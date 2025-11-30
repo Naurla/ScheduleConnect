@@ -8,7 +8,8 @@ import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import com.google.android.material.textfield.TextInputEditText // Import for the dialog input
+import com.google.android.material.textfield.TextInputEditText
+import com.hbb20.CountryCodePicker // Make sure you have this library dependency
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -31,12 +32,16 @@ class SignupActivity : AppCompatActivity() {
     private lateinit var rgGender: RadioGroup
     private lateinit var etGenderOther: EditText
     private lateinit var etDob: EditText
-    private lateinit var etPassword: EditText
-    private lateinit var etConfirmPassword: EditText
+    private lateinit var etPassword: TextInputEditText
+    private lateinit var etConfirmPassword: TextInputEditText
 
-    // --- EMAIL CONFIGURATION (REPLACE WITH YOUR DETAILS) ---
+    // Phone & CCP
+    private lateinit var etPhone: EditText
+    private lateinit var ccp: CountryCodePicker
+
+    // --- EMAIL CONFIGURATION ---
     private val SENDER_EMAIL = "scheduleconnect2025@gmail.com"
-    private val SENDER_PASSWORD = "zcml lkrm qeff xayy" // App Password (16 chars)
+    private val SENDER_PASSWORD = "zcml lkrm qeff xayy" // App Password
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,18 +55,24 @@ class SignupActivity : AppCompatActivity() {
         btnNext = findViewById(R.id.btnNext)
         btnBack = findViewById(R.id.btnBack)
         tvRegister = findViewById(R.id.tvRegister)
+
         rgGender = findViewById(R.id.radioGroupGender)
         etGenderOther = findViewById(R.id.etGenderOther)
         etDob = findViewById(R.id.etDob)
         etPassword = findViewById(R.id.etPassword)
         etConfirmPassword = findViewById(R.id.etConfirmPassword)
 
-        // Date Picker
+        // Initialize Phone & CCP
+        etPhone = findViewById(R.id.etPhone)
+        ccp = findViewById(R.id.ccp)
+        ccp.registerCarrierNumberEditText(etPhone) // Connects CCP to the EditText
+
+        // --- FEATURE: DATE PICKER ---
         etDob.setOnClickListener {
             showDatePicker()
         }
 
-        // Show/Hide "Others" Input
+        // LOGIC: Show/Hide "Others" Input for Gender
         rgGender.setOnCheckedChangeListener { _, checkedId ->
             if (checkedId == R.id.rbOther) {
                 etGenderOther.visibility = View.VISIBLE
@@ -127,7 +138,6 @@ class SignupActivity : AppCompatActivity() {
         val etMiddleName = findViewById<EditText>(R.id.etMiddleName)
         val etLastName = findViewById<EditText>(R.id.etLastName)
         val etEmail = findViewById<EditText>(R.id.etEmail)
-        val etPhone = findViewById<EditText>(R.id.etPhone)
         val etUsername = findViewById<EditText>(R.id.etUsername)
 
         // 2. Extract Strings
@@ -136,15 +146,15 @@ class SignupActivity : AppCompatActivity() {
         val lName = etLastName.text.toString().trim()
         val dob = etDob.text.toString().trim()
         val email = etEmail.text.toString().trim()
-        val phone = etPhone.text.toString().trim()
         val user = etUsername.text.toString().trim()
         val pass = etPassword.text.toString().trim()
         val confirmPass = etConfirmPassword.text.toString().trim()
 
-        // --- VALIDATION ---
+        // --- VALIDATION STEP 1: NAMES ---
         if (fName.isEmpty()) { etFirstName.error = "Required"; goToStep(0); return }
         if (lName.isEmpty()) { etLastName.error = "Required"; goToStep(0); return }
 
+        // --- VALIDATION STEP 2: DETAILS ---
         var gender = ""
         val selectedGenderId = rgGender.checkedRadioButtonId
         if (selectedGenderId == -1) { goToStep(1); Toast.makeText(this, "Select Gender", Toast.LENGTH_SHORT).show(); return }
@@ -158,8 +168,16 @@ class SignupActivity : AppCompatActivity() {
         }
         if (dob.isEmpty()) { etDob.error = "Required"; goToStep(1); return }
         if (email.isEmpty()) { etEmail.error = "Required"; goToStep(1); return }
-        if (phone.isEmpty()) { etPhone.error = "Required"; goToStep(1); return }
 
+        // Phone Validation with CCP
+        if (!ccp.isValidFullNumber) {
+            etPhone.error = "Invalid Number";
+            goToStep(1);
+            return
+        }
+        val phone = ccp.fullNumberWithPlus // Get full international format
+
+        // --- VALIDATION STEP 3: ACCOUNT ---
         if (user.isEmpty()) { etUsername.error = "Required"; goToStep(2); return }
         if (dbHelper.checkUsernameOrEmail(user)) { etUsername.error = "Taken"; goToStep(2); return }
         if (pass.isEmpty()) { etPassword.error = "Required"; goToStep(2); return }
@@ -200,7 +218,6 @@ class SignupActivity : AppCompatActivity() {
                 message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(email))
                 message.subject = "Verify your Email - ScheduleConnect"
 
-                // Professional HTML Email Content
                 val htmlContent = """
                     <!DOCTYPE html>
                     <html>
@@ -232,7 +249,6 @@ class SignupActivity : AppCompatActivity() {
 
                 withContext(Dispatchers.Main) {
                     progressDialog.dismiss()
-                    // Show Professional Verification Dialog
                     showVerificationDialog(verificationCode, fName, mName, lName, gender, dob, email, phone, user, pass)
                 }
 
@@ -253,16 +269,15 @@ class SignupActivity : AppCompatActivity() {
         val dialogBuilder = AlertDialog.Builder(this)
         val inflater = LayoutInflater.from(this)
 
-        // Use our new professional layout
+        // Use custom professional layout
         val dialogView = inflater.inflate(R.layout.dialog_verification, null)
         dialogBuilder.setView(dialogView)
 
         val alertDialog = dialogBuilder.create()
         alertDialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
-        // Bind Views
         val tvSubtitle = dialogView.findViewById<TextView>(R.id.tvDialogSubtitle)
-        val etCode = dialogView.findViewById<TextInputEditText>(R.id.etDialogCode) // Use TextInputEditText
+        val etCode = dialogView.findViewById<TextInputEditText>(R.id.etDialogCode)
         val btnCancel = dialogView.findViewById<TextView>(R.id.btnCancelDialog)
         val btnVerify = dialogView.findViewById<TextView>(R.id.btnVerifyDialog)
 

@@ -53,6 +53,7 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
+    implementation("com.hbb20:ccp:2.7.0")
 
     // Email Libraries
     implementation("com.sun.mail:android-mail:1.6.7")

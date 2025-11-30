@@ -163,14 +163,37 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Phone Number" />
-                <EditText
-                    android:id="@+id/etPhone"
+
+                <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:background="@android:drawable/edit_text"
-                    android:backgroundTint="#FFFFFF"
-                    android:padding="10dp"
-                    android:inputType="phone" />
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="10dp">
+
+                    <com.hbb20.CountryCodePicker
+                        android:id="@+id/ccp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="50dp"
+                        android:gravity="center"
+                        app:ccp_defaultNameCode="PH"
+                        app:ccp_showFlag="true"
+                        app:ccp_showNameCode="false"
+                        app:ccp_textSize="16sp"
+                        app:ccp_arrowSize="20dp"
+                        android:background="@android:drawable/edit_text"
+                        android:backgroundTint="#FFFFFF"/>
+
+                    <EditText
+                        android:id="@+id/etPhone"
+                        android:layout_width="match_parent"
+                        android:layout_height="50dp"
+                        android:background="@android:drawable/edit_text"
+                        android:backgroundTint="#FFFFFF"
+                        android:padding="10dp"
+                        android:hint="912 345 6789"
+                        android:inputType="phone" />
+                </LinearLayout>
+
             </LinearLayout>
 
             <LinearLayout
