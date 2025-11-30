@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -34,17 +35,25 @@
         android:inputType="textEmailAddress"
         android:layout_marginBottom="15dp"/>
 
-    <EditText
-        android:id="@+id/etPassword"
+    <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
-        android:layout_height="50dp"
-        android:background="@android:drawable/edit_text"
-        android:backgroundTint="#FFFFFF"
-        android:padding="10dp"
-        android:hint="Password"
-        android:inputType="textPassword"
-        android:drawableEnd="@android:drawable/ic_menu_view"
-        android:layout_marginBottom="10dp"/>
+        android:layout_height="wrap_content"
+        app:passwordToggleEnabled="true"
+        app:passwordToggleTint="#B71C1C"
+        app:hintEnabled="false"
+        android:layout_marginBottom="10dp">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etPassword"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:background="@android:drawable/edit_text"
+            android:backgroundTint="#FFFFFF"
+            android:padding="10dp"
+            android:hint="Password"
+            android:inputType="textPassword"/>
+
+    </com.google.android.material.textfield.TextInputLayout>
 
     <TextView
         android:layout_width="wrap_content"
@@ -54,7 +63,6 @@
         android:layout_gravity="end"
         android:layout_marginBottom="20dp"/>
 
-    <!-- Added Login Button -->
     <Button
         android:id="@+id/btnLogin"
         android:layout_width="match_parent"

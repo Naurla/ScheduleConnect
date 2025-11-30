@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@android:color/white">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Enter Verification Code"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="#000000"
+        android:layout_marginBottom="8dp"/>
+
+    <TextView
+        android:id="@+id/tvDialogSubtitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="We sent a verification code to your email."
+        android:textSize="14sp"
+        android:textColor="#666666"
+        android:lineSpacingExtra="4dp"
+        android:layout_marginBottom="24dp"/>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        app:boxStrokeColor="#8B1A1A"
+        app:boxStrokeWidth="2dp"
+        app:hintEnabled="false"
+        android:layout_marginBottom="32dp">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etDialogCode"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:hint="000000"
+            android:inputType="number"
+            android:maxLength="6"
+            android:gravity="center"
+            android:textSize="24sp"
+            android:letterSpacing="0.3"
+            android:textStyle="bold"
+            android:textColor="#8B1A1A"/>
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end">
+
+        <TextView
+            android:id="@+id/btnCancelDialog"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="CANCEL"
+            android:textColor="#757575"
+            android:textStyle="bold"
+            android:background="?attr/selectableItemBackground"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="10dp"
+            android:layout_marginEnd="8dp"/>
+
+        <TextView
+            android:id="@+id/btnVerifyDialog"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="VERIFY"
+            android:textColor="#8B1A1A"
+            android:textStyle="bold"
+            android:background="?attr/selectableItemBackground"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="10dp"/>
+    </LinearLayout>
+
+</LinearLayout>
