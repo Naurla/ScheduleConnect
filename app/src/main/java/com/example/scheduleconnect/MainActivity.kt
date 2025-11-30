@@ -39,31 +39,24 @@ class MainActivity : AppCompatActivity() {
             if (input.isEmpty() || password.isEmpty()) {
                 Toast.makeText(this, "Please enter all fields", Toast.LENGTH_SHORT).show()
             } else {
-                // STEP 1: Check if the username (or email) actually exists in the DB
-                // (Make sure your DatabaseHelper has this function, as we restored it in the previous step)
                 val userExists = dbHelper.checkUsernameOrEmail(input)
 
                 if (userExists) {
-                    // STEP 2: The user exists, now check if the password matches
                     val checkCredentials = dbHelper.checkUser(input, password)
 
                     if (checkCredentials) {
                         Toast.makeText(this, "Login Successful!", Toast.LENGTH_SHORT).show()
 
-                        // --- UPDATED LOGIC: NAVIGATE TO DASHBOARD ---
                         val intent = Intent(this, HomeActivity::class.java)
-                        // Optional: Pass the username to the dashboard if needed
-                        // intent.putExtra("USERNAME", input)
-                        startActivity(intent)
-                        finish() // Prevents going back to login screen when pressing 'Back'
-                        // --------------------------------------------
+                        // UPDATED: Pass the username to the HomeActivity
+                        intent.putExtra("CURRENT_USER", input)
 
+                        startActivity(intent)
+                        finish()
                     } else {
-                        // User found, but password was wrong
                         Toast.makeText(this, "Incorrect Password", Toast.LENGTH_SHORT).show()
                     }
                 } else {
-                    // User was not found in the database at all
                     Toast.makeText(this, "Username or Email not found", Toast.LENGTH_SHORT).show()
                 }
             }

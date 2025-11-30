@@ -29,8 +29,13 @@ class AddScheduleFragment : Fragment() {
             val desc = etDesc.text.toString()
 
             if (name.isNotEmpty() && date.isNotEmpty()) {
-                // For now, type is always "personal"
-                val success = dbHelper.addSchedule(name, date, loc, desc, "personal")
+                // UPDATED: Get current user from SharedPreferences
+                val sharedPref = requireActivity().getSharedPreferences("UserSession", android.content.Context.MODE_PRIVATE)
+                val currentUser = sharedPref.getString("username", "default_user") ?: "default_user"
+
+                // UPDATED: Pass currentUser to addSchedule
+                val success = dbHelper.addSchedule(currentUser, name, date, loc, desc, "personal")
+
                 if (success) {
                     Toast.makeText(context, "Schedule Added!", Toast.LENGTH_SHORT).show()
                     // Clear fields

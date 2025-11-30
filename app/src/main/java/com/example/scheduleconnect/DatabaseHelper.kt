@@ -21,7 +21,8 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
 
     companion object {
         private const val DATABASE_NAME = "ScheduleConnect.db"
-        private const val DATABASE_VERSION = 2
+        // UPDATED: Incremented version to 3 to trigger the update
+        private const val DATABASE_VERSION = 3
 
         // --- Users Table ---
         private const val TABLE_USERS = "users"
@@ -39,6 +40,8 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         // --- Schedules Table ---
         private const val TABLE_SCHEDULES = "schedules"
         const val SCH_ID = "schedule_id"
+        // UPDATED: Added username column constant
+        const val SCH_USERNAME = "username"
         const val SCH_TITLE = "title"
         const val SCH_DATE = "date"
         const val SCH_LOCATION = "location"
@@ -61,9 +64,10 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
                 + COL_PASSWORD + " TEXT" + ")")
         db?.execSQL(createUsers)
 
-        // Create Schedules Table
+        // Create Schedules Table (UPDATED with username column)
         val createSchedules = ("CREATE TABLE " + TABLE_SCHEDULES + "("
                 + SCH_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + SCH_USERNAME + " TEXT,"
                 + SCH_TITLE + " TEXT,"
                 + SCH_DATE + " TEXT,"
                 + SCH_LOCATION + " TEXT,"
@@ -74,7 +78,6 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
 
     override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
         if (oldVersion < 2) {
-            // If user has old app version (ver 1), add the new schedules table
             val createSchedules = ("CREATE TABLE " + TABLE_SCHEDULES + "("
                     + SCH_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
                     + SCH_TITLE + " TEXT,"
@@ -83,6 +86,10 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
                     + SCH_DESC + " TEXT,"
                     + SCH_TYPE + " TEXT" + ")")
             db?.execSQL(createSchedules)
+        }
+        // UPDATED: Upgrade logic for version 3 (adds username column to existing tables)
+        if (oldVersion < 3) {
+            db?.execSQL("ALTER TABLE $TABLE_SCHEDULES ADD COLUMN $SCH_USERNAME TEXT DEFAULT 'unknown'")
         }
     }
 
@@ -105,7 +112,6 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         return result != -1L
     }
 
-    // [Restored] This checks if the User/Email exists (ignoring password)
     fun checkUsernameOrEmail(input: String): Boolean {
         val db = this.readableDatabase
         val selection = "$COL_USERNAME = ? OR $COL_EMAIL = ?"
@@ -116,7 +122,6 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         return count > 0
     }
 
-    // This checks if the User/Email AND Password match
     fun checkUser(input: String, password: String): Boolean {
         val db = this.readableDatabase
         val selection = "($COL_USERNAME = ? OR $COL_EMAIL = ?) AND $COL_PASSWORD = ?"
@@ -127,11 +132,13 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         return count > 0
     }
 
-    // --- SCHEDULE METHODS ---
+    // --- SCHEDULE METHODS (UPDATED) ---
 
-    fun addSchedule(title: String, date: String, location: String, desc: String, type: String): Boolean {
+    // UPDATED: Now accepts 'user' string
+    fun addSchedule(user: String, title: String, date: String, location: String, desc: String, type: String): Boolean {
         val db = this.writableDatabase
         val cv = ContentValues()
+        cv.put(SCH_USERNAME, user) // Store the username
         cv.put(SCH_TITLE, title)
         cv.put(SCH_DATE, date)
         cv.put(SCH_LOCATION, location)
@@ -141,21 +148,31 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         return result != -1L
     }
 
-    fun getSchedules(type: String): ArrayList<Schedule> {
+    // UPDATED: Now accepts 'user' string to filter results
+    fun getSchedules(user: String, type: String): ArrayList<Schedule> {
         val list = ArrayList<Schedule>()
         val db = this.readableDatabase
-        val cursor: Cursor = db.rawQuery("SELECT * FROM $TABLE_SCHEDULES WHERE $SCH_TYPE = ?", arrayOf(type))
+        // Filter by type AND username
+        val cursor: Cursor = db.rawQuery("SELECT * FROM $TABLE_SCHEDULES WHERE $SCH_TYPE = ? AND $SCH_USERNAME = ?", arrayOf(type, user))
 
         if (cursor.moveToFirst()) {
             do {
-                // 0=id, 1=title, 2=date, 3=location, 4=desc, 5=type
-                val id = cursor.getInt(0)
-                val title = cursor.getString(1)
-                val date = cursor.getString(2)
-                val loc = cursor.getString(3)
-                val desc = cursor.getString(4)
+                // We use getColumnIndex to be safe since column order might change
+                val idIndex = cursor.getColumnIndex(SCH_ID)
+                val titleIndex = cursor.getColumnIndex(SCH_TITLE)
+                val dateIndex = cursor.getColumnIndex(SCH_DATE)
+                val locIndex = cursor.getColumnIndex(SCH_LOCATION)
+                val descIndex = cursor.getColumnIndex(SCH_DESC)
 
-                list.add(Schedule(id, title, date, loc, desc, type))
+                if(idIndex != -1 && titleIndex != -1) {
+                    val id = cursor.getInt(idIndex)
+                    val title = cursor.getString(titleIndex)
+                    val date = cursor.getString(dateIndex)
+                    val loc = cursor.getString(locIndex)
+                    val desc = cursor.getString(descIndex)
+
+                    list.add(Schedule(id, title, date, loc, desc, type))
+                }
             } while (cursor.moveToNext())
         }
         cursor.close()

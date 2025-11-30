@@ -60,7 +60,13 @@ class HomeFragment : Fragment() {
 
     private fun loadSchedules() {
         val type = if (isPersonal) "personal" else "shared"
-        val list = dbHelper.getSchedules(type)
+
+        // UPDATED: Get current user from SharedPreferences
+        val sharedPref = requireActivity().getSharedPreferences("UserSession", android.content.Context.MODE_PRIVATE)
+        val currentUser = sharedPref.getString("username", "default_user") ?: "default_user"
+
+        // UPDATED: Pass currentUser to getSchedules
+        val list = dbHelper.getSchedules(currentUser, type)
 
         if (list.isEmpty()) {
             recyclerView.visibility = View.GONE

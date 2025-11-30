@@ -11,7 +11,15 @@ class HomeActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
 
-        // The ID 'bottomNav' will now be found because we created activity_home.xml
+        // UPDATED: Retrieve username and save to SharedPreferences
+        val username = intent.getStringExtra("CURRENT_USER")
+        if (username != null) {
+            val sharedPref = getSharedPreferences("UserSession", MODE_PRIVATE)
+            val editor = sharedPref.edit()
+            editor.putString("username", username)
+            editor.apply()
+        }
+
         val bottomNav = findViewById<BottomNavigationView>(R.id.bottomNav)
 
         // Load Default Fragment (Home)
