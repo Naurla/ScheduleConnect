@@ -54,15 +54,11 @@ class HomeFragment : Fragment() {
     private fun updateTabStyles() {
         if (isPersonal) {
             // Case: "YOUR SCHEDULES" is Active
-            // Set Personal to RED (Active)
             tabPersonal.setTextColor(resources.getColor(R.color.app_red, null))
-            // Set Shared to BLACK (Inactive)
             tabShared.setTextColor(resources.getColor(R.color.black, null))
         } else {
             // Case: "SHARED SCHEDULES" is Active
-            // Set Personal to BLACK (Inactive)
             tabPersonal.setTextColor(resources.getColor(R.color.black, null))
-            // Set Shared to RED (Active)
             tabShared.setTextColor(resources.getColor(R.color.app_red, null))
         }
     }
@@ -81,7 +77,30 @@ class HomeFragment : Fragment() {
         } else {
             recyclerView.visibility = View.VISIBLE
             tvEmpty.visibility = View.GONE
-            recyclerView.adapter = ScheduleAdapter(list)
+
+            val adapter = ScheduleAdapter(list)
+            recyclerView.adapter = adapter
+
+            adapter.setOnItemClickListener { schedule ->
+                val fragment = ScheduleDetailFragment()
+                val bundle = Bundle()
+                bundle.putInt("SCH_ID", schedule.id)
+                bundle.putString("SCH_TITLE", schedule.title)
+                bundle.putString("SCH_DATE", schedule.date)
+                bundle.putString("SCH_LOC", schedule.location)
+                bundle.putString("SCH_DESC", schedule.description)
+                bundle.putString("SCH_CREATOR", schedule.creator)
+
+                // --- NEW: PASS THE TYPE ---
+                bundle.putString("SCH_TYPE", schedule.type)
+
+                fragment.arguments = bundle
+
+                parentFragmentManager.beginTransaction()
+                    .replace(R.id.fragmentContainer, fragment)
+                    .addToBackStack(null)
+                    .commit()
+            }
         }
     }
 }

@@ -21,6 +21,10 @@ class ScheduleDetailFragment : Fragment() {
     private lateinit var layoutButtons: LinearLayout
     private lateinit var layoutChangeMind: LinearLayout
     private lateinit var btnCurrentStatus: Button
+    private lateinit var btnDelete: ImageView
+    private lateinit var btnCancelPersonal: Button
+    private lateinit var btnViewAttendees: Button
+
     private lateinit var currentUser: String
     private var schId: Int = -1
 
@@ -28,43 +32,68 @@ class ScheduleDetailFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_schedule_details, container, false)
         dbHelper = DatabaseHelper(requireContext())
 
-        // 1. Retrieve Arguments
+        // 1. Get Arguments
         schId = arguments?.getInt("SCH_ID") ?: -1
         val title = arguments?.getString("SCH_TITLE")
         val date = arguments?.getString("SCH_DATE")
         val loc = arguments?.getString("SCH_LOC")
         val desc = arguments?.getString("SCH_DESC")
         val creator = arguments?.getString("SCH_CREATOR") ?: "Unknown"
+        val type = arguments?.getString("SCH_TYPE") ?: "shared" // Default to shared
 
-        // 2. Bind Data to Views
+        // 2. Bind Views
         view.findViewById<TextView>(R.id.tvDetailTitle).text = title
         view.findViewById<TextView>(R.id.tvDetailDate).text = date
         view.findViewById<TextView>(R.id.tvDetailLoc).text = loc
         view.findViewById<TextView>(R.id.tvDetailDesc).text = desc
         view.findViewById<TextView>(R.id.tvDetailCreator).text = "Schedule by: $creator"
 
-        // 3. Layout References
         layoutButtons = view.findViewById(R.id.layoutRSVPButtons)
         layoutChangeMind = view.findViewById(R.id.layoutChangeMind)
         btnCurrentStatus = view.findViewById(R.id.btnCurrentStatus)
+        btnDelete = view.findViewById(R.id.btnDeleteSchedule)
+        btnCancelPersonal = view.findViewById(R.id.btnCancelPersonal)
+        btnViewAttendees = view.findViewById(R.id.btnViewAttendees)
 
-        // 4. Get Current User
         val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
         currentUser = sharedPref.getString("username", "default_user") ?: "default_user"
 
-        // 5. Initialize View State
-        refreshStatusUI()
+        // 3. UI LOGIC: Personal vs Shared
+        if (type == "personal") {
+            // --- PERSONAL VIEW ---
+            // Hide RSVP / Attendee / Trash Icon
+            layoutButtons.visibility = View.GONE
+            layoutChangeMind.visibility = View.GONE
+            btnViewAttendees.visibility = View.GONE
+            btnDelete.visibility = View.GONE
 
-        // 6. RSVP Button Actions
-        view.findViewById<Button>(R.id.btnAttend).setOnClickListener {
-            updateStatusAndShowDialog(1, "You are now marked as ATTENDING this schedule.")
+            // Show Cancel Button
+            btnCancelPersonal.visibility = View.VISIBLE
+            btnCancelPersonal.setOnClickListener {
+                showCancelConfirmation()
+            }
+
+        } else {
+            // --- SHARED VIEW ---
+            btnCancelPersonal.visibility = View.GONE
+            btnViewAttendees.visibility = View.VISIBLE
+
+            // Show Delete icon ONLY if user is creator
+            if (currentUser == creator) {
+                btnDelete.visibility = View.VISIBLE
+                btnDelete.setOnClickListener { showDeleteConfirmation() }
+            } else {
+                btnDelete.visibility = View.GONE
+            }
+
+            // RSVP Status Logic
+            refreshStatusUI()
         }
-        view.findViewById<Button>(R.id.btnUnsure).setOnClickListener {
-            updateStatusAndShowDialog(2, "Your status is set to UNSURE.")
-        }
-        view.findViewById<Button>(R.id.btnNotAttend).setOnClickListener {
-            updateStatusAndShowDialog(3, "You are marked as NOT ATTENDING.")
-        }
+
+        // 4. RSVP Button Listeners (Only active for Shared)
+        view.findViewById<Button>(R.id.btnAttend).setOnClickListener { updateStatus(1, "You are ATTENDING.") }
+        view.findViewById<Button>(R.id.btnUnsure).setOnClickListener { updateStatus(2, "Your status is UNSURE.") }
+        view.findViewById<Button>(R.id.btnNotAttend).setOnClickListener { updateStatus(3, "You are NOT ATTENDING.") }
 
         view.findViewById<TextView>(R.id.tvChangeMind).setOnClickListener {
             layoutChangeMind.visibility = View.GONE
@@ -77,7 +106,6 @@ class ScheduleDetailFragment : Fragment() {
             bundle.putInt("SCH_ID", schId)
             bundle.putString("SCH_TITLE", title)
             bundle.putString("SCH_CREATOR", creator)
-
             fragment.arguments = bundle
             parentFragmentManager.beginTransaction()
                 .replace(R.id.fragmentContainer, fragment)
@@ -89,101 +117,61 @@ class ScheduleDetailFragment : Fragment() {
             parentFragmentManager.popBackStack()
         }
 
-        // --- UPDATED: DELETE BUTTON LOGIC (Top Right Icon) ---
-        // Changed type to ImageView
-        val btnDelete = view.findViewById<ImageView>(R.id.btnDeleteSchedule)
-
-        // Always visible for testing, or you can uncomment the restriction later
-        btnDelete.visibility = View.VISIBLE
-
-        btnDelete.setOnClickListener {
-            showDeleteConfirmation()
-        }
-
         return view
     }
 
-    private fun updateStatusAndShowDialog(status: Int, message: String) {
-        dbHelper.updateRSVP(schId, currentUser, status)
-        showCustomModal("Status Updated", message) {
-            refreshStatusUI()
-        }
-    }
-
-    private fun showCustomModal(title: String, message: String, onOkClick: () -> Unit) {
-        val builder = AlertDialog.Builder(requireContext())
-        val inflater = LayoutInflater.from(context)
-        val view = inflater.inflate(R.layout.dialog_custom_modal, null)
-
-        builder.setView(view)
-        val dialog = builder.create()
-        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-
-        val tvTitle = view.findViewById<TextView>(R.id.tvDialogTitle)
-        val tvMessage = view.findViewById<TextView>(R.id.tvDialogMessage)
-        val btnOk = view.findViewById<Button>(R.id.btnDialogOk)
-
-        tvTitle.text = title
-        tvMessage.text = message
-
-        btnOk.setOnClickListener {
-            dialog.dismiss()
-            onOkClick()
-        }
-
-        dialog.show()
-    }
-
-    private fun showDeleteConfirmation() {
-        val builder = AlertDialog.Builder(requireContext())
-        builder.setTitle("Delete Schedule")
-        builder.setMessage("Are you sure you want to delete this schedule? This action cannot be undone.")
-
-        builder.setPositiveButton("DELETE") { dialog, _ ->
-            val success = dbHelper.deleteSchedule(schId)
-            if (success) {
-                Toast.makeText(context, "Schedule Deleted Successfully", Toast.LENGTH_SHORT).show()
-                dialog.dismiss()
-                parentFragmentManager.popBackStack() // Go back to previous list
-            } else {
-                Toast.makeText(context, "Failed to delete schedule", Toast.LENGTH_SHORT).show()
+    // Handles logic for "Cancel Schedule" (Personal)
+    private fun showCancelConfirmation() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Cancel Schedule")
+            .setMessage("Are you sure you want to cancel this schedule? It will be removed from your list.")
+            .setPositiveButton("YES, CANCEL") { _, _ ->
+                if (dbHelper.deleteSchedule(schId)) {
+                    Toast.makeText(context, "Schedule Cancelled", Toast.LENGTH_SHORT).show()
+                    parentFragmentManager.popBackStack()
+                } else {
+                    Toast.makeText(context, "Error cancelling", Toast.LENGTH_SHORT).show()
+                }
             }
-        }
+            .setNegativeButton("NO", null)
+            .show()
+    }
 
-        builder.setNegativeButton("CANCEL") { dialog, _ ->
-            dialog.dismiss()
-        }
+    // Handles logic for "Delete Schedule" (Shared Creator)
+    private fun showDeleteConfirmation() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Delete Group Schedule")
+            .setMessage("Are you sure? This will remove it for EVERYONE in the group.")
+            .setPositiveButton("Delete") { _, _ ->
+                if (dbHelper.deleteSchedule(schId)) {
+                    Toast.makeText(context, "Schedule Deleted", Toast.LENGTH_SHORT).show()
+                    parentFragmentManager.popBackStack()
+                } else {
+                    Toast.makeText(context, "Error deleting", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
 
-        val dialog = builder.create()
-        dialog.show()
-
-        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Color.RED)
-        dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(Color.BLACK)
+    private fun updateStatus(status: Int, msg: String) {
+        dbHelper.updateRSVP(schId, currentUser, status)
+        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+        refreshStatusUI()
     }
 
     private fun refreshStatusUI() {
         val status = dbHelper.getUserRSVPStatus(schId, currentUser)
-
         if (status == 0) {
             layoutButtons.visibility = View.VISIBLE
             layoutChangeMind.visibility = View.GONE
         } else {
             layoutButtons.visibility = View.GONE
             layoutChangeMind.visibility = View.VISIBLE
-
             when (status) {
-                1 -> {
-                    btnCurrentStatus.text = "I WILL ATTEND"
-                    btnCurrentStatus.background.setTint(Color.parseColor("#8B1A1A"))
-                }
-                2 -> {
-                    btnCurrentStatus.text = "UNSURE"
-                    btnCurrentStatus.background.setTint(Color.parseColor("#F57C00"))
-                }
-                3 -> {
-                    btnCurrentStatus.text = "I WILL NOT ATTEND"
-                    btnCurrentStatus.background.setTint(Color.parseColor("#555555"))
-                }
+                1 -> { btnCurrentStatus.text = "I WILL ATTEND"; btnCurrentStatus.background.setTint(Color.parseColor("#8B1A1A")) }
+                2 -> { btnCurrentStatus.text = "UNSURE"; btnCurrentStatus.background.setTint(Color.parseColor("#F57C00")) }
+                3 -> { btnCurrentStatus.text = "I WILL NOT ATTEND"; btnCurrentStatus.background.setTint(Color.parseColor("#555555")) }
             }
         }
     }
