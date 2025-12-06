@@ -28,7 +28,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
 
     companion object {
         private const val DATABASE_NAME = "ScheduleConnect.db"
-        private const val DATABASE_VERSION = 10 // <--- Incremented Version
+        private const val DATABASE_VERSION = 11 // <--- Updated Version to 11
 
         // Table Names
         private const val TABLE_USERS = "users"
@@ -39,6 +39,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
 
         // Columns
         private const val COL_PROFILE_IMG = "profile_image"
+        private const val COL_GROUP_IMG = "group_image" // <--- NEW Constant
 
         // Schedule Columns
         const val SCH_ID = "schedule_id"
@@ -49,7 +50,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         const val SCH_LOCATION = "location"
         const val SCH_DESC = "description"
         const val SCH_TYPE = "type"
-        const val SCH_IMAGE = "schedule_image" // <--- NEW COLUMN
+        const val SCH_IMAGE = "schedule_image"
 
         // RSVP Columns
         const val RSVP_ID = "rsvp_id"
@@ -60,9 +61,9 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
 
     override fun onCreate(db: SQLiteDatabase?) {
         db?.execSQL("CREATE TABLE $TABLE_USERS (id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT, middle_name TEXT, last_name TEXT, gender TEXT, dob TEXT, email TEXT, phone TEXT, username TEXT, password TEXT, $COL_PROFILE_IMG BLOB)")
-        // Updated Create Table to include SCH_IMAGE
         db?.execSQL("CREATE TABLE $TABLE_SCHEDULES ($SCH_ID INTEGER PRIMARY KEY AUTOINCREMENT, $SCH_USERNAME TEXT, $SCH_GROUP_ID INTEGER DEFAULT -1, $SCH_TITLE TEXT, $SCH_DATE TEXT, $SCH_LOCATION TEXT, $SCH_DESC TEXT, $SCH_TYPE TEXT, $SCH_IMAGE BLOB)")
-        db?.execSQL("CREATE TABLE $TABLE_GROUPS (group_id INTEGER PRIMARY KEY AUTOINCREMENT, group_name TEXT, group_code TEXT)")
+        // UPDATED: Create Table to include COL_GROUP_IMG
+        db?.execSQL("CREATE TABLE $TABLE_GROUPS (group_id INTEGER PRIMARY KEY AUTOINCREMENT, group_name TEXT, group_code TEXT, $COL_GROUP_IMG BLOB)")
         db?.execSQL("CREATE TABLE $TABLE_MEMBERS (member_id INTEGER PRIMARY KEY AUTOINCREMENT, group_id INTEGER, username TEXT)")
         db?.execSQL("CREATE TABLE $TABLE_RSVP ($RSVP_ID INTEGER PRIMARY KEY AUTOINCREMENT, $RSVP_SCH_ID INTEGER, $RSVP_USER TEXT, $RSVP_STATUS INTEGER)")
     }
@@ -71,9 +72,12 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         if (oldVersion < 9) {
             try { db?.execSQL("ALTER TABLE $TABLE_USERS ADD COLUMN $COL_PROFILE_IMG BLOB") } catch (e: Exception) { }
         }
-        // Upgrade for Version 10: Add schedule_image column if missing
         if (oldVersion < 10) {
             try { db?.execSQL("ALTER TABLE $TABLE_SCHEDULES ADD COLUMN $SCH_IMAGE BLOB") } catch (e: Exception) { }
+        }
+        // Upgrade for Version 11: Add group_image column if missing
+        if (oldVersion < 11) {
+            try { db?.execSQL("ALTER TABLE $TABLE_GROUPS ADD COLUMN $COL_GROUP_IMG BLOB") } catch (e: Exception) { }
         }
     }
 
@@ -164,8 +168,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         return bitmap
     }
 
-    // --- SCHEDULE METHODS (UPDATED) ---
-    // FIX: Added 'image' parameter with default null value
+    // --- SCHEDULE METHODS ---
     fun addSchedule(user: String, groupId: Int, title: String, date: String, location: String, desc: String, type: String, image: ByteArray? = null): Boolean {
         val db = this.writableDatabase
         val cv = ContentValues()
@@ -195,7 +198,6 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
 
         if (cursor.moveToFirst()) {
             do {
-                // Safely get image blob
                 val imgIndex = cursor.getColumnIndex(SCH_IMAGE)
                 val imgBytes = if (imgIndex != -1) cursor.getBlob(imgIndex) else null
 
@@ -208,7 +210,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
                     cursor.getString(5),
                     cursor.getString(6),
                     type,
-                    imgBytes // <--- Pass Image
+                    imgBytes
                 ))
             } while (cursor.moveToNext())
         }
@@ -242,11 +244,18 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         cursor.close(); return list
     }
 
-    // --- GROUP & RSVP METHODS (Unchanged) ---
-    fun createGroupGetId(name: String, code: String, creator: String): Int {
+    // --- GROUP & RSVP METHODS (UPDATED) ---
+    // Added 'image' parameter
+    fun createGroupGetId(name: String, code: String, creator: String, image: ByteArray? = null): Int {
         val db = this.writableDatabase
         val cv = ContentValues()
         cv.put("group_name", name); cv.put("group_code", code)
+
+        // Save image if provided
+        if (image != null) {
+            cv.put(COL_GROUP_IMG, image)
+        }
+
         val groupId = db.insert(TABLE_GROUPS, null, cv)
         if (groupId != -1L) {
             val memberCv = ContentValues(); memberCv.put("group_id", groupId); memberCv.put("username", creator)

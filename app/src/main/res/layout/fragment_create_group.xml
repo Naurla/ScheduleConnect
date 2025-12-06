@@ -52,7 +52,43 @@
         android:background="@android:drawable/edit_text"
         android:backgroundTint="#FFFFFF"
         android:padding="10dp"
-        android:layout_marginBottom="20dp"/>
+        android:layout_marginBottom="15dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="GROUP IMAGE (OPTIONAL):"
+        android:textColor="#8B1A1A"
+        android:textStyle="bold"
+        android:layout_marginBottom="5dp"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="20dp"
+        android:background="#FFFFFF"
+        android:padding="8dp">
+
+        <Button
+            android:id="@+id/btnSelectGroupImage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Select Image"
+            android:textSize="12sp"
+            android:backgroundTint="#555"
+            android:textColor="#FFFFFF"
+            android:layout_marginEnd="15dp"/>
+
+        <ImageView
+            android:id="@+id/ivGroupImagePreview"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:src="@android:drawable/ic_menu_gallery"
+            android:scaleType="centerCrop"
+            android:background="#EEEEEE"/>
+    </LinearLayout>
 
     <TextView
         android:layout_width="wrap_content"

@@ -1,28 +1,58 @@
 package com.example.scheduleconnect
 
+import android.app.Activity
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.content.Context
+import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
-import java.util.Calendar
-// --- IMPORTS FOR WORK MANAGER ---
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
-import java.util.concurrent.TimeUnit
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 class AddSharedScheduleFragment : Fragment() {
     private lateinit var dbHelper: DatabaseHelper
     private lateinit var etDate: EditText
     private var groupId: Int = -1
+
+    // --- NEW: Image Variables ---
+    private lateinit var ivScheduleImage: ImageView
+    private lateinit var btnSelectImage: Button
+    private var selectedImageBitmap: Bitmap? = null
+
+    // --- NEW: Image Picker Launcher ---
+    private val imagePickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            val imageUri: Uri? = result.data?.data
+            if (imageUri != null) {
+                try {
+                    // Resize to prevent crash
+                    selectedImageBitmap = getResizedBitmap(imageUri)
+                    ivScheduleImage.setImageBitmap(selectedImageBitmap)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    Toast.makeText(requireContext(), "Error loading image", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.fragment_add_schedule, container, false)
@@ -35,8 +65,22 @@ class AddSharedScheduleFragment : Fragment() {
         val etDesc = view.findViewById<EditText>(R.id.etSchDesc)
         val btnAdd = view.findViewById<Button>(R.id.btnAddSchedule)
 
+        // --- NEW: Bind Image Views ---
+        ivScheduleImage = view.findViewById(R.id.ivScheduleImage)
+        btnSelectImage = view.findViewById(R.id.btnSelectImage)
+
         // Change text to match design
         btnAdd.text = "ADD SHARED SCHEDULE"
+
+        // --- NEW: Image Select Listener ---
+        btnSelectImage.setOnClickListener {
+            try {
+                val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+                imagePickerLauncher.launch(intent)
+            } catch (e: Exception) {
+                Toast.makeText(requireContext(), "Cannot open gallery", Toast.LENGTH_SHORT).show()
+            }
+        }
 
         etDate.setOnClickListener { showDateTimeDialog() }
 
@@ -50,8 +94,16 @@ class AddSharedScheduleFragment : Fragment() {
                 val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
                 val currentUser = sharedPref.getString("username", "default_user") ?: "default_user"
 
-                // Assuming optional image is null for shared schedules for now, or you can add image picker logic here too
-                val success = dbHelper.addSchedule(currentUser, groupId, name, date, loc, desc, "shared")
+                // --- NEW: Process Image ---
+                var imageBytes: ByteArray? = null
+                if (selectedImageBitmap != null) {
+                    val stream = ByteArrayOutputStream()
+                    selectedImageBitmap!!.compress(Bitmap.CompressFormat.PNG, 100, stream)
+                    imageBytes = stream.toByteArray()
+                }
+
+                // UPDATED: Pass imageBytes to addSchedule
+                val success = dbHelper.addSchedule(currentUser, groupId, name, date, loc, desc, "shared", imageBytes)
 
                 if (success) {
                     // --- NOTIFICATION LOGIC ---
@@ -97,10 +149,43 @@ class AddSharedScheduleFragment : Fragment() {
 
         DatePickerDialog(requireContext(), { _, selectedYear, selectedMonth, selectedDay ->
             TimePickerDialog(requireContext(), { _, selectedHour, selectedMinute ->
-                // Ensure this format matches SimpleDateFormat above
                 val formattedDateTime = String.format("%d-%02d-%02d %02d:%02d", selectedYear, selectedMonth + 1, selectedDay, selectedHour, selectedMinute)
                 etDate.setText(formattedDateTime)
             }, hour, minute, true).show()
         }, year, month, day).show()
+    }
+
+    // --- NEW: Helper to Resize Image ---
+    private fun getResizedBitmap(uri: Uri): Bitmap? {
+        var inputStream: InputStream? = null
+        try {
+            val options = BitmapFactory.Options()
+            options.inJustDecodeBounds = true
+            inputStream = requireContext().contentResolver.openInputStream(uri)
+            BitmapFactory.decodeStream(inputStream, null, options)
+            inputStream?.close()
+
+            val REQUIRED_SIZE = 500
+            var width_tmp = options.outWidth
+            var height_tmp = options.outHeight
+            var scale = 1
+            while (true) {
+                if (width_tmp / 2 < REQUIRED_SIZE || height_tmp / 2 < REQUIRED_SIZE) break
+                width_tmp /= 2
+                height_tmp /= 2
+                scale *= 2
+            }
+
+            val o2 = BitmapFactory.Options()
+            o2.inSampleSize = scale
+            inputStream = requireContext().contentResolver.openInputStream(uri)
+            val scaledBitmap = BitmapFactory.decodeStream(inputStream, null, o2)
+            return scaledBitmap
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return null
+        } finally {
+            inputStream?.close()
+        }
     }
 }
