@@ -53,7 +53,6 @@ class AddScheduleFragment : Fragment() {
             val imageUri: Uri? = result.data?.data
             if (imageUri != null) {
                 try {
-                    // CRASH FIX: Use safe loading method instead of decoding directly
                     selectedImageBitmap = getResizedBitmap(imageUri)
                     ivScheduleImage.setImageBitmap(selectedImageBitmap)
                 } catch (e: Exception) {
@@ -105,6 +104,9 @@ class AddScheduleFragment : Fragment() {
                 val success = dbHelper.addSchedule(currentUser, -1, title, dateStr, location, desc, "personal", imageBytes)
 
                 if (success) {
+                    // --- UPDATED: Save Notification to DB ---
+                    dbHelper.addNotification(currentUser, "New Schedule Added", "You created schedule: $title", dateStr)
+
                     scheduleNotification(title, dateStr)
                     Toast.makeText(requireContext(), "Schedule Added Successfully!", Toast.LENGTH_SHORT).show()
                     clearInputFields()
@@ -119,19 +121,15 @@ class AddScheduleFragment : Fragment() {
         return view
     }
 
-    // --- CRITICAL CRASH FIX: RESIZE IMAGE BEFORE LOADING ---
     private fun getResizedBitmap(uri: Uri): Bitmap? {
         var inputStream: InputStream? = null
         try {
-            // 1. First, decode only the dimensions (not the whole image)
             val options = BitmapFactory.Options()
             options.inJustDecodeBounds = true
             inputStream = requireContext().contentResolver.openInputStream(uri)
             BitmapFactory.decodeStream(inputStream, null, options)
             inputStream?.close()
 
-            // 2. Calculate the reduction factor (inSampleSize)
-            // We want the image to be roughly 500x500 pixels max to save memory
             val REQUIRED_SIZE = 500
             var width_tmp = options.outWidth
             var height_tmp = options.outHeight
@@ -143,7 +141,6 @@ class AddScheduleFragment : Fragment() {
                 scale *= 2
             }
 
-            // 3. Decode the actual image with the scale factor
             val o2 = BitmapFactory.Options()
             o2.inSampleSize = scale
             inputStream = requireContext().contentResolver.openInputStream(uri)

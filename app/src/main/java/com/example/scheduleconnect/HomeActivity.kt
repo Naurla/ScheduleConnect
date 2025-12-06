@@ -1,6 +1,7 @@
 package com.example.scheduleconnect
 
 import android.os.Bundle
+import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -26,6 +27,16 @@ class HomeActivity : AppCompatActivity() {
         if (savedInstanceState == null) {
             loadFragment(HomeFragment())
         }
+
+        // --- NEW: Handle Notification Bell Click ---
+        val btnNotif = findViewById<ImageView>(R.id.btnTopNotifications)
+        btnNotif.setOnClickListener {
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.fragmentContainer, UserNotificationsFragment())
+                .addToBackStack(null)
+                .commit()
+        }
+        // ------------------------------------------
 
         bottomNav.setOnItemSelectedListener { item ->
             var fragment: Fragment? = null

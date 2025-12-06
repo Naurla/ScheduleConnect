@@ -149,23 +149,35 @@ class ViewProfileFragment : Fragment() {
         }
     }
 
-    // --- MODAL 2: CHANGE USERNAME ---
+    // --- MODAL 2: CHANGE USERNAME (UPDATED) ---
     private fun showChangeUsernameDialog() {
         val builder = AlertDialog.Builder(requireContext())
         val inflater = LayoutInflater.from(context)
         val dialogView = inflater.inflate(R.layout.dialog_change_username, null)
+
         val etInput = dialogView.findViewById<EditText>(R.id.etNewUsernameInput)
+        val btnCancel = dialogView.findViewById<TextView>(R.id.btnCancelChange)
+        val btnUpdate = dialogView.findViewById<TextView>(R.id.btnUpdateChange)
 
         builder.setView(dialogView)
-        builder.setPositiveButton("UPDATE") { dialog, _ ->
+        val dialog = builder.create()
+
+        // Essential for rounded corners to show properly
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+        btnCancel.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        btnUpdate.setOnClickListener {
             val newName = etInput.text.toString().trim()
             if (newName.isNotEmpty()) {
                 performUsernameUpdate(newName)
             }
             dialog.dismiss()
         }
-        builder.setNegativeButton("CANCEL", null)
-        builder.show()
+
+        dialog.show()
     }
 
     private fun performUsernameUpdate(newName: String) {

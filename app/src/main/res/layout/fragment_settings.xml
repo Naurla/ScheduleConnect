@@ -28,7 +28,7 @@
             android:src="@android:drawable/sym_def_app_icon"
             android:scaleType="centerCrop"
             android:padding="2dp"
-            app:tint="#8B1A1A"/>
+            app:tint="#8B1A1A" />
 
     </androidx.cardview.widget.CardView>
 
@@ -63,11 +63,13 @@
             android:textStyle="bold"
             android:textSize="18sp"
             android:textAllCaps="true"
-            android:drawableStart="@android:drawable/ic_menu_myplaces"
-            android:drawableTint="#8B1A1A"
-            android:paddingHorizontal="20dp"
+            app:icon="@drawable/ic_settings_account"
+            app:iconTint="#8B1A1A"
+            app:iconGravity="start"
+            android:paddingStart="30dp"
+            android:paddingEnd="30dp"
             android:gravity="center"
-            android:layout_marginBottom="15dp"/>
+            android:layout_marginBottom="15dp" />
 
         <Button
             android:id="@+id/btnSecurity"
@@ -79,11 +81,13 @@
             android:textStyle="bold"
             android:textSize="18sp"
             android:textAllCaps="true"
-            android:drawableStart="@android:drawable/ic_secure"
-            android:drawableTint="#8B1A1A"
-            android:paddingHorizontal="20dp"
+            app:icon="@drawable/ic_settings_security"
+            app:iconTint="#8B1A1A"
+            app:iconGravity="start"
+            android:paddingStart="30dp"
+            android:paddingEnd="30dp"
             android:gravity="center"
-            android:layout_marginBottom="15dp"/>
+            android:layout_marginBottom="15dp" />
 
         <Button
             android:id="@+id/btnNotifications"
@@ -95,11 +99,13 @@
             android:textStyle="bold"
             android:textSize="18sp"
             android:textAllCaps="true"
-            android:drawableStart="@android:drawable/ic_popup_reminder"
-            android:drawableTint="#8B1A1A"
-            android:paddingHorizontal="20dp"
+            app:icon="@drawable/ic_settings_notifications"
+            app:iconTint="#8B1A1A"
+            app:iconGravity="start"
+            android:paddingStart="30dp"
+            android:paddingEnd="30dp"
             android:gravity="center"
-            android:layout_marginBottom="15dp"/>
+            android:layout_marginBottom="15dp" />
 
         <Button
             android:id="@+id/btnLanguage"
@@ -111,11 +117,13 @@
             android:textStyle="bold"
             android:textSize="18sp"
             android:textAllCaps="true"
-            android:drawableStart="@android:drawable/ic_menu_mapmode"
-            android:drawableTint="#8B1A1A"
-            android:paddingHorizontal="20dp"
+            app:icon="@drawable/ic_settings_language"
+            app:iconTint="#8B1A1A"
+            app:iconGravity="start"
+            android:paddingStart="30dp"
+            android:paddingEnd="30dp"
             android:gravity="center"
-            android:layout_marginBottom="15dp"/>
+            android:layout_marginBottom="15dp" />
 
         <Button
             android:id="@+id/btnLogout"
@@ -127,11 +135,12 @@
             android:textStyle="bold"
             android:textSize="18sp"
             android:textAllCaps="true"
-            android:drawableStart="@android:drawable/ic_lock_power_off"
-            android:drawableTint="#8B1A1A"
-            android:paddingHorizontal="20dp"
-            android:gravity="center"/>
+            app:icon="@drawable/ic_logout"
+            app:iconTint="#8B1A1A"
+            app:iconGravity="start"
+            android:paddingStart="30dp"
+            android:paddingEnd="30dp"
+            android:gravity="center" />
 
     </LinearLayout>
-
 </RelativeLayout>

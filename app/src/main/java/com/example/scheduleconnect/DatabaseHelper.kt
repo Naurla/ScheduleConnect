@@ -24,7 +24,6 @@ data class Schedule(
 
 data class GroupInfo(val id: Int, val name: String, val code: String)
 
-// --- NEW: Data Class for Profile ---
 data class UserDataModel(
     val username: String,
     val firstName: String,
@@ -36,7 +35,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
 
     companion object {
         private const val DATABASE_NAME = "ScheduleConnect.db"
-        private const val DATABASE_VERSION = 11
+        private const val DATABASE_VERSION = 12 // Incremented version for new table
 
         // Table Names
         private const val TABLE_USERS = "users"
@@ -44,6 +43,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         private const val TABLE_GROUPS = "schedule_groups"
         private const val TABLE_MEMBERS = "group_members"
         private const val TABLE_RSVP = "rsvps"
+        private const val TABLE_NOTIFICATIONS = "notifications" // NEW
 
         // Columns
         private const val COL_PROFILE_IMG = "profile_image"
@@ -65,6 +65,13 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         const val RSVP_SCH_ID = "schedule_id"
         const val RSVP_USER = "username"
         const val RSVP_STATUS = "status"
+
+        // Notification Columns (NEW)
+        private const val COL_NOTIF_ID = "notif_id"
+        private const val COL_NOTIF_USER = "username"
+        private const val COL_NOTIF_TITLE = "title"
+        private const val COL_NOTIF_MSG = "message"
+        private const val COL_NOTIF_DATE = "date"
     }
 
     override fun onCreate(db: SQLiteDatabase?) {
@@ -73,12 +80,22 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         db?.execSQL("CREATE TABLE $TABLE_GROUPS (group_id INTEGER PRIMARY KEY AUTOINCREMENT, group_name TEXT, group_code TEXT, $COL_GROUP_IMG BLOB)")
         db?.execSQL("CREATE TABLE $TABLE_MEMBERS (member_id INTEGER PRIMARY KEY AUTOINCREMENT, group_id INTEGER, username TEXT)")
         db?.execSQL("CREATE TABLE $TABLE_RSVP ($RSVP_ID INTEGER PRIMARY KEY AUTOINCREMENT, $RSVP_SCH_ID INTEGER, $RSVP_USER TEXT, $RSVP_STATUS INTEGER)")
+
+        // NEW TABLE
+        db?.execSQL("CREATE TABLE $TABLE_NOTIFICATIONS ($COL_NOTIF_ID INTEGER PRIMARY KEY AUTOINCREMENT, $COL_NOTIF_USER TEXT, $COL_NOTIF_TITLE TEXT, $COL_NOTIF_MSG TEXT, $COL_NOTIF_DATE TEXT)")
     }
 
     override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
         if (oldVersion < 9) try { db?.execSQL("ALTER TABLE $TABLE_USERS ADD COLUMN $COL_PROFILE_IMG BLOB") } catch (e: Exception) { }
         if (oldVersion < 10) try { db?.execSQL("ALTER TABLE $TABLE_SCHEDULES ADD COLUMN $SCH_IMAGE BLOB") } catch (e: Exception) { }
         if (oldVersion < 11) try { db?.execSQL("ALTER TABLE $TABLE_GROUPS ADD COLUMN $COL_GROUP_IMG BLOB") } catch (e: Exception) { }
+
+        // Create notification table if upgrading from older version
+        if (oldVersion < 12) {
+            try {
+                db?.execSQL("CREATE TABLE $TABLE_NOTIFICATIONS ($COL_NOTIF_ID INTEGER PRIMARY KEY AUTOINCREMENT, $COL_NOTIF_USER TEXT, $COL_NOTIF_TITLE TEXT, $COL_NOTIF_MSG TEXT, $COL_NOTIF_DATE TEXT)")
+            } catch (e: Exception) { }
+        }
     }
 
     // --- USER METHODS ---
@@ -177,7 +194,6 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         return bitmap
     }
 
-    // --- NEW: Get User Details for Profile ---
     fun getUserDetails(username: String): UserDataModel? {
         val db = this.readableDatabase
         val cursor = db.rawQuery("SELECT first_name, last_name, email FROM $TABLE_USERS WHERE username = ?", arrayOf(username))
@@ -193,35 +209,29 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         return user
     }
 
-    // --- NEW: Update Username (Cascades to all tables) ---
     fun updateUsername(currentName: String, newName: String): Boolean {
         val db = this.writableDatabase
         db.beginTransaction()
         try {
-            // 1. Check if new username already exists
             val checkCursor = db.rawQuery("SELECT * FROM $TABLE_USERS WHERE username = ?", arrayOf(newName))
             if (checkCursor.count > 0) {
                 checkCursor.close()
-                return false // Username taken
+                return false
             }
             checkCursor.close()
 
-            // 2. Update Users Table
             val cvUser = ContentValues()
             cvUser.put("username", newName)
             db.update(TABLE_USERS, cvUser, "username = ?", arrayOf(currentName))
 
-            // 3. Update Schedules Table (Creator)
             val cvSch = ContentValues()
             cvSch.put(SCH_USERNAME, newName)
             db.update(TABLE_SCHEDULES, cvSch, "$SCH_USERNAME = ?", arrayOf(currentName))
 
-            // 4. Update Group Members
             val cvMem = ContentValues()
             cvMem.put("username", newName)
             db.update(TABLE_MEMBERS, cvMem, "username = ?", arrayOf(currentName))
 
-            // 5. Update RSVPs
             val cvRsvp = ContentValues()
             cvRsvp.put(RSVP_USER, newName)
             db.update(TABLE_RSVP, cvRsvp, "$RSVP_USER = ?", arrayOf(currentName))
@@ -395,5 +405,34 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
             } while (cursor.moveToNext())
         }
         cursor.close(); return list
+    }
+
+    // --- NEW NOTIFICATION METHODS ---
+    fun addNotification(user: String, title: String, message: String, date: String): Boolean {
+        val db = this.writableDatabase
+        val cv = ContentValues()
+        cv.put(COL_NOTIF_USER, user)
+        cv.put(COL_NOTIF_TITLE, title)
+        cv.put(COL_NOTIF_MSG, message)
+        cv.put(COL_NOTIF_DATE, date)
+        return db.insert(TABLE_NOTIFICATIONS, null, cv) != -1L
+    }
+
+    fun getUserNotifications(user: String): ArrayList<Map<String, String>> {
+        val list = ArrayList<Map<String, String>>()
+        val db = this.readableDatabase
+        val cursor = db.rawQuery("SELECT * FROM $TABLE_NOTIFICATIONS WHERE $COL_NOTIF_USER = ? ORDER BY $COL_NOTIF_ID DESC", arrayOf(user))
+
+        if (cursor.moveToFirst()) {
+            do {
+                val map = HashMap<String, String>()
+                map["title"] = cursor.getString(cursor.getColumnIndexOrThrow(COL_NOTIF_TITLE))
+                map["message"] = cursor.getString(cursor.getColumnIndexOrThrow(COL_NOTIF_MSG))
+                map["date"] = cursor.getString(cursor.getColumnIndexOrThrow(COL_NOTIF_DATE))
+                list.add(map)
+            } while (cursor.moveToNext())
+        }
+        cursor.close()
+        return list
     }
 }

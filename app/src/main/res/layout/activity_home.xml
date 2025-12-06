@@ -40,7 +40,9 @@
                 android:src="@android:drawable/stat_notify_chat"
                 app:tint="@color/app_red"
                 android:layout_marginEnd="15dp"/>
+
             <ImageView
+                android:id="@+id/btnTopNotifications"
                 android:layout_width="30dp"
                 android:layout_height="30dp"
                 android:src="@android:drawable/ic_popup_reminder"
