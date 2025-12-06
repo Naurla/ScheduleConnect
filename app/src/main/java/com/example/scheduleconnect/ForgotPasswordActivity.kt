@@ -4,7 +4,7 @@ import android.app.ProgressDialog
 import android.os.Bundle
 import android.telephony.SmsManager
 import android.view.LayoutInflater
-import android.view.View // <--- THIS WAS MISSING
+import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -19,9 +19,6 @@ import java.util.*
 import javax.mail.*
 import javax.mail.internet.InternetAddress
 import javax.mail.internet.MimeMessage
-
-// Ensure this matches your package name
-import com.example.scheduleconnect.R
 
 class ForgotPasswordActivity : AppCompatActivity() {
 
@@ -52,6 +49,8 @@ class ForgotPasswordActivity : AppCompatActivity() {
 
         // Init Views
         val rgMethod = findViewById<RadioGroup>(R.id.rgMethod)
+
+        // These IDs must exist in the XML for the code to work
         layoutEmail = findViewById(R.id.layoutEmailInput)
         layoutPhone = findViewById(R.id.layoutPhoneInput)
         layoutReset = findViewById(R.id.layoutResetFields)
@@ -65,9 +64,9 @@ class ForgotPasswordActivity : AppCompatActivity() {
         etNewPass = findViewById(R.id.etNewPass)
         etConfirmPass = findViewById(R.id.etConfirmNewPass)
 
-        findViewById<ImageView>(R.id.btnBackForgot).setOnClickListener { finish() }
+        findViewById<View>(R.id.btnBackForgot).setOnClickListener { finish() }
 
-        // Toggle Logic
+        // Toggle Logic: Show/Hide inputs based on radio selection
         rgMethod.setOnCheckedChangeListener { _, checkedId ->
             if (checkedId == R.id.rbEmail) {
                 isEmailMethod = true
@@ -116,7 +115,7 @@ class ForgotPasswordActivity : AppCompatActivity() {
     private fun sendEmailOTP(email: String) {
         val otp = (100000..999999).random().toString()
         val pd = ProgressDialog(this)
-        pd.setMessage("Sending OTP to Email...")
+        pd.setMessage("Sending OTP...")
         pd.show()
 
         CoroutineScope(Dispatchers.IO).launch {
@@ -134,35 +133,9 @@ class ForgotPasswordActivity : AppCompatActivity() {
                 val message = MimeMessage(session)
                 message.setFrom(InternetAddress(SENDER_EMAIL, "ScheduleConnect Support"))
                 message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(email))
-                message.subject = "Reset Password OTP - ScheduleConnect"
+                message.subject = "Reset Password OTP"
+                message.setText("Your OTP is: $otp")
 
-                val htmlContent = """
-                    <!DOCTYPE html>
-                    <html>
-                    <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
-                        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0,0,0,0.1);">
-                            <h2 style="color: #8B1A1A; text-align: center;">ScheduleConnect</h2>
-                            <hr style="border: 0; border-top: 1px solid #eeeeee;">
-                            <p style="font-size: 16px; color: #333333;">Hello,</p>
-                            <p style="font-size: 16px; color: #555555;">
-                                We received a request to reset your password. Please use the OTP below to proceed with the password reset.
-                            </p>
-                            <div style="background-color: #f8d7da; padding: 15px; text-align: center; border-radius: 5px; margin: 20px 0;">
-                                <h1 style="color: #8B1A1A; letter-spacing: 5px; margin: 0;">$otp</h1>
-                            </div>
-                            <p style="font-size: 14px; color: #777777;">
-                                If you didn't request a password reset, you can safely ignore this email.
-                            </p>
-                            <br>
-                            <p style="font-size: 14px; color: #999999; text-align: center;">
-                                &copy; 2025 ScheduleConnect. All rights reserved.
-                            </p>
-                        </div>
-                    </body>
-                    </html>
-                """.trimIndent()
-
-                message.setContent(htmlContent, "text/html; charset=utf-8")
                 Transport.send(message)
 
                 withContext(Dispatchers.Main) {
@@ -187,11 +160,12 @@ class ForgotPasswordActivity : AppCompatActivity() {
         val otp = (100000..999999).random().toString()
         try {
             val smsManager = SmsManager.getDefault()
-            smsManager.sendTextMessage(phone, null, "Your ScheduleConnect OTP is: $otp", null, null)
+            smsManager.sendTextMessage(phone, null, "Your OTP is: $otp", null, null)
             Toast.makeText(this, "OTP sent to $phone", Toast.LENGTH_SHORT).show()
             showVerificationDialog(otp)
         } catch (e: Exception) {
-            Toast.makeText(this, "Failed to send SMS. Simulating OTP for demo: $otp", Toast.LENGTH_LONG).show()
+            // Fallback for demo if SMS fails (e.g. emulator)
+            Toast.makeText(this, "SMS Failed (Simulated OTP: $otp)", Toast.LENGTH_LONG).show()
             showVerificationDialog(otp)
         }
     }
@@ -214,11 +188,13 @@ class ForgotPasswordActivity : AppCompatActivity() {
         btnVerify.setOnClickListener {
             if (etCode.text.toString().trim() == correctOtp) {
                 dialog.dismiss()
+                // Show Reset Fields
                 layoutReset.visibility = View.VISIBLE
-                btnSendOTP.isEnabled = false
-                btnSendOTP.text = "VERIFIED"
-                etEmail.isEnabled = false
-                etPhone.isEnabled = false
+                // Disable inputs
+                btnSendOTP.visibility = View.GONE
+                layoutEmail.visibility = View.GONE
+                layoutPhone.visibility = View.GONE
+                findViewById<RadioGroup>(R.id.rgMethod).visibility = View.GONE
                 Toast.makeText(this, "Verified! Enter new password.", Toast.LENGTH_SHORT).show()
             } else {
                 etCode.error = "Incorrect OTP"
