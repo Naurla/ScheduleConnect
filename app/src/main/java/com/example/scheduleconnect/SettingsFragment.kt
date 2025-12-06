@@ -1,4 +1,6 @@
 package com.example.scheduleconnect
+
+import android.content.Context // Import Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -13,9 +15,14 @@ class SettingsFragment : Fragment() {
         val btnLogout = view.findViewById<Button>(R.id.btnLogout)
 
         btnLogout.setOnClickListener {
-            // Logout Logic
+            // 1. CLEAR the session data
+            val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
+            val editor = sharedPref.edit()
+            editor.clear() // Deletes all saved data
+            editor.apply()
+
+            // 2. Navigate to Login
             val intent = Intent(activity, MainActivity::class.java)
-            // Clear back stack so user can't go back to dashboard
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             startActivity(intent)
         }
