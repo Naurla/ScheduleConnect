@@ -1,157 +1,188 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#E0E0E0"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:padding="20dp">
+    android:background="@color/white"
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:padding="24dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginBottom="10dp">
+            android:layout_marginBottom="20dp">
 
             <ImageView
                 android:id="@+id/btnBackDetail"
                 android:layout_width="30dp"
                 android:layout_height="30dp"
                 android:src="@android:drawable/ic_menu_revert"
-                app:tint="@color/app_red"/>
+                app:tint="@color/app_red"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"/>
 
-            <View
-                android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1"/>
+            <TextView
+                android:id="@+id/tvDetailTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Schedule Title"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:textColor="@color/app_red"
+                android:layout_marginStart="15dp"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp">
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@android:drawable/ic_menu_today"
+                app:tint="#A1887F"/>
+            <TextView
+                android:id="@+id/tvDetailDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="2025-12-06 15:46"
+                android:textColor="#000"
+                android:textSize="16sp"
+                android:layout_marginStart="12dp"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp">
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@android:drawable/ic_menu_mylocation"
+                app:tint="#A1887F"/>
+            <TextView
+                android:id="@+id/tvDetailLoc"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Location Name"
+                android:textColor="#000"
+                android:textSize="16sp"
+                android:layout_marginStart="12dp"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="30dp">
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@android:drawable/ic_menu_info_details"
+                app:tint="#A1887F"/>
+            <TextView
+                android:id="@+id/tvDetailDesc"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Description goes here"
+                android:textColor="#000"
+                android:textSize="16sp"
+                android:layout_marginStart="12dp"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="40dp">
 
             <TextView
                 android:id="@+id/tvDetailCreator"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:text="Schedule by: User"
+                android:textColor="#555"
+                android:textSize="14sp"/>
+
+            <Button
+                android:id="@+id/btnViewAttendees"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:text="VIEW ATTENDEES"
+                android:textSize="10sp"
                 android:textStyle="bold"
-                android:textColor="#333"/>
+                android:backgroundTint="#8B1A1A"
+                android:textColor="@color/white"
+                android:paddingHorizontal="20dp"/>
         </LinearLayout>
-
-        <TextView
-            android:text="SCHEDULE NAME:"
-            android:textColor="@color/app_red"
-            android:textStyle="bold"
-            android:textSize="12sp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
-        <TextView
-            android:id="@+id/tvDetailTitle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@color/white"
-            android:padding="10dp"
-            android:text="Title"
-            android:textColor="#000"
-            android:layout_marginBottom="10dp"/>
-
-        <TextView
-            android:text="SCHEDULE DATE:"
-            android:textColor="@color/app_red"
-            android:textStyle="bold"
-            android:textSize="12sp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
-        <TextView
-            android:id="@+id/tvDetailDate"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@color/white"
-            android:padding="10dp"
-            android:text="Date"
-            android:textColor="#000"
-            android:layout_marginBottom="10dp"/>
-
-        <TextView
-            android:text="SCHEDULE LOCATION:"
-            android:textColor="@color/app_red"
-            android:textStyle="bold"
-            android:textSize="12sp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
-        <TextView
-            android:id="@+id/tvDetailLoc"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@color/white"
-            android:padding="10dp"
-            android:text="Location"
-            android:textColor="#000"
-            android:layout_marginBottom="10dp"/>
-
-        <TextView
-            android:text="SCHEDULE DESCRIPTION:"
-            android:textColor="@color/app_red"
-            android:textStyle="bold"
-            android:textSize="12sp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
-        <TextView
-            android:id="@+id/tvDetailDesc"
-            android:layout_width="match_parent"
-            android:layout_height="100dp"
-            android:background="@color/white"
-            android:padding="10dp"
-            android:text="Description"
-            android:textColor="#000"
-            android:layout_marginBottom="20dp"/>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="YOUR STATUS:"
-            android:textColor="@color/app_red"
-            android:textStyle="bold"
-            android:textSize="14sp"
-            android:layout_marginBottom="5dp"/>
 
         <LinearLayout
             android:id="@+id/layoutRSVPButtons"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
+            android:orientation="vertical"
             android:gravity="center"
             android:visibility="visible">
 
-            <Button
-                android:id="@+id/btnAttend"
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="I WILL\nATTEND"
-                android:backgroundTint="@color/app_red"
-                android:textColor="@color/white"
-                android:textSize="12sp"
-                android:layout_marginEnd="5dp"/>
+                android:text="Will you attend this schedule?"
+                android:textColor="#8B1A1A"
+                android:textStyle="bold"
+                android:textSize="16sp"
+                android:layout_marginBottom="15dp"/>
 
-            <Button
-                android:id="@+id/btnUnsure"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="UNSURE"
-                android:backgroundTint="@color/app_red"
-                android:textColor="@color/white"
-                android:textSize="12sp"
-                android:layout_marginEnd="5dp"/>
+                android:orientation="horizontal"
+                android:gravity="center">
 
-            <Button
-                android:id="@+id/btnNotAttend"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="I WILL NOT\nATTEND"
-                android:backgroundTint="@color/app_red"
-                android:textColor="@color/white"
-                android:textSize="12sp"/>
+                <Button
+                    android:id="@+id/btnAttend"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="I WILL\nATTEND"
+                    android:textSize="11sp"
+                    android:backgroundTint="#8B1A1A"
+                    android:textColor="@color/white"
+                    android:layout_marginEnd="8dp"/>
+
+                <Button
+                    android:id="@+id/btnUnsure"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="UNSURE"
+                    android:textSize="11sp"
+                    android:backgroundTint="#8B1A1A"
+                    android:textColor="@color/white"
+                    android:layout_marginEnd="8dp"/>
+
+                <Button
+                    android:id="@+id/btnNotAttend"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="I WILL NOT\nATTEND"
+                    android:textSize="11sp"
+                    android:backgroundTint="#8B1A1A"
+                    android:textColor="@color/white"/>
+            </LinearLayout>
         </LinearLayout>
 
         <LinearLayout
@@ -162,38 +193,38 @@
             android:gravity="center"
             android:visibility="gone">
 
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="YOUR STATUS:"
+                android:textColor="#8B1A1A"
+                android:textStyle="bold"
+                android:textSize="16sp"
+                android:layout_marginBottom="10dp"/>
+
             <Button
                 android:id="@+id/btnCurrentStatus"
-                android:layout_width="200dp"
+                android:layout_width="250dp"
                 android:layout_height="60dp"
                 android:text="I WILL ATTEND"
-                android:backgroundTint="#5C1212"
-                android:textColor="#FFFFFF"
-                android:textSize="16sp"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:backgroundTint="#8B1A1A"
+                android:textColor="@color/white"
                 android:clickable="false"/>
 
             <TextView
                 android:id="@+id/tvChangeMind"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="CHANGE YOUR MIND?"
-                android:textColor="@color/app_red"
-                android:textStyle="bold"
-                android:layout_marginTop="8dp"
+                android:text="Change your mind?"
+                android:textColor="#555"
+                android:layout_marginTop="15dp"
                 android:padding="10dp"
                 android:clickable="true"
                 android:focusable="true"
                 android:background="?attr/selectableItemBackground"/>
         </LinearLayout>
-
-        <Button
-            android:id="@+id/btnViewAttendees"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:text="VIEW ATTENDEES"
-            android:layout_marginTop="30dp"
-            android:backgroundTint="#757575"
-            android:textColor="#FFFFFF"/>
 
     </LinearLayout>
 </ScrollView>

@@ -9,6 +9,7 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 
 class ScheduleDetailFragment : Fragment() {
@@ -24,54 +25,66 @@ class ScheduleDetailFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_schedule_details, container, false)
         dbHelper = DatabaseHelper(requireContext())
 
+        // 1. Retrieve Arguments
         schId = arguments?.getInt("SCH_ID") ?: -1
         val title = arguments?.getString("SCH_TITLE")
         val date = arguments?.getString("SCH_DATE")
         val loc = arguments?.getString("SCH_LOC")
         val desc = arguments?.getString("SCH_DESC")
-        val creator = arguments?.getString("SCH_CREATOR")
+        val creator = arguments?.getString("SCH_CREATOR") ?: "Unknown"
 
+        // 2. Bind Data to Views
         view.findViewById<TextView>(R.id.tvDetailTitle).text = title
         view.findViewById<TextView>(R.id.tvDetailDate).text = date
         view.findViewById<TextView>(R.id.tvDetailLoc).text = loc
         view.findViewById<TextView>(R.id.tvDetailDesc).text = desc
         view.findViewById<TextView>(R.id.tvDetailCreator).text = "Schedule by: $creator"
 
+        // 3. Layout References
         layoutButtons = view.findViewById(R.id.layoutRSVPButtons)
         layoutChangeMind = view.findViewById(R.id.layoutChangeMind)
         btnCurrentStatus = view.findViewById(R.id.btnCurrentStatus)
 
+        // 4. Get Current User
         val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
         currentUser = sharedPref.getString("username", "default_user") ?: "default_user"
 
-        // 1. Load Status
+        // 5. Initialize View State
         refreshStatusUI()
 
-        // 2. RSVP Actions
-        view.findViewById<Button>(R.id.btnAttend).setOnClickListener { setRSVP(1) }
-        view.findViewById<Button>(R.id.btnUnsure).setOnClickListener { setRSVP(2) }
-        view.findViewById<Button>(R.id.btnNotAttend).setOnClickListener { setRSVP(3) }
+        // 6. RSVP Button Actions with POPUP MODAL
+        view.findViewById<Button>(R.id.btnAttend).setOnClickListener {
+            updateStatusAndShowDialog(1, "You are now marked as ATTENDING this schedule.")
+        }
+        view.findViewById<Button>(R.id.btnUnsure).setOnClickListener {
+            updateStatusAndShowDialog(2, "Your status is set to UNSURE.")
+        }
+        view.findViewById<Button>(R.id.btnNotAttend).setOnClickListener {
+            updateStatusAndShowDialog(3, "You are marked as NOT ATTENDING.")
+        }
 
-        // 3. Change Mind Logic
+        // 7. "Change your mind?" Logic
         view.findViewById<TextView>(R.id.tvChangeMind).setOnClickListener {
             layoutChangeMind.visibility = View.GONE
             layoutButtons.visibility = View.VISIBLE
         }
 
-        // 4. View Attendees Logic
+        // 8. View Attendees Button Logic
         view.findViewById<Button>(R.id.btnViewAttendees).setOnClickListener {
             val fragment = AttendeeListFragment()
             val bundle = Bundle()
             bundle.putInt("SCH_ID", schId)
             bundle.putString("SCH_TITLE", title)
-            fragment.arguments = bundle
+            bundle.putString("SCH_CREATOR", creator)
 
+            fragment.arguments = bundle
             parentFragmentManager.beginTransaction()
                 .replace(R.id.fragmentContainer, fragment)
                 .addToBackStack(null)
                 .commit()
         }
 
+        // Back Button
         view.findViewById<ImageView>(R.id.btnBackDetail).setOnClickListener {
             parentFragmentManager.popBackStack()
         }
@@ -79,25 +92,48 @@ class ScheduleDetailFragment : Fragment() {
         return view
     }
 
-    private fun setRSVP(status: Int) {
+    private fun updateStatusAndShowDialog(status: Int, message: String) {
+        // 1. Update Database
         dbHelper.updateRSVP(schId, currentUser, status)
-        refreshStatusUI()
+
+        // 2. Show Modal
+        AlertDialog.Builder(requireContext())
+            .setTitle("Status Updated")
+            .setMessage(message)
+            .setPositiveButton("OK") { dialog, _ ->
+                dialog.dismiss()
+                // 3. Refresh UI to show the big button AFTER dialog confirms
+                refreshStatusUI()
+            }
+            .setCancelable(false)
+            .show()
     }
 
     private fun refreshStatusUI() {
         val status = dbHelper.getUserRSVPStatus(schId, currentUser)
 
         if (status == 0) {
+            // No vote yet -> Show 3 Buttons
             layoutButtons.visibility = View.VISIBLE
             layoutChangeMind.visibility = View.GONE
         } else {
+            // Voted -> Show Big Status Button
             layoutButtons.visibility = View.GONE
             layoutChangeMind.visibility = View.VISIBLE
 
             when (status) {
-                1 -> btnCurrentStatus.text = "I WILL ATTEND"
-                2 -> btnCurrentStatus.text = "UNSURE"
-                3 -> btnCurrentStatus.text = "I WILL NOT ATTEND"
+                1 -> {
+                    btnCurrentStatus.text = "I WILL ATTEND"
+                    btnCurrentStatus.background.setTint(android.graphics.Color.parseColor("#8B1A1A")) // Red
+                }
+                2 -> {
+                    btnCurrentStatus.text = "UNSURE"
+                    btnCurrentStatus.background.setTint(android.graphics.Color.parseColor("#F57C00")) // Orange
+                }
+                3 -> {
+                    btnCurrentStatus.text = "I WILL NOT ATTEND"
+                    btnCurrentStatus.background.setTint(android.graphics.Color.parseColor("#555555")) // Gray
+                }
             }
         }
     }

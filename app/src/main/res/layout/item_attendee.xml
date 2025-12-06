@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    app:cardCornerRadius="10dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="0dp"
     app:cardBackgroundColor="#D7C4C4"
     android:layout_marginBottom="10dp">
 
@@ -11,14 +12,15 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="15dp"
-        android:gravity="center_vertical">
+        android:gravity="center_vertical"
+        android:padding="15dp">
 
         <ImageView
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
             android:src="@android:drawable/ic_menu_myplaces"
-            app:tint="#555"/>
+            app:tint="#555"
+            android:layout_marginEnd="15dp"/>
 
         <TextView
             android:id="@+id/tvAttUser"
@@ -28,8 +30,7 @@
             android:text="Username"
             android:textStyle="bold"
             android:textColor="@color/app_red"
-            android:textSize="16sp"
-            android:layout_marginStart="10dp"/>
+            android:textSize="16sp"/>
 
         <TextView
             android:id="@+id/tvAttStatus"
@@ -37,7 +38,8 @@
             android:layout_height="wrap_content"
             android:text="STATUS"
             android:textStyle="bold"
-            android:textColor="@color/app_red"/>
+            android:textColor="@color/app_red"
+            android:textSize="14sp"/>
 
     </LinearLayout>
 </androidx.cardview.widget.CardView>
