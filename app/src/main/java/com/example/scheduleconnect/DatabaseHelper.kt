@@ -35,7 +35,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
 
     companion object {
         private const val DATABASE_NAME = "ScheduleConnect.db"
-        private const val DATABASE_VERSION = 12 // Incremented version for new table
+        private const val DATABASE_VERSION = 12
 
         // Table Names
         private const val TABLE_USERS = "users"
@@ -43,7 +43,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         private const val TABLE_GROUPS = "schedule_groups"
         private const val TABLE_MEMBERS = "group_members"
         private const val TABLE_RSVP = "rsvps"
-        private const val TABLE_NOTIFICATIONS = "notifications" // NEW
+        private const val TABLE_NOTIFICATIONS = "notifications"
 
         // Columns
         private const val COL_PROFILE_IMG = "profile_image"
@@ -66,7 +66,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         const val RSVP_USER = "username"
         const val RSVP_STATUS = "status"
 
-        // Notification Columns (NEW)
+        // Notification Columns
         private const val COL_NOTIF_ID = "notif_id"
         private const val COL_NOTIF_USER = "username"
         private const val COL_NOTIF_TITLE = "title"
@@ -80,8 +80,6 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         db?.execSQL("CREATE TABLE $TABLE_GROUPS (group_id INTEGER PRIMARY KEY AUTOINCREMENT, group_name TEXT, group_code TEXT, $COL_GROUP_IMG BLOB)")
         db?.execSQL("CREATE TABLE $TABLE_MEMBERS (member_id INTEGER PRIMARY KEY AUTOINCREMENT, group_id INTEGER, username TEXT)")
         db?.execSQL("CREATE TABLE $TABLE_RSVP ($RSVP_ID INTEGER PRIMARY KEY AUTOINCREMENT, $RSVP_SCH_ID INTEGER, $RSVP_USER TEXT, $RSVP_STATUS INTEGER)")
-
-        // NEW TABLE
         db?.execSQL("CREATE TABLE $TABLE_NOTIFICATIONS ($COL_NOTIF_ID INTEGER PRIMARY KEY AUTOINCREMENT, $COL_NOTIF_USER TEXT, $COL_NOTIF_TITLE TEXT, $COL_NOTIF_MSG TEXT, $COL_NOTIF_DATE TEXT)")
     }
 
@@ -89,8 +87,6 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         if (oldVersion < 9) try { db?.execSQL("ALTER TABLE $TABLE_USERS ADD COLUMN $COL_PROFILE_IMG BLOB") } catch (e: Exception) { }
         if (oldVersion < 10) try { db?.execSQL("ALTER TABLE $TABLE_SCHEDULES ADD COLUMN $SCH_IMAGE BLOB") } catch (e: Exception) { }
         if (oldVersion < 11) try { db?.execSQL("ALTER TABLE $TABLE_GROUPS ADD COLUMN $COL_GROUP_IMG BLOB") } catch (e: Exception) { }
-
-        // Create notification table if upgrading from older version
         if (oldVersion < 12) {
             try {
                 db?.execSQL("CREATE TABLE $TABLE_NOTIFICATIONS ($COL_NOTIF_ID INTEGER PRIMARY KEY AUTOINCREMENT, $COL_NOTIF_USER TEXT, $COL_NOTIF_TITLE TEXT, $COL_NOTIF_MSG TEXT, $COL_NOTIF_DATE TEXT)")
@@ -258,6 +254,21 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         return db.insert(TABLE_SCHEDULES, null, cv) != -1L
     }
 
+    // --- NEW: DELETE SCHEDULE ---
+    fun deleteSchedule(scheduleId: Int): Boolean {
+        val db = this.writableDatabase
+        try {
+            // Delete associated RSVPs first
+            db.delete(TABLE_RSVP, "$RSVP_SCH_ID = ?", arrayOf(scheduleId.toString()))
+            // Delete the schedule
+            val result = db.delete(TABLE_SCHEDULES, "$SCH_ID = ?", arrayOf(scheduleId.toString()))
+            return result > 0
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return false
+        }
+    }
+
     fun getSchedules(user: String, type: String): ArrayList<Schedule> {
         val list = ArrayList<Schedule>()
         val db = this.readableDatabase
@@ -407,7 +418,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         cursor.close(); return list
     }
 
-    // --- NEW NOTIFICATION METHODS ---
+    // --- NOTIFICATION METHODS ---
     fun addNotification(user: String, title: String, message: String, date: String): Boolean {
         val db = this.writableDatabase
         val cv = ContentValues()

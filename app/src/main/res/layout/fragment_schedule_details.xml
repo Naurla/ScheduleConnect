@@ -31,13 +31,26 @@
 
             <TextView
                 android:id="@+id/tvDetailTitle"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:text="Schedule Title"
                 android:textSize="22sp"
                 android:textStyle="bold"
                 android:textColor="@color/app_red"
                 android:layout_marginStart="15dp"/>
+
+            <ImageView
+                android:id="@+id/btnDeleteSchedule"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:src="@android:drawable/ic_menu_delete"
+                app:tint="@color/app_red"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
+                android:visibility="visible"
+                android:layout_marginStart="8dp"/>
         </LinearLayout>
 
         <LinearLayout

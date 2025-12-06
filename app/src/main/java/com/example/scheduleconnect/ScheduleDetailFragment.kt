@@ -12,6 +12,7 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 
 class ScheduleDetailFragment : Fragment() {
@@ -54,7 +55,7 @@ class ScheduleDetailFragment : Fragment() {
         // 5. Initialize View State
         refreshStatusUI()
 
-        // 6. RSVP Button Actions with CUSTOM MODAL
+        // 6. RSVP Button Actions
         view.findViewById<Button>(R.id.btnAttend).setOnClickListener {
             updateStatusAndShowDialog(1, "You are now marked as ATTENDING this schedule.")
         }
@@ -88,20 +89,27 @@ class ScheduleDetailFragment : Fragment() {
             parentFragmentManager.popBackStack()
         }
 
+        // --- UPDATED: DELETE BUTTON LOGIC (Top Right Icon) ---
+        // Changed type to ImageView
+        val btnDelete = view.findViewById<ImageView>(R.id.btnDeleteSchedule)
+
+        // Always visible for testing, or you can uncomment the restriction later
+        btnDelete.visibility = View.VISIBLE
+
+        btnDelete.setOnClickListener {
+            showDeleteConfirmation()
+        }
+
         return view
     }
 
     private fun updateStatusAndShowDialog(status: Int, message: String) {
-        // 1. Update Database
         dbHelper.updateRSVP(schId, currentUser, status)
-
-        // 2. Show Custom Modal
         showCustomModal("Status Updated", message) {
             refreshStatusUI()
         }
     }
 
-    // --- NEW: Helper Function for Custom Modal ---
     private fun showCustomModal(title: String, message: String, onOkClick: () -> Unit) {
         val builder = AlertDialog.Builder(requireContext())
         val inflater = LayoutInflater.from(context)
@@ -124,6 +132,33 @@ class ScheduleDetailFragment : Fragment() {
         }
 
         dialog.show()
+    }
+
+    private fun showDeleteConfirmation() {
+        val builder = AlertDialog.Builder(requireContext())
+        builder.setTitle("Delete Schedule")
+        builder.setMessage("Are you sure you want to delete this schedule? This action cannot be undone.")
+
+        builder.setPositiveButton("DELETE") { dialog, _ ->
+            val success = dbHelper.deleteSchedule(schId)
+            if (success) {
+                Toast.makeText(context, "Schedule Deleted Successfully", Toast.LENGTH_SHORT).show()
+                dialog.dismiss()
+                parentFragmentManager.popBackStack() // Go back to previous list
+            } else {
+                Toast.makeText(context, "Failed to delete schedule", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        builder.setNegativeButton("CANCEL") { dialog, _ ->
+            dialog.dismiss()
+        }
+
+        val dialog = builder.create()
+        dialog.show()
+
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Color.RED)
+        dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(Color.BLACK)
     }
 
     private fun refreshStatusUI() {
