@@ -19,11 +19,11 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
-// --- IMPORTS FOR WORK MANAGER ---
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import java.io.ByteArrayOutputStream
+import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -34,15 +34,15 @@ class AddScheduleFragment : Fragment() {
 
     private lateinit var dbHelper: DatabaseHelper
     private lateinit var etTitle: EditText
-    private lateinit var tvDate: TextView // Assuming you use EditText ID etSchDate as TextView or EditText in layout
+    private lateinit var tvDate: TextView
     private lateinit var etLocation: EditText
     private lateinit var etDescription: EditText
     private lateinit var btnAdd: Button
+
     private lateinit var ivScheduleImage: ImageView
-    private lateinit var btnSelectImage: Button // Ensure you have this button in XML if using this logic
+    private lateinit var btnSelectImage: Button
     private var selectedImageBitmap: Bitmap? = null
 
-    // Helper to get current user
     private val currentUser: String by lazy {
         requireActivity().getSharedPreferences("UserSession", android.content.Context.MODE_PRIVATE)
             .getString("username", "default_user") ?: "default_user"
@@ -53,11 +53,12 @@ class AddScheduleFragment : Fragment() {
             val imageUri: Uri? = result.data?.data
             if (imageUri != null) {
                 try {
-                    val inputStream = requireContext().contentResolver.openInputStream(imageUri)
-                    selectedImageBitmap = BitmapFactory.decodeStream(inputStream)
+                    // CRASH FIX: Use safe loading method instead of decoding directly
+                    selectedImageBitmap = getResizedBitmap(imageUri)
                     ivScheduleImage.setImageBitmap(selectedImageBitmap)
                 } catch (e: Exception) {
-                    Toast.makeText(requireContext(), "Error loading image", Toast.LENGTH_SHORT).show()
+                    e.printStackTrace()
+                    Toast.makeText(requireContext(), "Error loading image: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -67,16 +68,23 @@ class AddScheduleFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_add_schedule, container, false)
         dbHelper = DatabaseHelper(requireContext())
 
-        // Mapping to IDs in fragment_add_schedule.xml
         etTitle = view.findViewById(R.id.etSchName)
-        tvDate = view.findViewById(R.id.etSchDate) // Using EditText as clickable field
+        tvDate = view.findViewById(R.id.etSchDate)
         etLocation = view.findViewById(R.id.etSchLocation)
         etDescription = view.findViewById(R.id.etSchDesc)
         btnAdd = view.findViewById(R.id.btnAddSchedule)
 
-        // Note: You need to add these IDs to your XML if you want the image picker
-        // ivScheduleImage = view.findViewById(R.id.ivScheduleImage)
-        // btnSelectImage = view.findViewById(R.id.btnSelectImage)
+        ivScheduleImage = view.findViewById(R.id.ivScheduleImage)
+        btnSelectImage = view.findViewById(R.id.btnSelectImage)
+
+        btnSelectImage.setOnClickListener {
+            try {
+                val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+                imagePickerLauncher.launch(intent)
+            } catch (e: Exception) {
+                Toast.makeText(requireContext(), "Cannot open gallery", Toast.LENGTH_SHORT).show()
+            }
+        }
 
         tvDate.setOnClickListener { showDateTimeDialog() }
 
@@ -87,7 +95,6 @@ class AddScheduleFragment : Fragment() {
             val desc = etDescription.text.toString()
 
             if (title.isNotEmpty() && dateStr.isNotEmpty()) {
-
                 var imageBytes: ByteArray? = null
                 if (selectedImageBitmap != null) {
                     val stream = ByteArrayOutputStream()
@@ -95,31 +102,12 @@ class AddScheduleFragment : Fragment() {
                     imageBytes = stream.toByteArray()
                 }
 
-                // Add schedule
                 val success = dbHelper.addSchedule(currentUser, -1, title, dateStr, location, desc, "personal", imageBytes)
 
                 if (success) {
-                    // Notification Logic
-                    try {
-                        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-                        val scheduleTime = sdf.parse(dateStr)
-                        val currentTime = Date()
-                        if (scheduleTime != null) {
-                            val diff = scheduleTime.time - currentTime.time
-                            if (diff > 0) {
-                                val workRequest = OneTimeWorkRequestBuilder<NotificationWorker>()
-                                    .setInitialDelay(diff, TimeUnit.MILLISECONDS)
-                                    .setInputData(workDataOf("title" to title, "message" to "You have a schedule now!"))
-                                    .build()
-                                WorkManager.getInstance(requireContext()).enqueue(workRequest)
-                            }
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-
-                    Toast.makeText(requireContext(), "Schedule Added!", Toast.LENGTH_SHORT).show()
-                    parentFragmentManager.popBackStack()
+                    scheduleNotification(title, dateStr)
+                    Toast.makeText(requireContext(), "Schedule Added Successfully!", Toast.LENGTH_SHORT).show()
+                    clearInputFields()
                 } else {
                     Toast.makeText(requireContext(), "Failed to add schedule", Toast.LENGTH_SHORT).show()
                 }
@@ -131,12 +119,82 @@ class AddScheduleFragment : Fragment() {
         return view
     }
 
+    // --- CRITICAL CRASH FIX: RESIZE IMAGE BEFORE LOADING ---
+    private fun getResizedBitmap(uri: Uri): Bitmap? {
+        var inputStream: InputStream? = null
+        try {
+            // 1. First, decode only the dimensions (not the whole image)
+            val options = BitmapFactory.Options()
+            options.inJustDecodeBounds = true
+            inputStream = requireContext().contentResolver.openInputStream(uri)
+            BitmapFactory.decodeStream(inputStream, null, options)
+            inputStream?.close()
+
+            // 2. Calculate the reduction factor (inSampleSize)
+            // We want the image to be roughly 500x500 pixels max to save memory
+            val REQUIRED_SIZE = 500
+            var width_tmp = options.outWidth
+            var height_tmp = options.outHeight
+            var scale = 1
+            while (true) {
+                if (width_tmp / 2 < REQUIRED_SIZE || height_tmp / 2 < REQUIRED_SIZE) break
+                width_tmp /= 2
+                height_tmp /= 2
+                scale *= 2
+            }
+
+            // 3. Decode the actual image with the scale factor
+            val o2 = BitmapFactory.Options()
+            o2.inSampleSize = scale
+            inputStream = requireContext().contentResolver.openInputStream(uri)
+            val scaledBitmap = BitmapFactory.decodeStream(inputStream, null, o2)
+            inputStream?.close()
+            return scaledBitmap
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return null
+        } finally {
+            inputStream?.close()
+        }
+    }
+
+    private fun clearInputFields() {
+        etTitle.text.clear()
+        etLocation.text.clear()
+        etDescription.text.clear()
+        tvDate.text = ""
+        tvDate.hint = "Select Date and Time"
+        selectedImageBitmap = null
+        ivScheduleImage.setImageResource(android.R.drawable.ic_menu_gallery)
+    }
+
+    private fun scheduleNotification(title: String, dateStr: String) {
+        try {
+            val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+            val scheduleTime = sdf.parse(dateStr)
+            val currentTime = Date()
+            if (scheduleTime != null) {
+                val diff = scheduleTime.time - currentTime.time
+                if (diff > 0) {
+                    val workRequest = OneTimeWorkRequestBuilder<NotificationWorker>()
+                        .setInitialDelay(diff, TimeUnit.MILLISECONDS)
+                        .setInputData(workDataOf("title" to title, "message" to "You have a schedule now!"))
+                        .build()
+                    WorkManager.getInstance(requireContext()).enqueue(workRequest)
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     private fun showDateTimeDialog() {
         val calendar = Calendar.getInstance()
         DatePickerDialog(requireContext(), { _, year, month, day ->
             TimePickerDialog(requireContext(), { _, hour, minute ->
                 val formatted = String.format("%d-%02d-%02d %02d:%02d", year, month + 1, day, hour, minute)
-                tvDate.setText(formatted)
+                tvDate.text = formatted
             }, calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), true).show()
         }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
     }
