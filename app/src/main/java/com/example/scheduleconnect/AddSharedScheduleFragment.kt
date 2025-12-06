@@ -7,19 +7,19 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.EditText
-import android.widget.Toast
+import android.widget.*
 import androidx.fragment.app.Fragment
 import java.util.Calendar
 
-class AddScheduleFragment : Fragment() {
+class AddSharedScheduleFragment : Fragment() {
     private lateinit var dbHelper: DatabaseHelper
     private lateinit var etDate: EditText
+    private var groupId: Int = -1
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.fragment_add_schedule, container, false)
         dbHelper = DatabaseHelper(requireContext())
+        groupId = arguments?.getInt("GROUP_ID") ?: -1
 
         val etName = view.findViewById<EditText>(R.id.etSchName)
         etDate = view.findViewById<EditText>(R.id.etSchDate)
@@ -27,9 +27,10 @@ class AddScheduleFragment : Fragment() {
         val etDesc = view.findViewById<EditText>(R.id.etSchDesc)
         val btnAdd = view.findViewById<Button>(R.id.btnAddSchedule)
 
-        etDate.setOnClickListener {
-            showDateTimeDialog()
-        }
+        // Change text to match design
+        btnAdd.text = "ADD SHARED SCHEDULE"
+
+        etDate.setOnClickListener { showDateTimeDialog() }
 
         btnAdd.setOnClickListener {
             val name = etName.text.toString()
@@ -41,15 +42,11 @@ class AddScheduleFragment : Fragment() {
                 val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
                 val currentUser = sharedPref.getString("username", "default_user") ?: "default_user"
 
-                // FIX: Added '-1' as the second argument for groupId (Personal Schedule)
-                val success = dbHelper.addSchedule(currentUser, -1, name, date, loc, desc, "personal")
+                val success = dbHelper.addSchedule(currentUser, groupId, name, date, loc, desc, "shared")
 
                 if (success) {
-                    Toast.makeText(context, "Schedule Added!", Toast.LENGTH_SHORT).show()
-                    etName.text.clear()
-                    etDate.text.clear()
-                    etLoc.text.clear()
-                    etDesc.text.clear()
+                    Toast.makeText(context, "Shared Schedule Added!", Toast.LENGTH_SHORT).show()
+                    parentFragmentManager.popBackStack()
                 } else {
                     Toast.makeText(context, "Error adding schedule", Toast.LENGTH_SHORT).show()
                 }
@@ -70,10 +67,7 @@ class AddScheduleFragment : Fragment() {
 
         DatePickerDialog(requireContext(), { _, selectedYear, selectedMonth, selectedDay ->
             TimePickerDialog(requireContext(), { _, selectedHour, selectedMinute ->
-                val formattedDateTime = String.format(
-                    "%d-%02d-%02d %02d:%02d",
-                    selectedYear, selectedMonth + 1, selectedDay, selectedHour, selectedMinute
-                )
+                val formattedDateTime = String.format("%d-%02d-%02d %02d:%02d", selectedYear, selectedMonth + 1, selectedDay, selectedHour, selectedMinute)
                 etDate.setText(formattedDateTime)
             }, hour, minute, false).show()
         }, year, month, day).show()

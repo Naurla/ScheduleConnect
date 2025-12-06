@@ -2,282 +2,250 @@ package com.example.scheduleconnect
 
 import android.content.ContentValues
 import android.content.Context
-import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import java.util.ArrayList
-import java.util.UUID
 
-// Data class to hold schedule info
 data class Schedule(
     val id: Int,
+    val creator: String,
+    val groupId: Int,
     val title: String,
     val date: String,
     val location: String,
     val description: String,
-    val type: String,
-    val status: String, // "DONE" or "DID NOT ATTEND"
-    val creator: String // Field to store creator's name
+    val type: String
 )
+
+data class GroupInfo(val id: Int, val name: String, val code: String)
 
 class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     companion object {
         private const val DATABASE_NAME = "ScheduleConnect.db"
-        private const val DATABASE_VERSION = 6
+        private const val DATABASE_VERSION = 8
 
-        // --- Users Table ---
+        // Table Names
         private const val TABLE_USERS = "users"
-        const val COL_ID = "id"
-        const val COL_FIRST_NAME = "first_name"
-        const val COL_MIDDLE_NAME = "middle_name"
-        const val COL_LAST_NAME = "last_name"
-        const val COL_GENDER = "gender"
-        const val COL_DOB = "dob"
-        const val COL_EMAIL = "email"
-        const val COL_PHONE = "phone"
-        const val COL_USERNAME = "username"
-        const val COL_PASSWORD = "password"
-        const val COL_GROUP_CODE = "group_code"
-
-        // --- Schedules Table ---
         private const val TABLE_SCHEDULES = "schedules"
+        private const val TABLE_GROUPS = "schedule_groups"
+        private const val TABLE_MEMBERS = "group_members"
+        private const val TABLE_RSVP = "rsvps"
+
+        // Schedule Columns
         const val SCH_ID = "schedule_id"
         const val SCH_USERNAME = "username"
+        const val SCH_GROUP_ID = "group_id" // New: Links schedule to a group
         const val SCH_TITLE = "title"
         const val SCH_DATE = "date"
         const val SCH_LOCATION = "location"
         const val SCH_DESC = "description"
-        const val SCH_TYPE = "type" // "personal" or "shared"
-        const val SCH_STATUS = "status"
-        const val SCH_CREATOR = "creator"
+        const val SCH_TYPE = "type"
 
-        // --- Groups Table ---
-        private const val TABLE_GROUPS = "groups"
-        const val GRP_ID = "group_id"
-        const val GRP_NAME = "group_name"
-        const val GRP_CODE = "group_code"
-        const val GRP_CREATOR = "creator_username"
+        // RSVP Columns
+        const val RSVP_ID = "rsvp_id"
+        const val RSVP_SCH_ID = "schedule_id"
+        const val RSVP_USER = "username"
+        const val RSVP_STATUS = "status" // 1=Attend, 2=Unsure, 3=Not Attend
     }
 
     override fun onCreate(db: SQLiteDatabase?) {
-        // Create Users Table
-        val createUsers = ("CREATE TABLE " + TABLE_USERS + "("
-                + COL_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
-                + COL_FIRST_NAME + " TEXT,"
-                + COL_MIDDLE_NAME + " TEXT,"
-                + COL_LAST_NAME + " TEXT,"
-                + COL_GENDER + " TEXT,"
-                + COL_DOB + " TEXT,"
-                + COL_EMAIL + " TEXT,"
-                + COL_PHONE + " TEXT,"
-                + COL_USERNAME + " TEXT,"
-                + COL_PASSWORD + " TEXT,"
-                + COL_GROUP_CODE + " TEXT" + ")")
-        db?.execSQL(createUsers)
+        // Users Table
+        db?.execSQL("CREATE TABLE $TABLE_USERS (id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT, middle_name TEXT, last_name TEXT, gender TEXT, dob TEXT, email TEXT, phone TEXT, username TEXT, password TEXT)")
 
-        // Create Schedules Table
-        val createSchedules = ("CREATE TABLE " + TABLE_SCHEDULES + "("
-                + SCH_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
-                + SCH_USERNAME + " TEXT,"
-                + SCH_TITLE + " TEXT,"
-                + SCH_DATE + " TEXT,"
-                + SCH_LOCATION + " TEXT,"
-                + SCH_DESC + " TEXT,"
-                + SCH_TYPE + " TEXT,"
-                + SCH_STATUS + " TEXT DEFAULT 'DONE',"
-                + SCH_CREATOR + " TEXT" + ")")
-        db?.execSQL(createSchedules)
+        // Schedules Table (with group_id)
+        db?.execSQL("CREATE TABLE $TABLE_SCHEDULES ($SCH_ID INTEGER PRIMARY KEY AUTOINCREMENT, $SCH_USERNAME TEXT, $SCH_GROUP_ID INTEGER DEFAULT -1, $SCH_TITLE TEXT, $SCH_DATE TEXT, $SCH_LOCATION TEXT, $SCH_DESC TEXT, $SCH_TYPE TEXT)")
 
-        // Create Groups Table
-        val createGroups = ("CREATE TABLE " + TABLE_GROUPS + "("
-                + GRP_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
-                + GRP_NAME + " TEXT,"
-                + GRP_CODE + " TEXT UNIQUE,"
-                + GRP_CREATOR + " TEXT" + ")")
-        db?.execSQL(createGroups)
+        // Groups Table
+        db?.execSQL("CREATE TABLE $TABLE_GROUPS (group_id INTEGER PRIMARY KEY AUTOINCREMENT, group_name TEXT, group_code TEXT)")
+
+        // Members Table
+        db?.execSQL("CREATE TABLE $TABLE_MEMBERS (member_id INTEGER PRIMARY KEY AUTOINCREMENT, group_id INTEGER, username TEXT)")
+
+        // RSVP Table
+        db?.execSQL("CREATE TABLE $TABLE_RSVP ($RSVP_ID INTEGER PRIMARY KEY AUTOINCREMENT, $RSVP_SCH_ID INTEGER, $RSVP_USER TEXT, $RSVP_STATUS INTEGER)")
     }
 
     override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
-        if (oldVersion < 3) {
-            db?.execSQL("ALTER TABLE $TABLE_SCHEDULES ADD COLUMN $SCH_USERNAME TEXT DEFAULT 'unknown'")
-        }
-        if (oldVersion < 4) {
-            db?.execSQL("CREATE TABLE $TABLE_GROUPS ($GRP_ID INTEGER PRIMARY KEY AUTOINCREMENT, $GRP_NAME TEXT, $GRP_CODE TEXT UNIQUE, $GRP_CREATOR TEXT)")
-            try { db?.execSQL("ALTER TABLE $TABLE_USERS ADD COLUMN $COL_GROUP_CODE TEXT") } catch (e: Exception) { }
-        }
-        if (oldVersion < 5) {
-            try { db?.execSQL("ALTER TABLE $TABLE_SCHEDULES ADD COLUMN $SCH_STATUS TEXT DEFAULT 'DONE'") } catch (e: Exception) { }
-        }
-        if (oldVersion < 6) {
-            try { db?.execSQL("ALTER TABLE $TABLE_SCHEDULES ADD COLUMN $SCH_CREATOR TEXT") } catch (e: Exception) { }
-        }
+        // Reset database on upgrade to avoid conflicts during development
+        db?.execSQL("DROP TABLE IF EXISTS $TABLE_USERS")
+        db?.execSQL("DROP TABLE IF EXISTS $TABLE_SCHEDULES")
+        db?.execSQL("DROP TABLE IF EXISTS $TABLE_GROUPS")
+        db?.execSQL("DROP TABLE IF EXISTS $TABLE_MEMBERS")
+        db?.execSQL("DROP TABLE IF EXISTS $TABLE_RSVP")
+        onCreate(db)
     }
 
-    // ===========================
-    //      USER AUTH METHODS
-    // ===========================
-
+    // --- USER METHODS ---
     fun addUser(fName: String, mName: String, lName: String, gender: String, dob: String, email: String, phone: String, user: String, pass: String): Boolean {
         val db = this.writableDatabase
-        val contentValues = ContentValues()
-        contentValues.put(COL_FIRST_NAME, fName)
-        contentValues.put(COL_MIDDLE_NAME, mName)
-        contentValues.put(COL_LAST_NAME, lName)
-        contentValues.put(COL_GENDER, gender)
-        contentValues.put(COL_DOB, dob)
-        contentValues.put(COL_EMAIL, email)
-        contentValues.put(COL_PHONE, phone)
-        contentValues.put(COL_USERNAME, user)
-        contentValues.put(COL_PASSWORD, pass)
-
-        val result = db.insert(TABLE_USERS, null, contentValues)
-        return result != -1L
+        val cv = ContentValues()
+        cv.put("first_name", fName); cv.put("middle_name", mName); cv.put("last_name", lName)
+        cv.put("gender", gender); cv.put("dob", dob); cv.put("email", email)
+        cv.put("phone", phone); cv.put("username", user); cv.put("password", pass)
+        return db.insert(TABLE_USERS, null, cv) != -1L
     }
 
     fun checkUsernameOrEmail(input: String): Boolean {
         val db = this.readableDatabase
-        val selection = "$COL_USERNAME = ? OR $COL_EMAIL = ?"
-        val selectionArgs = arrayOf(input, input)
-        val cursor = db.query(TABLE_USERS, arrayOf(COL_ID), selection, selectionArgs, null, null, null)
-        val count = cursor.count
+        val cursor = db.rawQuery("SELECT * FROM $TABLE_USERS WHERE username = ? OR email = ?", arrayOf(input, input))
+        val exists = cursor.count > 0
         cursor.close()
-        return count > 0
+        return exists
     }
 
     fun checkUser(input: String, password: String): Boolean {
         val db = this.readableDatabase
-        val selection = "($COL_USERNAME = ? OR $COL_EMAIL = ?) AND $COL_PASSWORD = ?"
-        val selectionArgs = arrayOf(input, input, password)
-        val cursor = db.query(TABLE_USERS, arrayOf(COL_ID), selection, selectionArgs, null, null, null)
-        val count = cursor.count
+        val cursor = db.rawQuery("SELECT * FROM $TABLE_USERS WHERE (username = ? OR email = ?) AND password = ?", arrayOf(input, input, password))
+        val exists = cursor.count > 0
         cursor.close()
-        return count > 0
+        return exists
     }
 
-    // NEW: Get User's First Name
-    fun getUserName(username: String): String? {
-        val db = this.readableDatabase
-        val cursor = db.rawQuery("SELECT $COL_FIRST_NAME FROM $TABLE_USERS WHERE $COL_USERNAME = ?", arrayOf(username))
-        if (cursor.moveToFirst()) {
-            val name = cursor.getString(cursor.getColumnIndexOrThrow(COL_FIRST_NAME))
-            cursor.close()
-            return name
-        }
-        cursor.close()
-        return null
-    }
-
-    // ===========================
-    //      GROUP METHODS
-    // ===========================
-
-    fun getUserGroupCode(username: String): String? {
-        val db = this.readableDatabase
-        val cursor = db.rawQuery("SELECT $COL_GROUP_CODE FROM $TABLE_USERS WHERE $COL_USERNAME = ?", arrayOf(username))
-        if (cursor.moveToFirst()) {
-            val idx = cursor.getColumnIndex(COL_GROUP_CODE)
-            if (idx != -1) {
-                val code = cursor.getString(idx)
-                cursor.close()
-                return code
-            }
-        }
-        cursor.close()
-        return null
-    }
-
-    fun getGroupInfo(groupCode: String): Cursor? {
-        val db = this.readableDatabase
-        return db.rawQuery("SELECT * FROM $TABLE_GROUPS WHERE $GRP_CODE = ?", arrayOf(groupCode))
-    }
-
-    fun createGroup(groupName: String, creatorUser: String): String? {
-        val db = this.writableDatabase
-        val groupCode = UUID.randomUUID().toString().substring(0, 6).uppercase()
-        val cv = ContentValues()
-        cv.put(GRP_NAME, groupName)
-        cv.put(GRP_CODE, groupCode)
-        cv.put(GRP_CREATOR, creatorUser)
-        val result = db.insert(TABLE_GROUPS, null, cv)
-        if (result != -1L) {
-            updateUserGroup(creatorUser, groupCode)
-            return groupCode
-        }
-        return null
-    }
-
-    fun joinGroup(groupCode: String, username: String): Int {
-        val db = this.readableDatabase
-        val cursor = db.rawQuery("SELECT * FROM $TABLE_GROUPS WHERE $GRP_CODE = ?", arrayOf(groupCode))
-        val groupExists = cursor.count > 0
-        cursor.close()
-
-        if (!groupExists) return 1
-
-        val dbWrite = this.writableDatabase
-        val cv = ContentValues()
-        cv.put(COL_GROUP_CODE, groupCode)
-        val rows = dbWrite.update(TABLE_USERS, cv, "$COL_USERNAME = ?", arrayOf(username))
-        return if (rows > 0) 0 else 2
-    }
-
-    private fun updateUserGroup(username: String, groupCode: String): Boolean {
-        val db = this.writableDatabase
-        val cv = ContentValues()
-        cv.put(COL_GROUP_CODE, groupCode)
-        return db.update(TABLE_USERS, cv, "$COL_USERNAME = ?", arrayOf(username)) > 0
-    }
-
-    // ===========================
-    //      SCHEDULE METHODS
-    // ===========================
-
-    fun addSchedule(user: String, title: String, date: String, loc: String, desc: String, type: String, creator: String = ""): Boolean {
+    // --- SCHEDULE METHODS ---
+    // Added groupId parameter
+    fun addSchedule(user: String, groupId: Int, title: String, date: String, location: String, desc: String, type: String): Boolean {
         val db = this.writableDatabase
         val cv = ContentValues()
         cv.put(SCH_USERNAME, user)
+        cv.put(SCH_GROUP_ID, groupId)
         cv.put(SCH_TITLE, title)
         cv.put(SCH_DATE, date)
-        cv.put(SCH_LOCATION, loc)
+        cv.put(SCH_LOCATION, location)
         cv.put(SCH_DESC, desc)
         cv.put(SCH_TYPE, type)
-        cv.put(SCH_STATUS, "DONE")
-        cv.put(SCH_CREATOR, creator)
         return db.insert(TABLE_SCHEDULES, null, cv) != -1L
     }
 
-    // UPDATED: Fixed NullPointerException by handling null values safely
-    fun getSchedules(user: String, type: String? = null): ArrayList<Schedule> {
+    // Fetch Personal Schedules
+    fun getSchedules(user: String, type: String): ArrayList<Schedule> {
+        // Only returns personal schedules for HomeFragment
         val list = ArrayList<Schedule>()
         val db = this.readableDatabase
-        val query = if (type == null) "SELECT * FROM $TABLE_SCHEDULES WHERE $SCH_USERNAME = ?"
-        else "SELECT * FROM $TABLE_SCHEDULES WHERE $SCH_TYPE = ? AND $SCH_USERNAME = ?"
-        val args = if (type == null) arrayOf(user) else arrayOf(type, user)
-        val cursor = db.rawQuery(query, args)
+        val cursor = db.rawQuery("SELECT * FROM $TABLE_SCHEDULES WHERE $SCH_TYPE = ? AND $SCH_USERNAME = ?", arrayOf(type, user))
 
         if (cursor.moveToFirst()) {
             do {
-                // Safely retrieve strings, defaulting to empty string or "DONE" if null
-                val statusIdx = cursor.getColumnIndex(SCH_STATUS)
-                val status = if (statusIdx != -1) cursor.getString(statusIdx) ?: "DONE" else "DONE"
-
-                val creatorIdx = cursor.getColumnIndex(SCH_CREATOR)
-                val creator = if (creatorIdx != -1) cursor.getString(creatorIdx) ?: "" else ""
-
-                list.add(Schedule(
-                    cursor.getInt(cursor.getColumnIndexOrThrow(SCH_ID)),
-                    cursor.getString(cursor.getColumnIndexOrThrow(SCH_TITLE)),
-                    cursor.getString(cursor.getColumnIndexOrThrow(SCH_DATE)),
-                    cursor.getString(cursor.getColumnIndexOrThrow(SCH_LOCATION)),
-                    cursor.getString(cursor.getColumnIndexOrThrow(SCH_DESC)),
-                    cursor.getString(cursor.getColumnIndexOrThrow(SCH_TYPE)),
-                    status,
-                    creator
-                ))
+                val id = cursor.getInt(cursor.getColumnIndexOrThrow(SCH_ID))
+                val creator = cursor.getString(cursor.getColumnIndexOrThrow(SCH_USERNAME))
+                val gid = cursor.getInt(cursor.getColumnIndexOrThrow(SCH_GROUP_ID))
+                val title = cursor.getString(cursor.getColumnIndexOrThrow(SCH_TITLE))
+                val date = cursor.getString(cursor.getColumnIndexOrThrow(SCH_DATE))
+                val loc = cursor.getString(cursor.getColumnIndexOrThrow(SCH_LOCATION))
+                val desc = cursor.getString(cursor.getColumnIndexOrThrow(SCH_DESC))
+                list.add(Schedule(id, creator, gid, title, date, loc, desc, type))
             } while (cursor.moveToNext())
         }
         cursor.close()
         return list
+    }
+
+    // Fetch Schedules for a specific Group
+    fun getGroupSchedules(groupId: Int): ArrayList<Schedule> {
+        val list = ArrayList<Schedule>()
+        val db = this.readableDatabase
+        val cursor = db.rawQuery("SELECT * FROM $TABLE_SCHEDULES WHERE $SCH_GROUP_ID = ?", arrayOf(groupId.toString()))
+
+        if (cursor.moveToFirst()) {
+            do {
+                val id = cursor.getInt(cursor.getColumnIndexOrThrow(SCH_ID))
+                val creator = cursor.getString(cursor.getColumnIndexOrThrow(SCH_USERNAME))
+                val gid = cursor.getInt(cursor.getColumnIndexOrThrow(SCH_GROUP_ID))
+                val title = cursor.getString(cursor.getColumnIndexOrThrow(SCH_TITLE))
+                val date = cursor.getString(cursor.getColumnIndexOrThrow(SCH_DATE))
+                val loc = cursor.getString(cursor.getColumnIndexOrThrow(SCH_LOCATION))
+                val desc = cursor.getString(cursor.getColumnIndexOrThrow(SCH_DESC))
+                val type = cursor.getString(cursor.getColumnIndexOrThrow(SCH_TYPE))
+                list.add(Schedule(id, creator, gid, title, date, loc, desc, type))
+            } while (cursor.moveToNext())
+        }
+        cursor.close()
+        return list
+    }
+
+    // --- GROUP METHODS ---
+    fun createGroup(name: String, code: String, creator: String): Boolean {
+        val db = this.writableDatabase
+        val cv = ContentValues()
+        cv.put("group_name", name)
+        cv.put("group_code", code)
+        val groupId = db.insert(TABLE_GROUPS, null, cv)
+
+        if (groupId != -1L) {
+            val memberCv = ContentValues()
+            memberCv.put("group_id", groupId)
+            memberCv.put("username", creator)
+            db.insert(TABLE_MEMBERS, null, memberCv)
+            return true
+        }
+        return false
+    }
+
+    fun joinGroup(user: String, code: String): Boolean {
+        val db = this.writableDatabase
+        val cursor = db.rawQuery("SELECT group_id FROM $TABLE_GROUPS WHERE group_code = ?", arrayOf(code))
+        if (cursor.moveToFirst()) {
+            val groupId = cursor.getInt(0)
+            cursor.close()
+
+            val checkCursor = db.rawQuery("SELECT * FROM $TABLE_MEMBERS WHERE group_id = ? AND username = ?", arrayOf(groupId.toString(), user))
+            if (checkCursor.count > 0) {
+                checkCursor.close()
+                return false
+            }
+            checkCursor.close()
+
+            val cv = ContentValues()
+            cv.put("group_id", groupId)
+            cv.put("username", user)
+            return db.insert(TABLE_MEMBERS, null, cv) != -1L
+        }
+        cursor.close()
+        return false
+    }
+
+    fun getUserGroups(user: String): ArrayList<GroupInfo> {
+        val list = ArrayList<GroupInfo>()
+        val db = this.readableDatabase
+        val query = "SELECT g.group_id, g.group_name, g.group_code FROM $TABLE_GROUPS g INNER JOIN $TABLE_MEMBERS m ON g.group_id = m.group_id WHERE m.username = ?"
+        val cursor = db.rawQuery(query, arrayOf(user))
+        if (cursor.moveToFirst()) {
+            do {
+                list.add(GroupInfo(cursor.getInt(0), cursor.getString(1), cursor.getString(2)))
+            } while (cursor.moveToNext())
+        }
+        cursor.close()
+        return list
+    }
+
+    fun getGroupMembers(groupId: Int): ArrayList<String> {
+        val list = ArrayList<String>()
+        val db = this.readableDatabase
+        val cursor = db.rawQuery("SELECT username FROM $TABLE_MEMBERS WHERE group_id = ?", arrayOf(groupId.toString()))
+        if (cursor.moveToFirst()) {
+            do {
+                list.add(cursor.getString(0))
+            } while (cursor.moveToNext())
+        }
+        cursor.close()
+        return list
+    }
+
+    // --- RSVP METHODS ---
+    fun updateRSVP(scheduleId: Int, user: String, status: Int) {
+        val db = this.writableDatabase
+        val cursor = db.rawQuery("SELECT $RSVP_ID FROM $TABLE_RSVP WHERE $RSVP_SCH_ID = ? AND $RSVP_USER = ?", arrayOf(scheduleId.toString(), user))
+
+        val cv = ContentValues()
+        cv.put(RSVP_SCH_ID, scheduleId)
+        cv.put(RSVP_USER, user)
+        cv.put(RSVP_STATUS, status)
+
+        if (cursor.moveToFirst()) {
+            db.update(TABLE_RSVP, cv, "$RSVP_SCH_ID = ? AND $RSVP_USER = ?", arrayOf(scheduleId.toString(), user))
+        } else {
+            db.insert(TABLE_RSVP, null, cv)
+        }
+        cursor.close()
     }
 }

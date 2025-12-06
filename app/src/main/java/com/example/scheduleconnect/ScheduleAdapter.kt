@@ -1,5 +1,6 @@
 package com.example.scheduleconnect
 
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -8,11 +9,17 @@ import androidx.recyclerview.widget.RecyclerView
 
 class ScheduleAdapter(private val list: ArrayList<Schedule>) : RecyclerView.Adapter<ScheduleAdapter.ViewHolder>() {
 
+    private var listener: ((Schedule) -> Unit)? = null
+
+    fun setOnItemClickListener(listener: (Schedule) -> Unit) {
+        this.listener = listener
+    }
+
     class ViewHolder(v: View) : RecyclerView.ViewHolder(v) {
         val title: TextView = v.findViewById(R.id.tvScheduleTitle)
         val date: TextView = v.findViewById(R.id.tvScheduleDate)
-        val location: TextView = v.findViewById(R.id.tvScheduleLocation)
-        val creator: TextView = v.findViewById(R.id.tvScheduleCreator) // New View
+        val loc: TextView = v.findViewById(R.id.tvScheduleLocation)
+        val creator: TextView = v.findViewById(R.id.tvScheduleCreator)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -24,14 +31,19 @@ class ScheduleAdapter(private val list: ArrayList<Schedule>) : RecyclerView.Adap
         val item = list[position]
         holder.title.text = item.title
         holder.date.text = item.date
-        holder.location.text = item.location
+        holder.loc.text = item.location
 
-        // Show creator only for shared schedules
-        if (item.type == "shared" && item.creator.isNotEmpty()) {
+        if (item.type == "shared") {
+            holder.creator.text = "By: ${item.creator}"
             holder.creator.visibility = View.VISIBLE
-            holder.creator.text = "Created by: ${item.creator}"
+            holder.title.setTextColor(Color.parseColor("#8B1A1A"))
         } else {
             holder.creator.visibility = View.GONE
+            holder.title.setTextColor(Color.BLACK)
+        }
+
+        holder.itemView.setOnClickListener {
+            listener?.invoke(item)
         }
     }
 
