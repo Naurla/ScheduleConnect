@@ -1,107 +1,137 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:gravity="center_horizontal"
-    android:background="#E0E0E0"
-    android:padding="20dp">
+    android:background="#F5F5F5">
 
-    <ImageView
-        android:id="@+id/ivSettingsProfile"
+    <View
+        android:id="@+id/viewSettingsHeader"
+        android:layout_width="match_parent"
+        android:layout_height="150dp"
+        android:background="#8B1A1A" />
+
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardProfileSettings"
         android:layout_width="100dp"
         android:layout_height="100dp"
-        android:src="@android:drawable/sym_def_app_icon"
-        android:background="@drawable/circle_background"
-        android:padding="15dp"
-        app:tint="#8B1A1A"
-        xmlns:app="http://schemas.android.com/apk/res-auto"
-        android:layout_marginTop="20dp"/>
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="100dp"
+        app:cardCornerRadius="50dp"
+        app:cardElevation="6dp"
+        app:cardBackgroundColor="#FFFFFF">
 
-    <TextView
-        android:id="@+id/tvSettingsUsername"
-        android:layout_width="wrap_content"
+        <ImageView
+            android:id="@+id/ivSettingsProfile"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:src="@android:drawable/sym_def_app_icon"
+            android:scaleType="centerCrop"
+            android:padding="2dp"
+            app:tint="#8B1A1A"/>
+
+    </androidx.cardview.widget.CardView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="USERNAME"
-        android:textColor="#B71C1C"
-        android:textStyle="bold"
-        android:textSize="18sp"
-        android:layout_marginTop="10dp"
-        android:layout_marginBottom="30dp"
-        android:textAllCaps="true"/>
+        android:layout_below="@id/cardProfileSettings"
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:paddingHorizontal="20dp"
+        android:paddingBottom="20dp">
 
-    <Button
-        android:id="@+id/btnAccount"
-        android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:text="Account"
-        android:backgroundTint="#C4B4B4"
-        android:textColor="#8B1A1A"
-        android:textStyle="bold"
-        android:textSize="18sp"
-        android:drawableStart="@android:drawable/ic_menu_myplaces"
-        android:drawableTint="#8B1A1A"
-        android:paddingStart="30dp"
-        android:gravity="center"
-        android:layout_marginBottom="15dp"/>
+        <TextView
+            android:id="@+id/tvSettingsUsername"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="USERNAME"
+            android:textColor="#B71C1C"
+            android:textStyle="bold"
+            android:textSize="20sp"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="24dp"
+            android:textAllCaps="true"/>
 
-    <Button
-        android:id="@+id/btnSecurity"
-        android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:text="SECURITY"
-        android:backgroundTint="#C4B4B4"
-        android:textColor="#8B1A1A"
-        android:textStyle="bold"
-        android:textSize="18sp"
-        android:drawableStart="@android:drawable/ic_secure"
-        android:drawableTint="#8B1A1A"
-        android:paddingStart="30dp"
-        android:gravity="center"
-        android:layout_marginBottom="15dp"/>
+        <Button
+            android:id="@+id/btnAccount"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="ACCOUNT"
+            android:backgroundTint="#C4B4B4"
+            android:textColor="#8B1A1A"
+            android:textStyle="bold"
+            android:textSize="18sp"
+            android:textAllCaps="true"
+            android:drawableStart="@android:drawable/ic_menu_myplaces"
+            android:drawableTint="#8B1A1A"
+            android:paddingHorizontal="20dp"
+            android:gravity="center"
+            android:layout_marginBottom="15dp"/>
 
-    <Button
-        android:id="@+id/btnNotifications"
-        android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:text="NOTIFICATIONS"
-        android:backgroundTint="#C4B4B4"
-        android:textColor="#8B1A1A"
-        android:textStyle="bold"
-        android:textSize="18sp"
-        android:drawableStart="@android:drawable/ic_popup_reminder"
-        android:drawableTint="#8B1A1A"
-        android:paddingStart="30dp"
-        android:gravity="center"
-        android:layout_marginBottom="15dp"/>
+        <Button
+            android:id="@+id/btnSecurity"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="SECURITY"
+            android:backgroundTint="#C4B4B4"
+            android:textColor="#8B1A1A"
+            android:textStyle="bold"
+            android:textSize="18sp"
+            android:textAllCaps="true"
+            android:drawableStart="@android:drawable/ic_secure"
+            android:drawableTint="#8B1A1A"
+            android:paddingHorizontal="20dp"
+            android:gravity="center"
+            android:layout_marginBottom="15dp"/>
 
-    <Button
-        android:id="@+id/btnLanguage"
-        android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:text="LANGUAGE"
-        android:backgroundTint="#C4B4B4"
-        android:textColor="#8B1A1A"
-        android:textStyle="bold"
-        android:textSize="18sp"
-        android:drawableStart="@android:drawable/ic_menu_mapmode"
-        android:drawableTint="#8B1A1A"
-        android:paddingStart="30dp"
-        android:gravity="center"
-        android:layout_marginBottom="15dp"/>
+        <Button
+            android:id="@+id/btnNotifications"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="NOTIFICATIONS"
+            android:backgroundTint="#C4B4B4"
+            android:textColor="#8B1A1A"
+            android:textStyle="bold"
+            android:textSize="18sp"
+            android:textAllCaps="true"
+            android:drawableStart="@android:drawable/ic_popup_reminder"
+            android:drawableTint="#8B1A1A"
+            android:paddingHorizontal="20dp"
+            android:gravity="center"
+            android:layout_marginBottom="15dp"/>
 
-    <Button
-        android:id="@+id/btnLogout"
-        android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:text="LOGOUT"
-        android:backgroundTint="#C4B4B4"
-        android:textColor="#8B1A1A"
-        android:textStyle="bold"
-        android:textSize="18sp"
-        android:drawableStart="@android:drawable/ic_lock_power_off"
-        android:drawableTint="#8B1A1A"
-        android:paddingStart="30dp"
-        android:gravity="center"/>
+        <Button
+            android:id="@+id/btnLanguage"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="LANGUAGE"
+            android:backgroundTint="#C4B4B4"
+            android:textColor="#8B1A1A"
+            android:textStyle="bold"
+            android:textSize="18sp"
+            android:textAllCaps="true"
+            android:drawableStart="@android:drawable/ic_menu_mapmode"
+            android:drawableTint="#8B1A1A"
+            android:paddingHorizontal="20dp"
+            android:gravity="center"
+            android:layout_marginBottom="15dp"/>
 
-</LinearLayout>
+        <Button
+            android:id="@+id/btnLogout"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="LOGOUT"
+            android:backgroundTint="#C4B4B4"
+            android:textColor="#8B1A1A"
+            android:textStyle="bold"
+            android:textSize="18sp"
+            android:textAllCaps="true"
+            android:drawableStart="@android:drawable/ic_lock_power_off"
+            android:drawableTint="#8B1A1A"
+            android:paddingHorizontal="20dp"
+            android:gravity="center"/>
+
+    </LinearLayout>
+
+</RelativeLayout>

@@ -1,6 +1,9 @@
 package com.example.scheduleconnect
 
+import android.app.AlertDialog
 import android.content.Context
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -9,7 +12,6 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 
 class ScheduleDetailFragment : Fragment() {
@@ -52,7 +54,7 @@ class ScheduleDetailFragment : Fragment() {
         // 5. Initialize View State
         refreshStatusUI()
 
-        // 6. RSVP Button Actions with POPUP MODAL
+        // 6. RSVP Button Actions with CUSTOM MODAL
         view.findViewById<Button>(R.id.btnAttend).setOnClickListener {
             updateStatusAndShowDialog(1, "You are now marked as ATTENDING this schedule.")
         }
@@ -63,13 +65,11 @@ class ScheduleDetailFragment : Fragment() {
             updateStatusAndShowDialog(3, "You are marked as NOT ATTENDING.")
         }
 
-        // 7. "Change your mind?" Logic
         view.findViewById<TextView>(R.id.tvChangeMind).setOnClickListener {
             layoutChangeMind.visibility = View.GONE
             layoutButtons.visibility = View.VISIBLE
         }
 
-        // 8. View Attendees Button Logic
         view.findViewById<Button>(R.id.btnViewAttendees).setOnClickListener {
             val fragment = AttendeeListFragment()
             val bundle = Bundle()
@@ -84,7 +84,6 @@ class ScheduleDetailFragment : Fragment() {
                 .commit()
         }
 
-        // Back Button
         view.findViewById<ImageView>(R.id.btnBackDetail).setOnClickListener {
             parentFragmentManager.popBackStack()
         }
@@ -96,43 +95,59 @@ class ScheduleDetailFragment : Fragment() {
         // 1. Update Database
         dbHelper.updateRSVP(schId, currentUser, status)
 
-        // 2. Show Modal
-        AlertDialog.Builder(requireContext())
-            .setTitle("Status Updated")
-            .setMessage(message)
-            .setPositiveButton("OK") { dialog, _ ->
-                dialog.dismiss()
-                // 3. Refresh UI to show the big button AFTER dialog confirms
-                refreshStatusUI()
-            }
-            .setCancelable(false)
-            .show()
+        // 2. Show Custom Modal
+        showCustomModal("Status Updated", message) {
+            refreshStatusUI()
+        }
+    }
+
+    // --- NEW: Helper Function for Custom Modal ---
+    private fun showCustomModal(title: String, message: String, onOkClick: () -> Unit) {
+        val builder = AlertDialog.Builder(requireContext())
+        val inflater = LayoutInflater.from(context)
+        val view = inflater.inflate(R.layout.dialog_custom_modal, null)
+
+        builder.setView(view)
+        val dialog = builder.create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+        val tvTitle = view.findViewById<TextView>(R.id.tvDialogTitle)
+        val tvMessage = view.findViewById<TextView>(R.id.tvDialogMessage)
+        val btnOk = view.findViewById<Button>(R.id.btnDialogOk)
+
+        tvTitle.text = title
+        tvMessage.text = message
+
+        btnOk.setOnClickListener {
+            dialog.dismiss()
+            onOkClick()
+        }
+
+        dialog.show()
     }
 
     private fun refreshStatusUI() {
         val status = dbHelper.getUserRSVPStatus(schId, currentUser)
 
         if (status == 0) {
-            // No vote yet -> Show 3 Buttons
             layoutButtons.visibility = View.VISIBLE
             layoutChangeMind.visibility = View.GONE
         } else {
-            // Voted -> Show Big Status Button
             layoutButtons.visibility = View.GONE
             layoutChangeMind.visibility = View.VISIBLE
 
             when (status) {
                 1 -> {
                     btnCurrentStatus.text = "I WILL ATTEND"
-                    btnCurrentStatus.background.setTint(android.graphics.Color.parseColor("#8B1A1A")) // Red
+                    btnCurrentStatus.background.setTint(Color.parseColor("#8B1A1A"))
                 }
                 2 -> {
                     btnCurrentStatus.text = "UNSURE"
-                    btnCurrentStatus.background.setTint(android.graphics.Color.parseColor("#F57C00")) // Orange
+                    btnCurrentStatus.background.setTint(Color.parseColor("#F57C00"))
                 }
                 3 -> {
                     btnCurrentStatus.text = "I WILL NOT ATTEND"
-                    btnCurrentStatus.background.setTint(android.graphics.Color.parseColor("#555555")) // Gray
+                    btnCurrentStatus.background.setTint(Color.parseColor("#555555"))
                 }
             }
         }

@@ -40,13 +40,11 @@
 
         <activity
             android:name=".HomeActivity"
-            android:exported="false"
-            android:hardwareAccelerated="false" />
+            android:exported="false" />
 
         <activity
             android:name=".ProfileSetupActivity"
-            android:exported="false"
-            android:hardwareAccelerated="false" />
+            android:exported="false" />
 
     </application>
 

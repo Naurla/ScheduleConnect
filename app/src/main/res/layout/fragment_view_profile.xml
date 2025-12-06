@@ -1,106 +1,92 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="#E0E0E0">
+    android:background="#F5F5F5">
+
+    <View
+        android:id="@+id/viewHeader"
+        android:layout_width="match_parent"
+        android:layout_height="180dp"
+        android:background="#8B1A1A" />
+
+    <ImageView
+        android:id="@+id/btnBackProfile"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_margin="16dp"
+        android:padding="8dp"
+        android:src="@android:drawable/ic_menu_revert"
+        app:tint="#FFFFFF"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:clickable="true"
+        android:focusable="true"/>
+
+    <com.google.android.material.imageview.ShapeableImageView
+        android:id="@+id/ivProfileImage"
+        android:layout_width="160dp"
+        android:layout_height="160dp"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="100dp"
+        android:scaleType="centerCrop"
+        android:src="@android:color/darker_gray"
+        android:padding="0dp"
+        app:strokeColor="#FFFFFF"
+        app:strokeWidth="5dp"
+        app:shapeAppearanceOverlay="@style/CircleImageStyle" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="15dp">
-        <ImageView
-            android:id="@+id/btnBackProfile"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            android:src="@android:drawable/ic_menu_revert"
-            app:tint="#8B1A1A"/>
-    </LinearLayout>
-
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="300dp"
-        android:layout_margin="10dp">
-
-        <ImageView
-            android:id="@+id/ivProfileImage"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:src="@drawable/ic_launcher_background"
-            android:scaleType="centerCrop"
-            android:background="#888"/>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="#40000000"/>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_gravity="bottom"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:paddingBottom="20dp">
-
-            <TextView
-                android:id="@+id/tvProfileFullName"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="FIRST NAME LAST NAME"
-                android:textColor="#8B1A1A"
-                android:background="#AAFFFFFF"
-                android:paddingHorizontal="20dp"
-                android:paddingVertical="5dp"
-                android:textStyle="bold"
-                android:textSize="18sp"
-                android:layout_marginBottom="10dp"/>
-
-            <TextView
-                android:id="@+id/tvProfileUsername"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="USERNAME"
-                android:textColor="#8B1A1A"
-                android:background="#AAFFFFFF"
-                android:paddingHorizontal="30dp"
-                android:paddingVertical="5dp"
-                android:textStyle="bold"/>
-        </LinearLayout>
-    </FrameLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_below="@id/ivProfileImage"
         android:orientation="vertical"
-        android:padding="20dp">
+        android:gravity="center"
+        android:paddingTop="16dp">
+
+        <TextView
+            android:id="@+id/tvProfileFullName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="FIRST NAME LAST NAME"
+            android:textColor="#333333"
+            android:textStyle="bold"
+            android:textSize="22sp"
+            android:textAllCaps="true"
+            android:layout_marginBottom="4dp"/>
+
+        <TextView
+            android:id="@+id/tvProfileUsername"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@username"
+            android:textColor="#8B1A1A"
+            android:textSize="16sp"
+            android:layout_marginBottom="30dp"/>
 
         <Button
             android:id="@+id/btnChangePhoto"
             android:layout_width="match_parent"
             android:layout_height="60dp"
+            android:layout_marginHorizontal="30dp"
             android:text="CHANGE PROFILE PHOTO"
-            android:backgroundTint="#C4B4B4"
+            android:backgroundTint="#FFFFFF"
             android:textColor="#8B1A1A"
             android:textStyle="bold"
-            android:drawableStart="@android:drawable/ic_menu_camera"
-            android:drawableTint="#8B1A1A"
-            android:paddingStart="30dp"
-            android:gravity="center"
+            android:elevation="4dp"
             android:layout_marginBottom="15dp"/>
 
         <Button
             android:id="@+id/btnChangeUsername"
             android:layout_width="match_parent"
             android:layout_height="60dp"
+            android:layout_marginHorizontal="30dp"
             android:text="CHANGE USERNAME"
-            android:backgroundTint="#C4B4B4"
+            android:backgroundTint="#FFFFFF"
             android:textColor="#8B1A1A"
             android:textStyle="bold"
-            android:drawableStart="@android:drawable/ic_menu_myplaces"
-            android:drawableTint="#8B1A1A"
-            android:paddingStart="30dp"
-            android:gravity="center"/>
+            android:elevation="4dp"/>
+
     </LinearLayout>
-</LinearLayout>
+
+</RelativeLayout>

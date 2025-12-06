@@ -14,27 +14,18 @@ import androidx.fragment.app.Fragment
 class SettingsFragment : Fragment() {
 
     private lateinit var dbHelper: DatabaseHelper
+    private lateinit var ivProfile: ImageView
+    private lateinit var tvUsername: TextView
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.fragment_settings, container, false)
         dbHelper = DatabaseHelper(requireContext())
 
-        // 1. Get User Session
-        val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
-        val username = sharedPref.getString("username", "User") ?: "User"
+        // 1. Initialize Views
+        tvUsername = view.findViewById(R.id.tvSettingsUsername)
+        ivProfile = view.findViewById(R.id.ivSettingsProfile)
 
-        // 2. Setup Profile Header (Name & Image)
-        val tvUsername = view.findViewById<TextView>(R.id.tvSettingsUsername)
-        val ivProfile = view.findViewById<ImageView>(R.id.ivSettingsProfile)
-
-        tvUsername.text = username
-
-        val profileBitmap = dbHelper.getProfilePicture(username)
-        if (profileBitmap != null) {
-            ivProfile.setImageBitmap(profileBitmap)
-        }
-
-        // 3. Navigation Buttons
+        // 2. Navigation Buttons
         view.findViewById<Button>(R.id.btnAccount).setOnClickListener {
             replaceFragment(ViewProfileFragment())
         }
@@ -51,8 +42,9 @@ class SettingsFragment : Fragment() {
             replaceFragment(LanguageFragment())
         }
 
-        // 4. Logout Logic
+        // 3. Logout Logic
         view.findViewById<Button>(R.id.btnLogout).setOnClickListener {
+            val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
             val editor = sharedPref.edit()
             editor.clear()
             editor.apply()
@@ -64,6 +56,31 @@ class SettingsFragment : Fragment() {
         }
 
         return view
+    }
+
+    // --- FIX: Refresh Data every time the Fragment appears ---
+    override fun onResume() {
+        super.onResume()
+        loadUserData()
+    }
+
+    private fun loadUserData() {
+        val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
+        val username = sharedPref.getString("username", "User") ?: "User"
+
+        // Set Username
+        tvUsername.text = username
+
+        // Set Profile Image
+        val profileBitmap = dbHelper.getProfilePicture(username)
+        if (profileBitmap != null) {
+            ivProfile.setImageBitmap(profileBitmap)
+            ivProfile.imageTintList = null // Remove tint if user has a custom photo
+            ivProfile.scaleType = ImageView.ScaleType.CENTER_CROP
+        } else {
+            // Reset to default if no image
+            ivProfile.setImageResource(android.R.drawable.sym_def_app_icon)
+        }
     }
 
     private fun replaceFragment(fragment: Fragment) {
