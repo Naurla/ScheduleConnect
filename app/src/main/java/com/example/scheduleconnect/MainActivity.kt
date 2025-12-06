@@ -16,22 +16,18 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Initialize Database Helper
         dbHelper = DatabaseHelper(this)
 
-        // Initialize Views
         val etUsername = findViewById<EditText>(R.id.etUsername)
         val etPassword = findViewById<EditText>(R.id.etPassword)
         val btnLogin = findViewById<Button>(R.id.btnLogin)
         val tvSignUp = findViewById<TextView>(R.id.tvSignUp)
 
-        // 1. Handle Sign Up Click
         tvSignUp.setOnClickListener {
             val intent = Intent(this, SignupActivity::class.java)
             startActivity(intent)
         }
 
-        // 2. Handle Login Click
         btnLogin.setOnClickListener {
             val input = etUsername.text.toString()
             val password = etPassword.text.toString()
@@ -47,12 +43,23 @@ class MainActivity : AppCompatActivity() {
                     if (checkCredentials) {
                         Toast.makeText(this, "Login Successful!", Toast.LENGTH_SHORT).show()
 
-                        val intent = Intent(this, HomeActivity::class.java)
-                        // UPDATED: Pass the username to the HomeActivity
-                        intent.putExtra("CURRENT_USER", input)
+                        // --- UPDATED LOGIC START ---
+                        val hasPic = dbHelper.hasProfilePicture(input)
 
-                        startActivity(intent)
+                        if (hasPic) {
+                            // Proceed to Home directly
+                            val intent = Intent(this, HomeActivity::class.java)
+                            intent.putExtra("CURRENT_USER", input)
+                            startActivity(intent)
+                        } else {
+                            // Redirect to Profile Setup
+                            val intent = Intent(this, ProfileSetupActivity::class.java)
+                            intent.putExtra("CURRENT_USER", input)
+                            startActivity(intent)
+                        }
                         finish()
+                        // --- UPDATED LOGIC END ---
+
                     } else {
                         Toast.makeText(this, "Incorrect Password", Toast.LENGTH_SHORT).show()
                     }
