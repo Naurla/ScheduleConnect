@@ -44,28 +44,35 @@ class HomeFragment : Fragment() {
             loadSchedules()
         }
 
-        loadSchedules() // Load default
+        // Initialize styles and load data
+        updateTabStyles()
+        loadSchedules()
+
         return view
     }
 
     private fun updateTabStyles() {
         if (isPersonal) {
-            tabPersonal.setTextColor(resources.getColor(R.color.black, null))
-            tabShared.setTextColor(resources.getColor(R.color.app_red, null))
-        } else {
+            // Case: "YOUR SCHEDULES" is Active
+            // Set Personal to RED (Active)
             tabPersonal.setTextColor(resources.getColor(R.color.app_red, null))
+            // Set Shared to BLACK (Inactive)
             tabShared.setTextColor(resources.getColor(R.color.black, null))
+        } else {
+            // Case: "SHARED SCHEDULES" is Active
+            // Set Personal to BLACK (Inactive)
+            tabPersonal.setTextColor(resources.getColor(R.color.black, null))
+            // Set Shared to RED (Active)
+            tabShared.setTextColor(resources.getColor(R.color.app_red, null))
         }
     }
 
     private fun loadSchedules() {
         val type = if (isPersonal) "personal" else "shared"
 
-        // UPDATED: Get current user from SharedPreferences
         val sharedPref = requireActivity().getSharedPreferences("UserSession", android.content.Context.MODE_PRIVATE)
         val currentUser = sharedPref.getString("username", "default_user") ?: "default_user"
 
-        // UPDATED: Pass currentUser to getSchedules
         val list = dbHelper.getSchedules(currentUser, type)
 
         if (list.isEmpty()) {

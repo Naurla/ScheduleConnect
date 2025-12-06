@@ -34,14 +34,8 @@
             android:textColor="#8B1A1A"
             android:textStyle="bold"
             android:textSize="20sp"
-            android:gravity="center"/>
-
-        <ImageView
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            android:src="@android:drawable/ic_popup_reminder"
-            app:tint="#8B1A1A"/>
-    </LinearLayout>
+            android:gravity="center"
+            android:layout_marginEnd="30dp"/> </LinearLayout>
 
     <TextView
         android:layout_width="wrap_content"

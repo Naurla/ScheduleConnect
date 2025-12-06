@@ -1,9 +1,11 @@
 package com.example.scheduleconnect
 
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
@@ -16,6 +18,8 @@ class ScheduleAdapter(private val list: ArrayList<Schedule>) : RecyclerView.Adap
     }
 
     class ViewHolder(v: View) : RecyclerView.ViewHolder(v) {
+        // This line will stop showing error after you update item_schedule.xml
+        val imgHeader: ImageView = v.findViewById(R.id.imgScheduleHeader)
         val title: TextView = v.findViewById(R.id.tvScheduleTitle)
         val date: TextView = v.findViewById(R.id.tvScheduleDate)
         val loc: TextView = v.findViewById(R.id.tvScheduleLocation)
@@ -33,13 +37,21 @@ class ScheduleAdapter(private val list: ArrayList<Schedule>) : RecyclerView.Adap
         holder.date.text = item.date
         holder.loc.text = item.location
 
+        if (item.image != null) {
+            val bitmap = BitmapFactory.decodeByteArray(item.image, 0, item.image.size)
+            holder.imgHeader.setImageBitmap(bitmap)
+            holder.imgHeader.visibility = View.VISIBLE
+        } else {
+            holder.imgHeader.visibility = View.GONE
+        }
+
         if (item.type == "shared") {
             holder.creator.text = "By: ${item.creator}"
             holder.creator.visibility = View.VISIBLE
             holder.title.setTextColor(Color.parseColor("#8B1A1A"))
         } else {
             holder.creator.visibility = View.GONE
-            holder.title.setTextColor(Color.BLACK)
+            holder.title.setTextColor(Color.parseColor("#8B1A1A"))
         }
 
         holder.itemView.setOnClickListener {

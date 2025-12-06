@@ -37,7 +37,6 @@ android {
         jvmTarget = "11"
     }
 
-    // --- FIX FOR DUPLICATE FILE ERROR ---
     packaging {
         resources {
             excludes += "META-INF/NOTICE.md"
@@ -47,7 +46,6 @@ android {
 }
 
 dependencies {
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
@@ -58,6 +56,9 @@ dependencies {
     // Email Libraries
     implementation("com.sun.mail:android-mail:1.6.7")
     implementation("com.sun.mail:android-activation:1.6.7")
+
+    // --- WORK MANAGER (Required for Notifications) ---
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

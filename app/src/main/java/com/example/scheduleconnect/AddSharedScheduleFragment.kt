@@ -10,6 +10,14 @@ import android.view.ViewGroup
 import android.widget.*
 import androidx.fragment.app.Fragment
 import java.util.Calendar
+// --- IMPORTS FOR WORK MANAGER ---
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
+import java.util.concurrent.TimeUnit
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class AddSharedScheduleFragment : Fragment() {
     private lateinit var dbHelper: DatabaseHelper
@@ -42,9 +50,31 @@ class AddSharedScheduleFragment : Fragment() {
                 val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
                 val currentUser = sharedPref.getString("username", "default_user") ?: "default_user"
 
+                // Assuming optional image is null for shared schedules for now, or you can add image picker logic here too
                 val success = dbHelper.addSchedule(currentUser, groupId, name, date, loc, desc, "shared")
 
                 if (success) {
+                    // --- NOTIFICATION LOGIC ---
+                    try {
+                        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+                        val scheduleTime = sdf.parse(date)
+                        val currentTime = Date()
+
+                        if (scheduleTime != null) {
+                            val diff = scheduleTime.time - currentTime.time
+                            if (diff > 0) {
+                                val workRequest = OneTimeWorkRequestBuilder<NotificationWorker>()
+                                    .setInitialDelay(diff, TimeUnit.MILLISECONDS)
+                                    .setInputData(workDataOf("title" to "Shared Schedule: $name", "message" to "Upcoming shared event at $loc"))
+                                    .build()
+                                WorkManager.getInstance(requireContext()).enqueue(workRequest)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                    // --------------------------
+
                     Toast.makeText(context, "Shared Schedule Added!", Toast.LENGTH_SHORT).show()
                     parentFragmentManager.popBackStack()
                 } else {
@@ -67,9 +97,10 @@ class AddSharedScheduleFragment : Fragment() {
 
         DatePickerDialog(requireContext(), { _, selectedYear, selectedMonth, selectedDay ->
             TimePickerDialog(requireContext(), { _, selectedHour, selectedMinute ->
+                // Ensure this format matches SimpleDateFormat above
                 val formattedDateTime = String.format("%d-%02d-%02d %02d:%02d", selectedYear, selectedMonth + 1, selectedDay, selectedHour, selectedMinute)
                 etDate.setText(formattedDateTime)
-            }, hour, minute, false).show()
+            }, hour, minute, true).show()
         }, year, month, day).show()
     }
 }

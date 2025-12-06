@@ -5,46 +5,74 @@
     android:layout_height="wrap_content"
     android:layout_marginBottom="10dp"
     app:cardCornerRadius="8dp"
-    app:cardElevation="4dp">
+    app:cardElevation="4dp"
+    app:cardBackgroundColor="#EAEAEA">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/tvScheduleTitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Schedule Title"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="@color/app_red"/>
-
-        <TextView
-            android:id="@+id/tvScheduleDate"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/date_time"
-            android:layout_marginTop="4dp"/>
-
-        <TextView
-            android:id="@+id/tvScheduleLocation"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Location"
-            android:layout_marginTop="4dp"/>
-
-        <TextView
-            android:id="@+id/tvScheduleCreator"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Created by:"
-            android:textSize="12sp"
-            android:textColor="#757575"
-            android:layout_marginTop="8dp"
+        <ImageView
+            android:id="@+id/imgScheduleHeader"
+            android:layout_width="match_parent"
+            android:layout_height="150dp"
+            android:scaleType="centerCrop"
+            android:src="@drawable/ic_launcher_background"
             android:visibility="gone"/>
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:id="@+id/tvScheduleDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Mon, Dec 1, 2025 6:00 PM"
+                android:textSize="12sp"
+                android:textColor="#757575"/>
+
+            <TextView
+                android:id="@+id/tvScheduleTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Schedule Title"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="@color/app_red"/>
+
+            <TextView
+                android:id="@+id/tvScheduleCreator"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="By: James"
+                android:textSize="12sp"
+                android:textColor="#757575"
+                android:visibility="gone"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="4dp">
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@android:drawable/ic_menu_mylocation"
+                    app:tint="#555"/>
+                <TextView
+                    android:id="@+id/tvScheduleLocation"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Location"
+                    android:textSize="12sp"
+                    android:textColor="#555"
+                    android:layout_marginStart="4dp"/>
+            </LinearLayout>
+
+        </LinearLayout>
     </LinearLayout>
 </androidx.cardview.widget.CardView>
