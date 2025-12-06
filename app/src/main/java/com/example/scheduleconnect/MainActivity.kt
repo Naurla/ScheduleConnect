@@ -1,3 +1,4 @@
+// (Updating MainActivity to link Forgot Password)
 package com.example.scheduleconnect
 
 import android.content.Intent
@@ -22,9 +23,16 @@ class MainActivity : AppCompatActivity() {
         val etPassword = findViewById<EditText>(R.id.etPassword)
         val btnLogin = findViewById<Button>(R.id.btnLogin)
         val tvSignUp = findViewById<TextView>(R.id.tvSignUp)
+        val tvForgot = findViewById<TextView>(R.id.tvForgotPassword) // Added Reference
 
         tvSignUp.setOnClickListener {
             val intent = Intent(this, SignupActivity::class.java)
+            startActivity(intent)
+        }
+
+        // --- NEW CLICK LISTENER ---
+        tvForgot.setOnClickListener {
+            val intent = Intent(this, ForgotPasswordActivity::class.java)
             startActivity(intent)
         }
 
@@ -43,22 +51,18 @@ class MainActivity : AppCompatActivity() {
                     if (checkCredentials) {
                         Toast.makeText(this, "Login Successful!", Toast.LENGTH_SHORT).show()
 
-                        // --- UPDATED LOGIC START ---
                         val hasPic = dbHelper.hasProfilePicture(input)
 
                         if (hasPic) {
-                            // Proceed to Home directly
                             val intent = Intent(this, HomeActivity::class.java)
                             intent.putExtra("CURRENT_USER", input)
                             startActivity(intent)
                         } else {
-                            // Redirect to Profile Setup
                             val intent = Intent(this, ProfileSetupActivity::class.java)
                             intent.putExtra("CURRENT_USER", input)
                             startActivity(intent)
                         }
                         finish()
-                        // --- UPDATED LOGIC END ---
 
                     } else {
                         Toast.makeText(this, "Incorrect Password", Toast.LENGTH_SHORT).show()

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    app:cardCornerRadius="10dp"
+    app:cardBackgroundColor="#D7C4C4"
+    android:layout_marginBottom="10dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="15dp"
+        android:gravity="center_vertical">
+
+        <ImageView
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@android:drawable/ic_menu_myplaces"
+            app:tint="#555"/>
+
+        <TextView
+            android:id="@+id/tvAttUser"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Username"
+            android:textStyle="bold"
+            android:textColor="@color/app_red"
+            android:textSize="16sp"
+            android:layout_marginStart="10dp"/>
+
+        <TextView
+            android:id="@+id/tvAttStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="STATUS"
+            android:textStyle="bold"
+            android:textColor="@color/app_red"/>
+
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

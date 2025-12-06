@@ -20,7 +20,6 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
 
     companion object {
         private const val DATABASE_NAME = "ScheduleConnect.db"
-        // Version 9 adds the profile picture column
         private const val DATABASE_VERSION = 9
 
         // Table Names
@@ -31,7 +30,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         private const val TABLE_RSVP = "rsvps"
 
         // Columns
-        private const val COL_PROFILE_IMG = "profile_image" // New Column
+        private const val COL_PROFILE_IMG = "profile_image"
 
         // Schedule Columns
         const val SCH_ID = "schedule_id"
@@ -51,9 +50,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
     }
 
     override fun onCreate(db: SQLiteDatabase?) {
-        // Users table now includes profile_image BLOB
         db?.execSQL("CREATE TABLE $TABLE_USERS (id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT, middle_name TEXT, last_name TEXT, gender TEXT, dob TEXT, email TEXT, phone TEXT, username TEXT, password TEXT, $COL_PROFILE_IMG BLOB)")
-
         db?.execSQL("CREATE TABLE $TABLE_SCHEDULES ($SCH_ID INTEGER PRIMARY KEY AUTOINCREMENT, $SCH_USERNAME TEXT, $SCH_GROUP_ID INTEGER DEFAULT -1, $SCH_TITLE TEXT, $SCH_DATE TEXT, $SCH_LOCATION TEXT, $SCH_DESC TEXT, $SCH_TYPE TEXT)")
         db?.execSQL("CREATE TABLE $TABLE_GROUPS (group_id INTEGER PRIMARY KEY AUTOINCREMENT, group_name TEXT, group_code TEXT)")
         db?.execSQL("CREATE TABLE $TABLE_MEMBERS (member_id INTEGER PRIMARY KEY AUTOINCREMENT, group_id INTEGER, username TEXT)")
@@ -62,18 +59,13 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
 
     override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
         if (oldVersion < 9) {
-            // Add the profile image column if upgrading
             try {
                 db?.execSQL("ALTER TABLE $TABLE_USERS ADD COLUMN $COL_PROFILE_IMG BLOB")
-            } catch (e: Exception) {
-                // Column might already exist, ignore error
-            }
+            } catch (e: Exception) { }
         }
     }
 
     // --- USER METHODS ---
-
-    // This was the missing function causing your error!
     fun checkUser(input: String, password: String): Boolean {
         val db = this.readableDatabase
         val cursor = db.rawQuery("SELECT * FROM $TABLE_USERS WHERE (username = ? OR email = ?) AND password = ?", arrayOf(input, input, password))
@@ -99,12 +91,29 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         return exists
     }
 
-    fun getUser(username: String): Boolean {
+    fun checkEmail(email: String): Boolean {
         val db = this.readableDatabase
-        val cursor = db.rawQuery("SELECT * FROM $TABLE_USERS WHERE username = ?", arrayOf(username))
+        val cursor = db.rawQuery("SELECT * FROM $TABLE_USERS WHERE email = ?", arrayOf(email))
         val exists = cursor.count > 0
         cursor.close()
         return exists
+    }
+
+    fun checkPhone(phone: String): Boolean {
+        val db = this.readableDatabase
+        val cursor = db.rawQuery("SELECT * FROM $TABLE_USERS WHERE phone = ?", arrayOf(phone))
+        val exists = cursor.count > 0
+        cursor.close()
+        return exists
+    }
+
+    fun updatePassword(identifier: String, newPass: String, isEmail: Boolean): Boolean {
+        val db = this.writableDatabase
+        val cv = ContentValues()
+        cv.put("password", newPass)
+        val whereClause = if (isEmail) "email = ?" else "phone = ?"
+        val result = db.update(TABLE_USERS, cv, whereClause, arrayOf(identifier))
+        return result != -1
     }
 
     fun searchUsers(keyword: String, excludeUser: String): ArrayList<String> {
@@ -112,15 +121,11 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         val db = this.readableDatabase
         val cursor = db.rawQuery("SELECT username FROM $TABLE_USERS WHERE username LIKE ? AND username != ?", arrayOf("%$keyword%", excludeUser))
         if (cursor.moveToFirst()) {
-            do {
-                list.add(cursor.getString(0))
-            } while (cursor.moveToNext())
+            do { list.add(cursor.getString(0)) } while (cursor.moveToNext())
         }
         cursor.close()
         return list
     }
-
-    // --- NEW: PROFILE PICTURE METHODS ---
 
     fun hasProfilePicture(username: String): Boolean {
         val db = this.readableDatabase
@@ -205,10 +210,6 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         return -1
     }
 
-    fun createGroup(name: String, code: String, creator: String): Boolean {
-        return createGroupGetId(name, code, creator) != -1
-    }
-
     fun joinGroup(user: String, code: String): Boolean {
         val db = this.writableDatabase
         val cursor = db.rawQuery("SELECT group_id FROM $TABLE_GROUPS WHERE group_code = ?", arrayOf(code))
@@ -242,15 +243,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         cursor.close(); return list
     }
 
-    fun getGroupMembers(groupId: Int): ArrayList<String> {
-        val list = ArrayList<String>()
-        val db = this.readableDatabase
-        val cursor = db.rawQuery("SELECT username FROM $TABLE_MEMBERS WHERE group_id = ?", arrayOf(groupId.toString()))
-        if (cursor.moveToFirst()) {
-            do { list.add(cursor.getString(0)) } while (cursor.moveToNext())
-        }
-        cursor.close(); return list
-    }
+    // --- RSVP METHODS (UPDATED) ---
 
     fun updateRSVP(scheduleId: Int, user: String, status: Int) {
         val db = this.writableDatabase
@@ -260,5 +253,45 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         if (cursor.moveToFirst()) { db.update(TABLE_RSVP, cv, "$RSVP_SCH_ID = ? AND $RSVP_USER = ?", arrayOf(scheduleId.toString(), user)) }
         else { db.insert(TABLE_RSVP, null, cv) }
         cursor.close()
+    }
+
+    // NEW: Get current user's status (0=None, 1=Going, 2=Unsure, 3=Not Going)
+    fun getUserRSVPStatus(scheduleId: Int, username: String): Int {
+        val db = this.readableDatabase
+        val cursor = db.rawQuery("SELECT $RSVP_STATUS FROM $TABLE_RSVP WHERE $RSVP_SCH_ID = ? AND $RSVP_USER = ?", arrayOf(scheduleId.toString(), username))
+        var status = 0
+        if (cursor.moveToFirst()) {
+            status = cursor.getInt(0)
+        }
+        cursor.close()
+        return status
+    }
+
+    // NEW: Get list of attendees
+    fun getScheduleAttendees(scheduleId: Int): ArrayList<Map<String, String>> {
+        val list = ArrayList<Map<String, String>>()
+        val db = this.readableDatabase
+        val cursor = db.rawQuery("SELECT $RSVP_USER, $RSVP_STATUS FROM $TABLE_RSVP WHERE $RSVP_SCH_ID = ?", arrayOf(scheduleId.toString()))
+
+        if (cursor.moveToFirst()) {
+            do {
+                val user = cursor.getString(0)
+                val statusInt = cursor.getInt(1)
+
+                val statusStr = when (statusInt) {
+                    1 -> "GOING"
+                    2 -> "UNSURE"
+                    3 -> "NOT GOING"
+                    else -> "UNKNOWN"
+                }
+
+                val map = HashMap<String, String>()
+                map["username"] = user
+                map["status"] = statusStr
+                list.add(map)
+            } while (cursor.moveToNext())
+        }
+        cursor.close()
+        return list
     }
 }

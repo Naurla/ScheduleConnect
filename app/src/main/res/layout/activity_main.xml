@@ -56,12 +56,15 @@
     </com.google.android.material.textfield.TextInputLayout>
 
     <TextView
+        android:id="@+id/tvForgotPassword"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Forgot Password?"
         android:textColor="#5C6BC0"
         android:layout_gravity="end"
-        android:layout_marginBottom="20dp"/>
+        android:layout_marginBottom="20dp"
+        android:clickable="true"
+        android:focusable="true"/>
 
     <Button
         android:id="@+id/btnLogin"
