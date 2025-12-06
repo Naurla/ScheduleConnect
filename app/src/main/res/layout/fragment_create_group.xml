@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#D9D9D9"
+    android:padding="20dp"
+    android:clickable="true"
+    android:focusable="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="20dp">
+
+        <ImageView
+            android:id="@+id/btnBackCreate"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:src="@android:drawable/ic_menu_revert"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true"
+            app:tint="#8B1A1A"/>
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="CREATE SHARED\nSCHEDULE GROUP"
+            android:textColor="#8B1A1A"
+            android:textStyle="bold"
+            android:textSize="20sp"
+            android:gravity="center"/>
+
+        <ImageView
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:src="@android:drawable/ic_popup_reminder"
+            app:tint="#8B1A1A"/>
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="SHARED SCHEDULE NAME:"
+        android:textColor="#8B1A1A"
+        android:textStyle="bold"
+        android:layout_marginBottom="5dp"/>
+
+    <EditText
+        android:id="@+id/etGroupName"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:background="@android:drawable/edit_text"
+        android:backgroundTint="#FFFFFF"
+        android:padding="10dp"
+        android:layout_marginBottom="20dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="ADD PEOPLE:"
+        android:textColor="#8B1A1A"
+        android:textStyle="bold"
+        android:layout_marginBottom="5dp"/>
+
+    <EditText
+        android:id="@+id/etAddPeople"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:background="@drawable/rounded_edittext"
+        android:backgroundTint="#FFFFFF"
+        android:hint="Search Username"
+        android:paddingStart="15dp"
+        android:drawableStart="@android:drawable/ic_menu_search"
+        android:drawableTint="#555"
+        android:layout_marginBottom="10dp"/>
+
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardSearchResults"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:cardCornerRadius="20dp"
+        app:cardBackgroundColor="#C4B4B4"
+        app:cardElevation="0dp"
+        android:visibility="gone"
+        android:layout_marginBottom="20dp">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerUserResults"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="15dp"
+            android:clipToPadding="false"/>
+
+    </androidx.cardview.widget.CardView>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"/>
+
+    <Button
+        android:id="@+id/btnFinalizeCreate"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:text="CREATE"
+        android:backgroundTint="#8B1A1A"
+        android:textColor="#FFFFFF"
+        android:textSize="18sp"
+        android:textStyle="bold"/>
+
+</LinearLayout>
