@@ -1,5 +1,6 @@
 package com.example.scheduleconnect
 
+import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -17,7 +18,6 @@ class HomeFragment : Fragment() {
     private lateinit var tabPersonal: TextView
     private lateinit var tabShared: TextView
 
-    // Flag to track which tab is active
     private var isPersonal = true
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -31,7 +31,6 @@ class HomeFragment : Fragment() {
 
         recyclerView.layoutManager = LinearLayoutManager(context)
 
-        // Tab Logic
         tabPersonal.setOnClickListener {
             isPersonal = true
             updateTabStyles()
@@ -44,7 +43,6 @@ class HomeFragment : Fragment() {
             loadSchedules()
         }
 
-        // Initialize styles and load data
         updateTabStyles()
         loadSchedules()
 
@@ -53,19 +51,16 @@ class HomeFragment : Fragment() {
 
     private fun updateTabStyles() {
         if (isPersonal) {
-            // Case: "YOUR SCHEDULES" is Active
-            tabPersonal.setTextColor(resources.getColor(R.color.app_red, null))
-            tabShared.setTextColor(resources.getColor(R.color.black, null))
+            tabPersonal.setTextColor(Color.parseColor("#8B1A1A"))
+            tabShared.setTextColor(Color.parseColor("#000000"))
         } else {
-            // Case: "SHARED SCHEDULES" is Active
-            tabPersonal.setTextColor(resources.getColor(R.color.black, null))
-            tabShared.setTextColor(resources.getColor(R.color.app_red, null))
+            tabPersonal.setTextColor(Color.parseColor("#000000"))
+            tabShared.setTextColor(Color.parseColor("#8B1A1A"))
         }
     }
 
     private fun loadSchedules() {
         val type = if (isPersonal) "personal" else "shared"
-
         val sharedPref = requireActivity().getSharedPreferences("UserSession", android.content.Context.MODE_PRIVATE)
         val currentUser = sharedPref.getString("username", "default_user") ?: "default_user"
 
@@ -91,7 +86,7 @@ class HomeFragment : Fragment() {
                 bundle.putString("SCH_DESC", schedule.description)
                 bundle.putString("SCH_CREATOR", schedule.creator)
 
-                // --- NEW: PASS THE TYPE ---
+                // IMPORTANT: Passes the type so we know whether to show Cancel or RSVP
                 bundle.putString("SCH_TYPE", schedule.type)
 
                 fragment.arguments = bundle

@@ -3,76 +3,67 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="10dp"
+    android:layout_marginBottom="12dp"
     app:cardCornerRadius="8dp"
-    app:cardElevation="4dp"
-    app:cardBackgroundColor="#EAEAEA">
+    app:cardElevation="2dp"
+    app:cardBackgroundColor="#FFFFFF">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:padding="16dp">
 
-        <ImageView
-            android:id="@+id/imgScheduleHeader"
-            android:layout_width="match_parent"
-            android:layout_height="150dp"
-            android:scaleType="centerCrop"
-            android:src="@drawable/ic_launcher_background"
+        <TextView
+            android:id="@+id/tvScheduleDate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="2026-01-01 15:55"
+            android:textSize="12sp"
+            android:textColor="#757575"
+            android:layout_marginBottom="4dp"/>
+
+        <TextView
+            android:id="@+id/tvScheduleTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Schedule Title"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#8B1A1A"
+            android:layout_marginBottom="4dp"/>
+
+        <TextView
+            android:id="@+id/tvScheduleCreator"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="By: User"
+            android:textSize="12sp"
+            android:textColor="#757575"
             android:visibility="gone"/>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="2dp">
+
+            <ImageView
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:src="@android:drawable/ic_menu_mylocation"
+                app:tint="#555"/>
 
             <TextView
-                android:id="@+id/tvScheduleDate"
+                android:id="@+id/tvScheduleLocation"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Mon, Dec 1, 2025 6:00 PM"
+                android:text="Location"
                 android:textSize="12sp"
-                android:textColor="#757575"/>
-
-            <TextView
-                android:id="@+id/tvScheduleTitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Schedule Title"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:textColor="@color/app_red"/>
-
-            <TextView
-                android:id="@+id/tvScheduleCreator"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="By: James"
-                android:textSize="12sp"
-                android:textColor="#757575"
-                android:visibility="gone"/>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="4dp">
-                <ImageView
-                    android:layout_width="14dp"
-                    android:layout_height="14dp"
-                    android:src="@android:drawable/ic_menu_mylocation"
-                    app:tint="#555"/>
-                <TextView
-                    android:id="@+id/tvScheduleLocation"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Location"
-                    android:textSize="12sp"
-                    android:textColor="#555"
-                    android:layout_marginStart="4dp"/>
-            </LinearLayout>
-
+                android:textColor="#555"
+                android:layout_marginStart="4dp"/>
         </LinearLayout>
+
     </LinearLayout>
 </androidx.cardview.widget.CardView>
