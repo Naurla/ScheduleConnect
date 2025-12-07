@@ -3,6 +3,7 @@ package com.example.scheduleconnect
 import android.app.AlertDialog
 import android.content.Context
 import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -27,8 +28,10 @@ class ScheduleDetailFragment : Fragment() {
     private lateinit var btnDelete: ImageView
     private lateinit var btnEdit: ImageView
 
-    private lateinit var btnCancelPersonal: Button
-    private lateinit var btnFinishSchedule: Button
+    // --- FIX: Changed from Button to TextView to match the simplified UI ---
+    private lateinit var btnCancelPersonal: TextView
+    private lateinit var btnFinishSchedule: TextView
+
     private lateinit var btnViewAttendees: Button
 
     private lateinit var tvTitle: TextView
@@ -66,8 +69,10 @@ class ScheduleDetailFragment : Fragment() {
         btnDelete = view.findViewById(R.id.btnDeleteSchedule)
         btnEdit = view.findViewById(R.id.btnEditSchedule)
 
+        // --- FIX: Corrected findViewById to use TextView ---
         btnCancelPersonal = view.findViewById(R.id.btnCancelPersonal)
         btnFinishSchedule = view.findViewById(R.id.btnFinishSchedule)
+
         btnViewAttendees = view.findViewById(R.id.btnViewAttendees)
 
         view.findViewById<ImageView>(R.id.btnBackDetail).setOnClickListener {
@@ -138,11 +143,11 @@ class ScheduleDetailFragment : Fragment() {
             // --- UPDATED: Darker color for placeholder ---
             if (schedule.description.trim().isEmpty()) {
                 tvDesc.text = "No description provided."
-                tvDesc.setTextColor(Color.parseColor("#555555")) // Darker gray instead of light #999
-                tvDesc.setTypeface(null, android.graphics.Typeface.ITALIC) // Optional: Make it italic
+                tvDesc.setTextColor(Color.parseColor("#555555"))
+                tvDesc.setTypeface(null, android.graphics.Typeface.ITALIC)
             } else {
                 tvDesc.text = schedule.description
-                tvDesc.setTextColor(Color.parseColor("#333333")) // Standard dark text
+                tvDesc.setTextColor(Color.parseColor("#333333"))
                 tvDesc.setTypeface(null, android.graphics.Typeface.NORMAL)
             }
             // -------------------------------------
@@ -200,11 +205,12 @@ class ScheduleDetailFragment : Fragment() {
     }
 
     private fun showCancelConfirmation() {
+        // --- FIX: Using System AlertDialog with clear messaging for confirmation ---
         AlertDialog.Builder(requireContext())
-            .setTitle("Cancel Schedule")
-            .setMessage("Are you sure you want to cancel this schedule?")
+            .setTitle("CANCEL SCHEDULE?")
+            .setMessage("Are you sure you want to cancel this schedule? This action cannot be undone.")
             .setPositiveButton("YES, CANCEL") { _, _ -> updateScheduleStatus("CANCELLED") }
-            .setNegativeButton("NO", null)
+            .setNegativeButton("NO, GO BACK", null)
             .show()
     }
 

@@ -17,6 +17,7 @@ class ScheduleAdapter(private var list: ArrayList<Schedule>) : RecyclerView.Adap
     }
 
     class ViewHolder(v: View) : RecyclerView.ViewHolder(v) {
+        // R.id.tvScheduleTitle is correctly referenced here, provided the R class is valid.
         val title: TextView = v.findViewById(R.id.tvScheduleTitle)
         val date: TextView = v.findViewById(R.id.tvScheduleDate)
         val loc: TextView = v.findViewById(R.id.tvScheduleLocation)

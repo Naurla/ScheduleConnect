@@ -79,13 +79,24 @@ class HomeFragment : Fragment() {
         return view
     }
 
+    // --- FIX: Updated to dynamically apply the red underline/selector ---
     private fun updateTabStyles() {
         if (isPersonal) {
+            // Personal is selected: Apply red underline and color
             tabPersonal.setTextColor(Color.parseColor("#8B1A1A"))
+            tabPersonal.setBackgroundResource(R.drawable.tab_selector)
+
+            // Shared is unselected: Remove underline and use black color
             tabShared.setTextColor(Color.parseColor("#000000"))
+            tabShared.setBackgroundResource(0)
         } else {
+            // Personal is unselected
             tabPersonal.setTextColor(Color.parseColor("#000000"))
+            tabPersonal.setBackgroundResource(0)
+
+            // Shared is selected
             tabShared.setTextColor(Color.parseColor("#8B1A1A"))
+            tabShared.setBackgroundResource(R.drawable.tab_selector)
         }
     }
 

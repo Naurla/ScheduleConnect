@@ -15,7 +15,6 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
@@ -35,7 +34,7 @@ class AddScheduleFragment : Fragment() {
 
     private lateinit var dbHelper: DatabaseHelper
     private lateinit var etTitle: EditText
-    private lateinit var tvDate: EditText // Changed to EditText to match XML ID type usually
+    private lateinit var tvDate: EditText
     private lateinit var etLocation: EditText
     private lateinit var etDescription: EditText
     private lateinit var btnAdd: Button
@@ -80,13 +79,17 @@ class AddScheduleFragment : Fragment() {
         ivScheduleImage = view.findViewById(R.id.ivScheduleImage)
         btnSelectImage = view.findViewById(R.id.btnSelectImage)
 
-        // Cancel Button Logic
+        // --- FIXED CANCEL BUTTON LOGIC ---
         btnCancel.setOnClickListener {
             clearInputFields()
-            if (activity is HomeActivity) {
+
+            // Check if we are hosted by HomeActivity to access its BottomNav
+            if (requireActivity() is HomeActivity) {
                 val bottomNav = requireActivity().findViewById<BottomNavigationView>(R.id.bottomNav)
-                bottomNav.selectedItemId = R.id.nav_home
+                // Navigate back to the Home tab
+                bottomNav?.selectedItemId = R.id.nav_home
             } else {
+                // Fallback for other containers
                 parentFragmentManager.popBackStack()
             }
         }
@@ -108,7 +111,7 @@ class AddScheduleFragment : Fragment() {
             val location = etLocation.text.toString().trim()
             val desc = etDescription.text.toString().trim()
 
-            // --- UPDATED: Validation ---
+            // Validation
             if (title.isEmpty() || dateStr.isEmpty() || location.isEmpty()) {
                 Toast.makeText(requireContext(), "Name, Date, and Location are required!", Toast.LENGTH_LONG).show()
                 if(title.isEmpty()) etTitle.error = "Required"
