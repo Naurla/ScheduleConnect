@@ -1,13 +1,20 @@
 package com.example.scheduleconnect
 
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import java.util.Random
 
 class HistoryAdapter(private var list: ArrayList<Schedule>) : RecyclerView.Adapter<HistoryAdapter.ViewHolder>() {
+
+    // --- NEW: Listener for click events ---
+    private var listener: ((Schedule) -> Unit)? = null
+
+    fun setOnItemClickListener(listener: (Schedule) -> Unit) {
+        this.listener = listener
+    }
 
     class ViewHolder(v: View) : RecyclerView.ViewHolder(v) {
         val date: TextView = v.findViewById(R.id.tvHistoryDate)
@@ -29,25 +36,37 @@ class HistoryAdapter(private var list: ArrayList<Schedule>) : RecyclerView.Adapt
         holder.date.text = item.date
         holder.location.text = item.location
 
-        // Fake Logic to simulate the UI statuses (since we don't have full logic for "Did not attend" yet)
-        if (position % 2 == 0) {
-            holder.status.text = "DONE"
-        } else {
-            holder.status.text = "DID NOT\nATTEND"
+        // Show real status
+        when (item.status) {
+            "FINISHED" -> {
+                holder.status.text = "FINISHED"
+                holder.status.setTextColor(Color.parseColor("#388E3C")) // Green
+            }
+            "CANCELLED" -> {
+                holder.status.text = "CANCELLED"
+                holder.status.setTextColor(Color.parseColor("#D32F2F")) // Red
+            }
+            else -> {
+                holder.status.text = "DONE"
+                holder.status.setTextColor(Color.GRAY)
+            }
         }
 
-        // Show extra info if it's a shared schedule
         if (item.type == "shared") {
             holder.sharedInfo.visibility = View.VISIBLE
-            holder.sharedInfo.text = "Type: Shared Group Event"
+            holder.sharedInfo.text = "Shared by: ${item.creator}"
         } else {
             holder.sharedInfo.visibility = View.GONE
+        }
+
+        // --- NEW: Handle Click ---
+        holder.itemView.setOnClickListener {
+            listener?.invoke(item)
         }
     }
 
     override fun getItemCount() = list.size
 
-    // Helper to update list for search
     fun updateList(newList: ArrayList<Schedule>) {
         list = newList
         notifyDataSetChanged()

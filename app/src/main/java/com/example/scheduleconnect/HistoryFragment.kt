@@ -19,6 +19,7 @@ class HistoryFragment : Fragment() {
     private lateinit var dbHelper: DatabaseHelper
     private lateinit var recyclerView: RecyclerView
     private lateinit var tvEmpty: TextView
+    private lateinit var adapter: HistoryAdapter
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.fragment_history, container, false)
@@ -34,48 +35,65 @@ class HistoryFragment : Fragment() {
     }
 
     private fun loadHistory() {
-        // 1. Safe User Retrieval (Fixes the Null Error)
         val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
-        // We use "default_user" as a fallback so 'currentUser' is never null
         val currentUser = sharedPref.getString("username", "default_user") ?: "default_user"
 
-        // 2. Fetch ALL schedules (Personal + Shared)
-        val personalList = dbHelper.getSchedules(currentUser, "personal")
-        val sharedList = dbHelper.getSchedules(currentUser, "shared")
-
-        val allSchedules = ArrayList<Schedule>()
-        allSchedules.addAll(personalList)
-        allSchedules.addAll(sharedList)
-
-        // 3. Filter for Past Dates
+        val allSchedules = dbHelper.getAllHistorySchedules(currentUser)
         val historyList = ArrayList<Schedule>()
-        // Ensure this format matches exactly how you save it in AddScheduleFragment
         val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
         val now = Date()
 
         for (item in allSchedules) {
+            // 1. Check Explicit Status
+            if (item.status == "FINISHED" || item.status == "CANCELLED") {
+                historyList.add(item)
+                continue
+            }
+            // 2. Check Date (Past Active)
             try {
-                // Try to parse the date string
                 val dateObj = sdf.parse(item.date)
-                // If date is valid and is BEFORE now, add to history
                 if (dateObj != null && dateObj.before(now)) {
                     historyList.add(item)
                 }
             } catch (e: Exception) {
-                // If date parsing fails (e.g. data saved before the format update), ignore it
                 continue
             }
         }
 
-        // 4. Update UI
         if (historyList.isEmpty()) {
             recyclerView.visibility = View.GONE
             tvEmpty.visibility = View.VISIBLE
         } else {
             recyclerView.visibility = View.VISIBLE
             tvEmpty.visibility = View.GONE
-            // Reuse the existing ScheduleAdapter
-            recyclerView.adapter = ScheduleAdapter(historyList)
+
+            adapter = HistoryAdapter(historyList)
+            adapter.setOnItemClickListener { schedule ->
+                openHistoryDetails(schedule)
+            }
+            recyclerView.adapter = adapter
         }
+    }
+
+    private fun openHistoryDetails(schedule: Schedule) {
+        val fragment = ScheduleDetailFragment()
+        val bundle = Bundle()
+        bundle.putInt("SCH_ID", schedule.id)
+        bundle.putString("SCH_TITLE", schedule.title)
+        bundle.putString("SCH_DATE", schedule.date)
+        bundle.putString("SCH_LOC", schedule.location)
+        bundle.putString("SCH_DESC", schedule.description)
+        bundle.putString("SCH_CREATOR", schedule.creator)
+        bundle.putString("SCH_TYPE", schedule.type)
+
+        // --- NEW: Pass flag to indicate this is strictly history view ---
+        bundle.putBoolean("IS_FROM_HISTORY", true)
+
+        fragment.arguments = bundle
+
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.fragmentContainer, fragment)
+            .addToBackStack(null)
+            .commit()
     }
 }

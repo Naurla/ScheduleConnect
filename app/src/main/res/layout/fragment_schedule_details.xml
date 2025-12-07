@@ -41,6 +41,18 @@
                 android:layout_marginStart="15dp"/>
 
             <ImageView
+                android:id="@+id/btnEditSchedule"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:src="@android:drawable/ic_menu_edit"
+                app:tint="@color/app_red"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:layout_marginEnd="10dp"
+                android:visibility="gone"/>
+
+            <ImageView
                 android:id="@+id/btnDeleteSchedule"
                 android:layout_width="30dp"
                 android:layout_height="30dp"
@@ -239,6 +251,18 @@
         </LinearLayout>
 
         <Button
+            android:id="@+id/btnFinishSchedule"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="FINISH SCHEDULE"
+            android:backgroundTint="#388E3C"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:layout_marginTop="20dp"
+            android:visibility="gone"/>
+
+        <Button
             android:id="@+id/btnCancelPersonal"
             android:layout_width="match_parent"
             android:layout_height="60dp"
@@ -247,7 +271,7 @@
             android:textColor="#FFFFFF"
             android:textStyle="bold"
             android:textSize="16sp"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="10dp"
             android:visibility="gone"/>
 
     </LinearLayout>

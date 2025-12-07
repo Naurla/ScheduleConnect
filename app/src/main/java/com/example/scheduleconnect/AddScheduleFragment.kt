@@ -22,7 +22,6 @@ import androidx.fragment.app.Fragment
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
-// Added Import for BottomNavigationView
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
@@ -36,7 +35,7 @@ class AddScheduleFragment : Fragment() {
 
     private lateinit var dbHelper: DatabaseHelper
     private lateinit var etTitle: EditText
-    private lateinit var tvDate: TextView
+    private lateinit var tvDate: EditText // Changed to EditText to match XML ID type usually
     private lateinit var etLocation: EditText
     private lateinit var etDescription: EditText
     private lateinit var btnAdd: Button
@@ -60,7 +59,7 @@ class AddScheduleFragment : Fragment() {
                     ivScheduleImage.setImageBitmap(selectedImageBitmap)
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    Toast.makeText(requireContext(), "Error loading image: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Error loading image", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -81,17 +80,13 @@ class AddScheduleFragment : Fragment() {
         ivScheduleImage = view.findViewById(R.id.ivScheduleImage)
         btnSelectImage = view.findViewById(R.id.btnSelectImage)
 
-        // --- FIXED: CANCEL BUTTON LOGIC ---
+        // Cancel Button Logic
         btnCancel.setOnClickListener {
             clearInputFields()
-
-            // Instead of popping the back stack (which might go to 'Group'),
-            // we explicitly switch the Bottom Navigation Tab to 'Home'.
             if (activity is HomeActivity) {
                 val bottomNav = requireActivity().findViewById<BottomNavigationView>(R.id.bottomNav)
                 bottomNav.selectedItemId = R.id.nav_home
             } else {
-                // Fallback for safety
                 parentFragmentManager.popBackStack()
             }
         }
@@ -108,34 +103,36 @@ class AddScheduleFragment : Fragment() {
         tvDate.setOnClickListener { showDateTimeDialog() }
 
         btnAdd.setOnClickListener {
-            val title = etTitle.text.toString()
-            val dateStr = tvDate.text.toString()
-            val location = etLocation.text.toString()
-            val desc = etDescription.text.toString()
+            val title = etTitle.text.toString().trim()
+            val dateStr = tvDate.text.toString().trim()
+            val location = etLocation.text.toString().trim()
+            val desc = etDescription.text.toString().trim()
 
-            if (title.isNotEmpty() && dateStr.isNotEmpty()) {
-                var imageBytes: ByteArray? = null
-                if (selectedImageBitmap != null) {
-                    val stream = ByteArrayOutputStream()
-                    selectedImageBitmap!!.compress(Bitmap.CompressFormat.PNG, 100, stream)
-                    imageBytes = stream.toByteArray()
-                }
+            // --- UPDATED: Validation ---
+            if (title.isEmpty() || dateStr.isEmpty() || location.isEmpty()) {
+                Toast.makeText(requireContext(), "Name, Date, and Location are required!", Toast.LENGTH_LONG).show()
+                if(title.isEmpty()) etTitle.error = "Required"
+                if(dateStr.isEmpty()) tvDate.error = "Required"
+                if(location.isEmpty()) etLocation.error = "Required"
+                return@setOnClickListener
+            }
 
-                val success = dbHelper.addSchedule(currentUser, -1, title, dateStr, location, desc, "personal", imageBytes)
+            var imageBytes: ByteArray? = null
+            if (selectedImageBitmap != null) {
+                val stream = ByteArrayOutputStream()
+                selectedImageBitmap!!.compress(Bitmap.CompressFormat.PNG, 100, stream)
+                imageBytes = stream.toByteArray()
+            }
 
-                if (success) {
-                    dbHelper.addNotification(currentUser, "New Schedule Added", "You created schedule: $title", dateStr)
-                    scheduleNotification(title, dateStr)
-                    Toast.makeText(requireContext(), "Schedule Added Successfully!", Toast.LENGTH_SHORT).show()
-                    clearInputFields()
-                    // Optional: You can also redirect to Home after adding if you prefer
-                    // val bottomNav = requireActivity().findViewById<BottomNavigationView>(R.id.bottomNav)
-                    // bottomNav.selectedItemId = R.id.nav_home
-                } else {
-                    Toast.makeText(requireContext(), "Failed to add schedule", Toast.LENGTH_SHORT).show()
-                }
+            val success = dbHelper.addSchedule(currentUser, -1, title, dateStr, location, desc, "personal", imageBytes)
+
+            if (success) {
+                dbHelper.addNotification(currentUser, "New Schedule Added", "You created schedule: $title", dateStr)
+                scheduleNotification(title, dateStr)
+                Toast.makeText(requireContext(), "Personal Schedule Added!", Toast.LENGTH_SHORT).show()
+                clearInputFields()
             } else {
-                Toast.makeText(requireContext(), "Please fill required fields", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Failed to add schedule", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -181,7 +178,7 @@ class AddScheduleFragment : Fragment() {
         etTitle.text.clear()
         etLocation.text.clear()
         etDescription.text.clear()
-        tvDate.text = ""
+        tvDate.text.clear()
         tvDate.hint = "Select Date and Time"
         selectedImageBitmap = null
         ivScheduleImage.setImageResource(android.R.drawable.ic_menu_gallery)
@@ -212,7 +209,7 @@ class AddScheduleFragment : Fragment() {
         DatePickerDialog(requireContext(), { _, year, month, day ->
             TimePickerDialog(requireContext(), { _, hour, minute ->
                 val formatted = String.format("%d-%02d-%02d %02d:%02d", year, month + 1, day, hour, minute)
-                tvDate.text = formatted
+                tvDate.setText(formatted)
             }, calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), true).show()
         }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
     }

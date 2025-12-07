@@ -7,7 +7,8 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
-class ScheduleAdapter(private val list: ArrayList<Schedule>) : RecyclerView.Adapter<ScheduleAdapter.ViewHolder>() {
+// Changed 'val' to 'var' so we can update the list
+class ScheduleAdapter(private var list: ArrayList<Schedule>) : RecyclerView.Adapter<ScheduleAdapter.ViewHolder>() {
 
     private var listener: ((Schedule) -> Unit)? = null
 
@@ -16,7 +17,6 @@ class ScheduleAdapter(private val list: ArrayList<Schedule>) : RecyclerView.Adap
     }
 
     class ViewHolder(v: View) : RecyclerView.ViewHolder(v) {
-        // Removed imgHeader reference to fix the error
         val title: TextView = v.findViewById(R.id.tvScheduleTitle)
         val date: TextView = v.findViewById(R.id.tvScheduleDate)
         val loc: TextView = v.findViewById(R.id.tvScheduleLocation)
@@ -49,4 +49,10 @@ class ScheduleAdapter(private val list: ArrayList<Schedule>) : RecyclerView.Adap
     }
 
     override fun getItemCount() = list.size
+
+    // --- NEW: Helper function to update data for search ---
+    fun updateList(newList: ArrayList<Schedule>) {
+        list = newList
+        notifyDataSetChanged()
+    }
 }

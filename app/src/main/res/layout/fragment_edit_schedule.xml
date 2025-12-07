@@ -13,7 +13,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="NEW SCHEDULE"
+            android:text="EDIT SCHEDULE"
             android:textColor="@color/app_red"
             android:textSize="22sp"
             android:textStyle="bold"
@@ -28,7 +28,7 @@
             android:textStyle="bold"
             android:textSize="12sp"/>
         <EditText
-            android:id="@+id/etSchName"
+            android:id="@+id/etEditSchName"
             android:layout_width="match_parent"
             android:layout_height="40dp"
             android:background="@color/white"
@@ -44,7 +44,7 @@
             android:textStyle="bold"
             android:textSize="12sp"/>
         <EditText
-            android:id="@+id/etSchDate"
+            android:id="@+id/etEditSchDate"
             android:layout_width="match_parent"
             android:layout_height="40dp"
             android:background="@color/white"
@@ -64,7 +64,7 @@
             android:textStyle="bold"
             android:textSize="12sp"/>
         <EditText
-            android:id="@+id/etSchLocation"
+            android:id="@+id/etEditSchLocation"
             android:layout_width="match_parent"
             android:layout_height="40dp"
             android:background="@color/white"
@@ -75,12 +75,12 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="SCHEDULE DESCRIPTION (OPTIONAL):"
+            android:text="SCHEDULE DESCRIPTION:"
             android:textColor="@color/app_red"
             android:textStyle="bold"
             android:textSize="12sp"/>
         <EditText
-            android:id="@+id/etSchDesc"
+            android:id="@+id/etEditSchDesc"
             android:layout_width="match_parent"
             android:layout_height="70dp"
             android:background="@color/white"
@@ -92,13 +92,13 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="SCHEDULE IMAGE (OPTIONAL):"
+            android:text="CHANGE IMAGE (OPTIONAL):"
             android:textColor="@color/app_red"
             android:textStyle="bold"
             android:textSize="12sp"/>
 
         <LinearLayout
-            android:id="@+id/layoutImageSection"
+            android:id="@+id/layoutEditImageSection"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
@@ -108,7 +108,7 @@
             android:padding="8dp">
 
             <Button
-                android:id="@+id/btnSelectImage"
+                android:id="@+id/btnEditSelectImage"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Select Image"
@@ -118,7 +118,7 @@
                 android:layout_marginEnd="15dp"/>
 
             <ImageView
-                android:id="@+id/ivScheduleImage"
+                android:id="@+id/ivEditScheduleImage"
                 android:layout_width="0dp"
                 android:layout_height="100dp"
                 android:layout_weight="1"
@@ -135,11 +135,11 @@
             android:layout_marginBottom="20dp">
 
             <Button
-                android:id="@+id/btnAddSchedule"
+                android:id="@+id/btnUpdateSchedule"
                 android:layout_width="0dp"
                 android:layout_height="55dp"
                 android:layout_weight="1"
-                android:text="ADD SCHEDULE"
+                android:text="UPDATE"
                 android:backgroundTint="@color/app_red"
                 android:textColor="@color/white"
                 android:textSize="14sp"
@@ -147,12 +147,12 @@
                 android:layout_marginEnd="8dp"/>
 
             <Button
-                android:id="@+id/btnCancelSchedule"
+                android:id="@+id/btnCancelEdit"
                 android:layout_width="0dp"
                 android:layout_height="55dp"
                 android:layout_weight="1"
                 android:text="CANCEL"
-                android:backgroundTint="@color/app_red"
+                android:backgroundTint="@color/gray_text"
                 android:textColor="@color/white"
                 android:textSize="14sp"
                 android:textStyle="bold"

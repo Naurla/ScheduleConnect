@@ -18,9 +18,12 @@
             android:layout_width="30dp"
             android:layout_height="30dp"
             android:src="@android:drawable/ic_menu_revert"
-            app:tint="#8B1A1A"/>
+            app:tint="#8B1A1A"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackgroundBorderless"/>
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="PASSWORD &amp;\nSECURITY"
             android:textColor="#8B1A1A"
@@ -49,20 +52,26 @@
         android:layout_marginBottom="30dp">
 
         <TextView
+            android:id="@+id/tvSecurityEmail"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="u**********@gmail.com"
+            android:text="Loading..."
             android:textColor="#8B1A1A"
             android:textStyle="bold"
             android:textSize="16sp"
             android:letterSpacing="0.1"/>
 
         <ImageView
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:id="@+id/btnToggleEmailVisibility"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
             android:src="@android:drawable/ic_menu_view"
-            app:tint="#8B1A1A"/>
+            app:tint="#8B1A1A"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:padding="3dp"/>
     </LinearLayout>
 
     <Button
