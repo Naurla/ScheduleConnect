@@ -1,85 +1,90 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#E0E0E0"
-    android:padding="20dp">
+    android:background="@color/app_background"
+    android:padding="24dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layout_marginBottom="10dp">
+        android:orientation="vertical"
+        android:layout_marginBottom="20dp">
 
-        <ImageView
-            android:id="@+id/btnBackNotifList"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            android:src="@android:drawable/ic_menu_revert"
-            android:tint="#8B1A1A"
-            android:clickable="true"
-            android:focusable="true"
-            android:background="?attr/selectableItemBackgroundBorderless"/>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="5dp">
 
+            <ImageView
+                android:id="@+id/btnBackUserNotif"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:padding="8dp"
+                android:src="@android:drawable/ic_menu_revert"
+                app:tint="@color/app_red"
+                android:background="@drawable/circle_background"
+                android:clickable="true"
+                android:focusable="true"
+                android:layout_marginEnd="15dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="NOTIFICATIONS"
+                android:textColor="@color/app_red"
+                android:textSize="26sp"
+                android:textStyle="bold"/>
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Stay updated with your schedule."
+            android:textColor="#757575"
+            android:textSize="14sp"
+            android:layout_marginStart="4dp"/>
     </LinearLayout>
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="NOTIFICATIONS"
-        android:textColor="#8B1A1A"
-        android:textStyle="bold"
-        android:textSize="28sp"
-        android:gravity="center"
-        android:layout_marginBottom="15dp"/>
-
-    <EditText
-        android:id="@+id/etSearchNotif"
-        android:layout_width="match_parent"
-        android:layout_height="50dp"
-        android:background="@drawable/rounded_edittext"
-        android:hint="Search for notification..."
-        android:paddingStart="15dp"
-        android:drawableStart="@android:drawable/ic_menu_search"
-        android:drawableTint="#555"
-        android:drawablePadding="10dp"
-        android:layout_marginBottom="10dp"/>
-
-    <TextView
-        android:id="@+id/btnFilterDate"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Filter By Date:"
-        android:textStyle="bold"
-        android:textColor="#757575"
-        android:textSize="14sp"
-        android:layout_marginBottom="20dp"
-        android:clickable="true"
-        android:focusable="true"/>
 
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_height="match_parent">
 
         <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recyclerNotifications"
+            android:id="@+id/recyclerUserNotifications"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"/>
+            android:layout_height="match_parent"
+            android:paddingBottom="80dp"
+            android:clipToPadding="false"/>
 
-        <TextView
-            android:id="@+id/tvNoNotifications"
+        <LinearLayout
+            android:id="@+id/layoutEmptyNotifs"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="NO NOTIFICATIONS YET"
-            android:textStyle="bold"
-            android:textColor="#9E9E9E"
-            android:textSize="18sp"
+            android:orientation="vertical"
             android:gravity="center"
-            android:layout_marginTop="50dp"
-            android:visibility="gone"/>
+            android:layout_marginTop="100dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:src="@drawable/ic_settings_notifications"
+                app:tint="#CCCCCC"
+                android:layout_marginBottom="10dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="No notifications yet"
+                android:textColor="#999"
+                android:textSize="16sp"
+                android:textStyle="bold"/>
+        </LinearLayout>
     </FrameLayout>
 
 </LinearLayout>

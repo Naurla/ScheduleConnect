@@ -1,5 +1,6 @@
 package com.example.scheduleconnect
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
@@ -47,23 +48,23 @@ class MainActivity : AppCompatActivity() {
                     val checkCredentials = dbHelper.checkUser(input, password)
 
                     if (checkCredentials) {
-                        // --- FIX: Resolve correct username from Email or Username input ---
-                        // If input is email, this returns the username. If username, it returns the username.
-                        // Fallback to 'input' only if null (though checkUser passed, so it shouldn't be null).
                         val realUsername = dbHelper.getUsernameFromInput(input) ?: input
+
+                        // Save Session
+                        val sharedPref = getSharedPreferences("UserSession", Context.MODE_PRIVATE)
+                        val editor = sharedPref.edit()
+                        editor.putString("username", realUsername)
+                        editor.apply()
 
                         Toast.makeText(this, "Login Successful!", Toast.LENGTH_SHORT).show()
 
-                        // Check profile picture using the RESOLVED username
                         val hasPic = dbHelper.hasProfilePicture(realUsername)
 
                         if (hasPic) {
                             val intent = Intent(this, HomeActivity::class.java)
-                            intent.putExtra("CURRENT_USER", realUsername)
                             startActivity(intent)
                         } else {
                             val intent = Intent(this, ProfileSetupActivity::class.java)
-                            intent.putExtra("CURRENT_USER", realUsername)
                             startActivity(intent)
                         }
                         finish()

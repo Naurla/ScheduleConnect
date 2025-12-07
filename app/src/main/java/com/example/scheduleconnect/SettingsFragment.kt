@@ -1,92 +1,143 @@
 package com.example.scheduleconnect
 
+import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.cardview.widget.CardView
 import androidx.fragment.app.Fragment
 
 class SettingsFragment : Fragment() {
 
     private lateinit var dbHelper: DatabaseHelper
+    private lateinit var tvName: TextView
     private lateinit var ivProfile: ImageView
-    private lateinit var tvUsername: TextView
+    private lateinit var cardProfile: CardView
+    private lateinit var btnPassword: LinearLayout
+    private lateinit var btnNotifications: LinearLayout
+    private lateinit var btnLanguage: LinearLayout
+    private lateinit var btnLogOut: Button
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.fragment_settings, container, false)
         dbHelper = DatabaseHelper(requireContext())
 
-        // 1. Initialize Views
-        tvUsername = view.findViewById(R.id.tvSettingsUsername)
+        // Initialize Views
+        tvName = view.findViewById(R.id.tvSettingsName)
         ivProfile = view.findViewById(R.id.ivSettingsProfile)
+        cardProfile = view.findViewById(R.id.cardUserProfile)
 
-        // 2. Navigation Buttons
-        view.findViewById<Button>(R.id.btnAccount).setOnClickListener {
-            replaceFragment(ViewProfileFragment())
+        btnPassword = view.findViewById(R.id.btnSettingPassword)
+        btnNotifications = view.findViewById(R.id.btnSettingNotif)
+        btnLanguage = view.findViewById(R.id.btnSettingLanguage)
+        btnLogOut = view.findViewById(R.id.btnLogOut)
+
+        // Load Data
+        loadUserData()
+
+        // Listeners
+        cardProfile.setOnClickListener {
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.fragmentContainer, ViewProfileFragment())
+                .addToBackStack(null)
+                .commit()
         }
 
-        view.findViewById<Button>(R.id.btnSecurity).setOnClickListener {
-            replaceFragment(SecurityFragment())
+        btnPassword.setOnClickListener {
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.fragmentContainer, ChangePasswordFragment())
+                .addToBackStack(null)
+                .commit()
         }
 
-        view.findViewById<Button>(R.id.btnNotifications).setOnClickListener {
-            replaceFragment(NotificationsFragment())
+        btnNotifications.setOnClickListener {
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.fragmentContainer, NotificationsFragment())
+                .addToBackStack(null)
+                .commit()
         }
 
-        view.findViewById<Button>(R.id.btnLanguage).setOnClickListener {
-            replaceFragment(LanguageFragment())
+        btnLanguage.setOnClickListener {
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.fragmentContainer, LanguageFragment())
+                .addToBackStack(null)
+                .commit()
         }
 
-        // 3. Logout Logic
-        view.findViewById<Button>(R.id.btnLogout).setOnClickListener {
-            val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
-            val editor = sharedPref.edit()
-            editor.clear()
-            editor.apply()
-
-            val intent = Intent(activity, MainActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            startActivity(intent)
-            activity?.finish()
+        btnLogOut.setOnClickListener {
+            showLogoutConfirmation()
         }
 
         return view
-    }
-
-    // --- FIX: Refresh Data every time the Fragment appears ---
-    override fun onResume() {
-        super.onResume()
-        loadUserData()
     }
 
     private fun loadUserData() {
         val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
         val username = sharedPref.getString("username", "User") ?: "User"
 
-        // Set Username
-        tvUsername.text = username
-
-        // Set Profile Image
-        val profileBitmap = dbHelper.getProfilePicture(username)
-        if (profileBitmap != null) {
-            ivProfile.setImageBitmap(profileBitmap)
-            ivProfile.imageTintList = null // Remove tint if user has a custom photo
-            ivProfile.scaleType = ImageView.ScaleType.CENTER_CROP
+        val userDetails = dbHelper.getUserDetails(username)
+        if (userDetails != null) {
+            val fullName = "${userDetails.firstName} ${userDetails.lastName}".trim()
+            tvName.text = if (fullName.isNotEmpty()) fullName else username
         } else {
-            // Reset to default if no image
-            ivProfile.setImageResource(android.R.drawable.sym_def_app_icon)
+            tvName.text = username
+        }
+
+        val bmp = dbHelper.getProfilePicture(username)
+        if (bmp != null) {
+            ivProfile.setImageBitmap(bmp)
+            ivProfile.imageTintList = null
+        } else {
+            ivProfile.setImageResource(R.drawable.ic_person)
+            ivProfile.setColorFilter(Color.parseColor("#999999"))
         }
     }
 
-    private fun replaceFragment(fragment: Fragment) {
-        parentFragmentManager.beginTransaction()
-            .replace(R.id.fragmentContainer, fragment)
-            .addToBackStack(null)
-            .commit()
+    private fun showLogoutConfirmation() {
+        val builder = AlertDialog.Builder(requireContext())
+        val view = LayoutInflater.from(context).inflate(R.layout.dialog_generic_confirmation, null)
+
+        builder.setView(view)
+        val dialog = builder.create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+        val tvTitle = view.findViewById<TextView>(R.id.tvDialogTitle)
+        val tvMessage = view.findViewById<TextView>(R.id.tvDialogMessage)
+        val btnYes = view.findViewById<Button>(R.id.btnDialogYes)
+        val btnNo = view.findViewById<TextView>(R.id.btnDialogNo)
+
+        tvTitle.text = "LOG OUT"
+        tvMessage.text = "Are you sure you want to log out?"
+        btnYes.text = "YES, LOG OUT"
+
+        btnNo.setOnClickListener { dialog.dismiss() }
+
+        btnYes.setOnClickListener {
+            dialog.dismiss()
+            performLogout()
+        }
+
+        dialog.show()
+    }
+
+    private fun performLogout() {
+        val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
+        val editor = sharedPref.edit()
+        editor.clear()
+        editor.apply()
+
+        val intent = Intent(requireActivity(), MainActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
+        requireActivity().finish()
     }
 }

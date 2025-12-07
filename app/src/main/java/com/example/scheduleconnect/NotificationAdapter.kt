@@ -6,17 +6,18 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
-class NotificationAdapter(private var list: ArrayList<Map<String, String>>) : RecyclerView.Adapter<NotificationAdapter.ViewHolder>() {
+class NotificationAdapter(private val list: ArrayList<Map<String, String>>) :
+    RecyclerView.Adapter<NotificationAdapter.ViewHolder>() {
 
-    class ViewHolder(v: View) : RecyclerView.ViewHolder(v) {
-        val title: TextView = v.findViewById(R.id.tvNotifTitle)
-        val message: TextView = v.findViewById(R.id.tvNotifMessage)
-        val date: TextView = v.findViewById(R.id.tvNotifDate)
+    class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val title: TextView = view.findViewById(R.id.tvNotifTitle)
+        val message: TextView = view.findViewById(R.id.tvNotifMessage)
+        val date: TextView = view.findViewById(R.id.tvNotifDate)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        val v = LayoutInflater.from(parent.context).inflate(R.layout.item_notification, parent, false)
-        return ViewHolder(v)
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_notification, parent, false)
+        return ViewHolder(view)
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
@@ -27,9 +28,4 @@ class NotificationAdapter(private var list: ArrayList<Map<String, String>>) : Re
     }
 
     override fun getItemCount() = list.size
-
-    fun updateList(newList: ArrayList<Map<String, String>>) {
-        list = newList
-        notifyDataSetChanged()
-    }
 }

@@ -1,87 +1,126 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="#E0E0E0"
-    android:padding="20dp">
+    android:background="@color/app_background"
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layout_marginBottom="30dp">
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:paddingBottom="100dp">
 
-        <ImageView
-            android:id="@+id/btnBackLanguage"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            android:src="@android:drawable/ic_menu_revert"
-            app:tint="#8B1A1A"
-            android:clickable="true"
-            android:focusable="true"
-            android:background="?attr/selectableItemBackgroundBorderless"/>
-
-        <TextView
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="LANGUAGE"
-            android:textColor="#8B1A1A"
-            android:textStyle="bold"
-            android:textSize="24sp"
-            android:gravity="center"
-            android:layout_weight="1"/>
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="24dp">
 
-        <View
-            android:layout_width="30dp"
-            android:layout_height="30dp"/>
-    </LinearLayout>
+            <ImageView
+                android:id="@+id/btnBackLanguage"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:padding="8dp"
+                android:src="@android:drawable/ic_menu_revert"
+                app:tint="@color/app_red"
+                android:background="@drawable/circle_background"
+                android:clickable="true"
+                android:focusable="true"/>
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Select App Language"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:textColor="#8B1A1A"
-        android:layout_marginBottom="15dp"/>
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_marginEnd="40dp"> <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="LANGUAGE"
+                android:textColor="@color/app_red"
+                android:textSize="20sp"
+                android:textStyle="bold"/>
+            </LinearLayout>
+        </LinearLayout>
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@drawable/rounded_edittext"
-        android:orientation="vertical"
-        android:padding="10dp">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Select your preferred language."
+            android:textColor="#757575"
+            android:textSize="14sp"
+            android:layout_marginBottom="16dp"
+            android:layout_marginStart="4dp"/>
 
-        <RadioGroup
+        <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="@android:color/white"
+            android:layout_marginBottom="30dp">
 
-            <RadioButton
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="English"
-                android:checked="true"
-                android:textSize="16sp"
-                android:padding="10dp"
-                android:buttonTint="#8B1A1A"/>
+                android:orientation="vertical">
 
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="#DDD"
-                android:layout_marginVertical="5dp"/>
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="8dp"
+                    android:background="@color/app_red"/>
 
-            <RadioButton
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Filipino"
-                android:textSize="16sp"
-                android:padding="10dp"
-                android:buttonTint="#8B1A1A"/>
-        </RadioGroup>
+                <RadioGroup
+                    android:id="@+id/radioGroupLanguage"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="20dp">
+
+                    <RadioButton
+                        android:id="@+id/rbEnglish"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="English"
+                        android:textSize="16sp"
+                        android:padding="12dp"
+                        android:buttonTint="@color/app_red"
+                        android:textColor="#333333"
+                        android:layout_marginBottom="8dp"/>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="#F0F0F0"
+                        android:layout_marginBottom="8dp"/>
+
+                    <RadioButton
+                        android:id="@+id/rbFilipino"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Filipino"
+                        android:textSize="16sp"
+                        android:padding="12dp"
+                        android:buttonTint="@color/app_red"
+                        android:textColor="#333333"/>
+
+                </RadioGroup>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <Button
+            android:id="@+id/btnSaveLanguage"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="APPLY CHANGES"
+            android:backgroundTint="@color/app_red"
+            android:textColor="@color/white"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            app:cornerRadius="12dp"/>
+
     </LinearLayout>
-
-</LinearLayout>
+</ScrollView>

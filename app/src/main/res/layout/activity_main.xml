@@ -63,6 +63,9 @@
                 android:padding="15dp"
                 android:hint="Username or Email"
                 android:inputType="textEmailAddress"
+                android:drawableStart="@drawable/ic_person"
+                android:drawableTint="#8B1A1A"
+                android:drawablePadding="12dp"
                 android:layout_marginBottom="15dp"/>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -81,6 +84,9 @@
                     android:background="@drawable/rounded_edittext"
                     android:padding="15dp"
                     android:hint="Password"
+                    android:drawableStart="@drawable/ic_settings_security"
+                    android:drawableTint="#8B1A1A"
+                    android:drawablePadding="12dp"
                     android:inputType="textPassword"/>
             </com.google.android.material.textfield.TextInputLayout>
 

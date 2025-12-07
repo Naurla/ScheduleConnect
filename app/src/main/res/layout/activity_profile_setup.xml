@@ -3,130 +3,107 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F5F5">
+    android:background="@color/app_background">
 
     <View
-        android:id="@+id/viewHeader"
         android:layout_width="match_parent"
-        android:layout_height="300dp"
-        android:background="#8B1A1A"/>
+        android:layout_height="250dp"
+        android:background="@color/app_red"/>
 
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:fillViewport="true"
-        android:paddingHorizontal="24dp"
-        android:paddingVertical="30dp">
+        android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:gravity="center_horizontal"
-            android:layout_gravity="center_vertical">
+            android:padding="30dp"
+            android:gravity="center">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="COMPLETE PROFILE"
+                android:textColor="@android:color/white"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="5dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Add a photo so friends can recognize you."
+                android:textColor="#FFCDD2"
+                android:textSize="14sp"
+                android:layout_marginBottom="30dp"
+                android:gravity="center"/>
 
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardCornerRadius="20dp"
-                app:cardElevation="10dp"
-                app:cardBackgroundColor="#FFFFFF">
+                app:cardElevation="8dp"
+                app:cardBackgroundColor="@android:color/white">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:gravity="center_horizontal"
-                    android:padding="20dp">
-
-                    <ImageView
-                        android:layout_width="100dp"
-                        android:layout_height="100dp"
-                        android:src="@drawable/lugaw"
-                        android:layout_marginBottom="10dp"
-                        android:layout_marginTop="10dp"/>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Set Up"
-                        android:textColor="#B71C1C"
-                        android:textSize="26sp"
-                        android:textStyle="bold"/>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Your Profile Picture"
-                        android:textColor="#B71C1C"
-                        android:textSize="26sp"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="30dp"/>
+                    android:padding="30dp"
+                    android:gravity="center">
 
                     <androidx.cardview.widget.CardView
-                        android:id="@+id/cardUpload"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        app:cardCornerRadius="16dp"
-                        app:cardElevation="4dp"
-                        app:cardBackgroundColor="#CFCFCF"
-                        android:layout_marginHorizontal="10dp">
-                        <FrameLayout
+                        android:layout_width="140dp"
+                        android:layout_height="140dp"
+                        app:cardCornerRadius="70dp"
+                        app:cardBackgroundColor="#F5F5F5"
+                        app:cardElevation="0dp"
+                        android:layout_marginBottom="20dp">
+
+                        <ImageView
+                            android:id="@+id/ivSetupProfileImage"
                             android:layout_width="match_parent"
-                            android:layout_height="250dp">
-                            <ImageView
-                                android:id="@+id/imgProfilePreview"
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                android:scaleType="centerCrop"/>
-
-                            <LinearLayout
-                                android:id="@+id/layoutPlaceholder"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:orientation="vertical"
-                                android:layout_gravity="center"
-                                android:gravity="center">
-
-                                <ImageView
-                                    android:layout_width="50dp"
-                                    android:layout_height="50dp"
-                                    android:src="@android:drawable/ic_menu_camera"
-                                    app:tint="#B71C1C"/>
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="ADD PHOTO"
-                                    android:textColor="#333"
-                                    android:textStyle="bold"
-                                    android:layout_marginTop="8dp"/>
-                            </LinearLayout>
-                        </FrameLayout>
+                            android:layout_height="match_parent"
+                            android:src="@drawable/ic_person"
+                            app:tint="#999999"
+                            android:scaleType="centerCrop"/>
                     </androidx.cardview.widget.CardView>
 
                     <Button
-                        android:id="@+id/btnSaveProfile"
-                        android:layout_width="match_parent"
-                        android:layout_height="50dp"
-                        android:text="SAVE &amp; CONTINUE"
-                        android:backgroundTint="#B71C1C"
-                        android:textColor="#FFFFFF"
-                        android:layout_marginTop="30dp"
-                        android:layout_marginBottom="10dp"
-                        android:layout_marginHorizontal="10dp"
-                        android:visibility="gone"/>
-
-                    <TextView
-                        android:id="@+id/btnSkip"
+                        android:id="@+id/btnSetupUpload"
+                        style="@style/Widget.MaterialComponents.Button.TextButton"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="SKIP"
-                        android:textColor="#B71C1C"
+                        android:text="UPLOAD PHOTO"
+                        android:textColor="@color/app_red"
+                        android:textStyle="bold"
+                        android:textSize="14sp"
+                        android:layout_marginBottom="30dp"/>
+
+                    <Button
+                        android:id="@+id/btnSetupSave"
+                        android:layout_width="match_parent"
+                        android:layout_height="60dp"
+                        android:text="SAVE &amp; CONTINUE"
+                        android:backgroundTint="@color/app_red"
+                        android:textColor="@android:color/white"
                         android:textStyle="bold"
                         android:textSize="16sp"
-                        android:layout_marginTop="10dp"
-                        android:padding="10dp"/>
+                        app:cornerRadius="30dp"
+                        android:layout_marginBottom="15dp"/>
+
+                    <TextView
+                        android:id="@+id/tvSetupSkip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Skip for now"
+                        android:textColor="#757575"
+                        android:textStyle="bold"
+                        android:padding="10dp"
+                        android:clickable="true"
+                        android:focusable="true"/>
 
                 </LinearLayout>
             </androidx.cardview.widget.CardView>

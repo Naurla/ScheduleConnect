@@ -1,74 +1,59 @@
 package com.example.scheduleconnect
 
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
-class HistoryAdapter(private var list: ArrayList<Schedule>) : RecyclerView.Adapter<HistoryAdapter.ViewHolder>() {
+class HistoryAdapter(private val scheduleList: ArrayList<Schedule>) :
+    RecyclerView.Adapter<HistoryAdapter.ViewHolder>() {
 
-    // --- NEW: Listener for click events ---
-    private var listener: ((Schedule) -> Unit)? = null
+    private var onItemClick: ((Schedule) -> Unit)? = null
 
     fun setOnItemClickListener(listener: (Schedule) -> Unit) {
-        this.listener = listener
+        onItemClick = listener
     }
 
-    class ViewHolder(v: View) : RecyclerView.ViewHolder(v) {
-        val date: TextView = v.findViewById(R.id.tvHistoryDate)
-        val title: TextView = v.findViewById(R.id.tvHistoryTitle)
-        val location: TextView = v.findViewById(R.id.tvHistoryLocation)
-        val status: TextView = v.findViewById(R.id.tvStatus)
-        val sharedInfo: TextView = v.findViewById(R.id.tvHistorySharedBy)
+    class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val title: TextView = view.findViewById(R.id.tvHistoryTitle)
+        val date: TextView = view.findViewById(R.id.tvHistoryDate)
+        val status: TextView = view.findViewById(R.id.tvHistoryStatus)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        val v = LayoutInflater.from(parent.context).inflate(R.layout.item_history, parent, false)
-        return ViewHolder(v)
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_history, parent, false)
+        return ViewHolder(view)
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val item = list[position]
+        val item = scheduleList[position]
 
         holder.title.text = item.title
         holder.date.text = item.date
-        holder.location.text = item.location
+        holder.status.text = item.status
 
-        // Show real status
-        when (item.status) {
-            "FINISHED" -> {
-                holder.status.text = "FINISHED"
-                holder.status.setTextColor(Color.parseColor("#388E3C")) // Green
-            }
-            "CANCELLED" -> {
-                holder.status.text = "CANCELLED"
-                holder.status.setTextColor(Color.parseColor("#D32F2F")) // Red
-            }
-            else -> {
-                holder.status.text = "DONE"
-                holder.status.setTextColor(Color.GRAY)
-            }
-        }
+        // Dynamic Badge Color
+        val bgShape = GradientDrawable()
+        bgShape.shape = GradientDrawable.RECTANGLE
+        bgShape.cornerRadius = 20f // Rounded corners for pill shape
 
-        if (item.type == "shared") {
-            holder.sharedInfo.visibility = View.VISIBLE
-            holder.sharedInfo.text = "Shared by: ${item.creator}"
+        if (item.status == "FINISHED") {
+            bgShape.setColor(Color.parseColor("#8B1A1A")) // App Red
         } else {
-            holder.sharedInfo.visibility = View.GONE
+            bgShape.setColor(Color.parseColor("#757575")) // Gray for Cancelled
         }
 
-        // --- NEW: Handle Click ---
+        holder.status.background = bgShape
+
         holder.itemView.setOnClickListener {
-            listener?.invoke(item)
+            onItemClick?.invoke(item)
         }
     }
 
-    override fun getItemCount() = list.size
-
-    fun updateList(newList: ArrayList<Schedule>) {
-        list = newList
-        notifyDataSetChanged()
+    override fun getItemCount(): Int {
+        return scheduleList.size
     }
 }

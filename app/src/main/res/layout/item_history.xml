@@ -3,96 +3,77 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="16dp"
-    app:cardCornerRadius="8dp"
-    app:cardElevation="4dp"
-    app:cardBackgroundColor="#E0E0E0">
+    android:layout_marginBottom="12dp"
+    android:layout_marginHorizontal="2dp"
+    android:layout_marginTop="2dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="3dp"
+    app:cardBackgroundColor="@android:color/white">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:padding="16dp">
 
-        <ImageView
-            android:id="@+id/imgHeader"
-            android:layout_width="match_parent"
-            android:layout_height="100dp"
-            android:scaleType="centerCrop"
-            android:src="@android:drawable/ic_menu_gallery"
-            android:background="#A5D6A7" />
-
-        <RelativeLayout
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="12dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_toStartOf="@+id/tvStatus"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/tvHistoryDate"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Fri, Oct 3, 2025 2:00PM"
-                    android:textSize="12sp"
-                    android:textColor="#757575"/>
-
-                <TextView
-                    android:id="@+id/tvHistoryTitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Jogging"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/app_red"/>
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginTop="4dp">
-                    <ImageView
-                        android:layout_width="12dp"
-                        android:layout_height="12dp"
-                        android:src="@android:drawable/ic_menu_mylocation"
-                        app:tint="#555"/>
-                    <TextView
-                        android:id="@+id/tvHistoryLocation"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Butterfly Garden"
-                        android:textSize="12sp"
-                        android:textColor="#555"
-                        android:layout_marginStart="4dp"/>
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/tvHistorySharedBy"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="By: Jessa Mae From: Cutiepythons"
-                    android:textSize="10sp"
-                    android:textColor="#757575"
-                    android:layout_marginTop="4dp"
-                    android:visibility="gone"/>
-            </LinearLayout>
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="8dp">
 
             <TextView
-                android:id="@+id/tvStatus"
+                android:id="@+id/tvHistoryTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Schedule Title"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#333333"
+                android:ellipsize="end"
+                android:singleLine="true"/>
+
+            <TextView
+                android:id="@+id/tvHistoryStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_alignParentEnd="true"
-                android:layout_centerVertical="true"
-                android:text="DONE"
+                android:text="FINISHED"
+                android:textSize="10sp"
                 android:textStyle="bold"
-                android:textSize="20sp"
-                android:textColor="#9E9E9E"
-                android:gravity="end"/>
+                android:textColor="#FFFFFF"
+                android:background="@drawable/circle_background"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="4dp"/>
+        </LinearLayout>
 
-        </RelativeLayout>
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#F0F0F0"
+            android:layout_marginBottom="8dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@android:drawable/ic_menu_today"
+                app:tint="#757575"
+                android:layout_marginEnd="6dp"/>
+
+            <TextView
+                android:id="@+id/tvHistoryDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Date • Time"
+                android:textSize="12sp"
+                android:textColor="#666666"/>
+        </LinearLayout>
+
     </LinearLayout>
 </androidx.cardview.widget.CardView>
