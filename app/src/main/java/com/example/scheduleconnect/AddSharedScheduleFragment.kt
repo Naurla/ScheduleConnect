@@ -29,21 +29,21 @@ import java.util.concurrent.TimeUnit
 
 class AddSharedScheduleFragment : Fragment() {
     private lateinit var dbHelper: DatabaseHelper
+    private lateinit var etName: EditText
     private lateinit var etDate: EditText
+    private lateinit var etLoc: EditText
+    private lateinit var etDesc: EditText
     private var groupId: Int = -1
 
-    // --- NEW: Image Variables ---
     private lateinit var ivScheduleImage: ImageView
     private lateinit var btnSelectImage: Button
     private var selectedImageBitmap: Bitmap? = null
 
-    // --- NEW: Image Picker Launcher ---
     private val imagePickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK && result.data != null) {
             val imageUri: Uri? = result.data?.data
             if (imageUri != null) {
                 try {
-                    // Resize to prevent crash
                     selectedImageBitmap = getResizedBitmap(imageUri)
                     ivScheduleImage.setImageBitmap(selectedImageBitmap)
                 } catch (e: Exception) {
@@ -59,20 +59,25 @@ class AddSharedScheduleFragment : Fragment() {
         dbHelper = DatabaseHelper(requireContext())
         groupId = arguments?.getInt("GROUP_ID") ?: -1
 
-        val etName = view.findViewById<EditText>(R.id.etSchName)
-        etDate = view.findViewById<EditText>(R.id.etSchDate)
-        val etLoc = view.findViewById<EditText>(R.id.etSchLocation)
-        val etDesc = view.findViewById<EditText>(R.id.etSchDesc)
-        val btnAdd = view.findViewById<Button>(R.id.btnAddSchedule)
+        etName = view.findViewById(R.id.etSchName)
+        etDate = view.findViewById(R.id.etSchDate)
+        etLoc = view.findViewById(R.id.etSchLocation)
+        etDesc = view.findViewById(R.id.etSchDesc)
 
-        // --- NEW: Bind Image Views ---
+        val btnAdd = view.findViewById<Button>(R.id.btnAddSchedule)
+        val btnCancel = view.findViewById<Button>(R.id.btnCancelSchedule)
+
         ivScheduleImage = view.findViewById(R.id.ivScheduleImage)
         btnSelectImage = view.findViewById(R.id.btnSelectImage)
 
-        // Change text to match design
         btnAdd.text = "ADD SHARED SCHEDULE"
 
-        // --- NEW: Image Select Listener ---
+        // --- UPDATED: Clear inputs then close ---
+        btnCancel.setOnClickListener {
+            clearInputFields()
+            parentFragmentManager.popBackStack()
+        }
+
         btnSelectImage.setOnClickListener {
             try {
                 val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
@@ -94,7 +99,6 @@ class AddSharedScheduleFragment : Fragment() {
                 val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
                 val currentUser = sharedPref.getString("username", "default_user") ?: "default_user"
 
-                // --- NEW: Process Image ---
                 var imageBytes: ByteArray? = null
                 if (selectedImageBitmap != null) {
                     val stream = ByteArrayOutputStream()
@@ -102,11 +106,9 @@ class AddSharedScheduleFragment : Fragment() {
                     imageBytes = stream.toByteArray()
                 }
 
-                // UPDATED: Pass imageBytes to addSchedule
                 val success = dbHelper.addSchedule(currentUser, groupId, name, date, loc, desc, "shared", imageBytes)
 
                 if (success) {
-                    // --- NOTIFICATION LOGIC ---
                     try {
                         val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
                         val scheduleTime = sdf.parse(date)
@@ -125,9 +127,9 @@ class AddSharedScheduleFragment : Fragment() {
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
-                    // --------------------------
 
                     Toast.makeText(context, "Shared Schedule Added!", Toast.LENGTH_SHORT).show()
+                    clearInputFields()
                     parentFragmentManager.popBackStack()
                 } else {
                     Toast.makeText(context, "Error adding schedule", Toast.LENGTH_SHORT).show()
@@ -137,6 +139,17 @@ class AddSharedScheduleFragment : Fragment() {
             }
         }
         return view
+    }
+
+    // --- HELPER TO CLEAR FIELDS ---
+    private fun clearInputFields() {
+        etName.text.clear()
+        etLoc.text.clear()
+        etDesc.text.clear()
+        etDate.text.clear()
+        etDate.hint = "Select Date and Time"
+        selectedImageBitmap = null
+        ivScheduleImage.setImageResource(android.R.drawable.ic_menu_gallery)
     }
 
     private fun showDateTimeDialog() {
@@ -155,7 +168,6 @@ class AddSharedScheduleFragment : Fragment() {
         }, year, month, day).show()
     }
 
-    // --- NEW: Helper to Resize Image ---
     private fun getResizedBitmap(uri: Uri): Bitmap? {
         var inputStream: InputStream? = null
         try {

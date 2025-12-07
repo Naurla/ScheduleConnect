@@ -103,6 +103,18 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         return exists
     }
 
+    // --- NEW: Helper to get Username if Email is used ---
+    fun getUsernameFromInput(input: String): String? {
+        val db = this.readableDatabase
+        val cursor = db.rawQuery("SELECT username FROM $TABLE_USERS WHERE username = ? OR email = ?", arrayOf(input, input))
+        var foundUsername: String? = null
+        if (cursor.moveToFirst()) {
+            foundUsername = cursor.getString(0)
+        }
+        cursor.close()
+        return foundUsername
+    }
+
     fun addUser(fName: String, mName: String, lName: String, gender: String, dob: String, email: String, phone: String, user: String, pass: String): Boolean {
         val db = this.writableDatabase
         val cv = ContentValues()
@@ -254,13 +266,10 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         return db.insert(TABLE_SCHEDULES, null, cv) != -1L
     }
 
-    // --- NEW: DELETE SCHEDULE ---
     fun deleteSchedule(scheduleId: Int): Boolean {
         val db = this.writableDatabase
         try {
-            // Delete associated RSVPs first
             db.delete(TABLE_RSVP, "$RSVP_SCH_ID = ?", arrayOf(scheduleId.toString()))
-            // Delete the schedule
             val result = db.delete(TABLE_SCHEDULES, "$SCH_ID = ?", arrayOf(scheduleId.toString()))
             return result > 0
         } catch (e: Exception) {

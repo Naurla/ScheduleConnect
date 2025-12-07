@@ -1,4 +1,3 @@
-// (Updating MainActivity to link Forgot Password)
 package com.example.scheduleconnect
 
 import android.content.Intent
@@ -23,22 +22,21 @@ class MainActivity : AppCompatActivity() {
         val etPassword = findViewById<EditText>(R.id.etPassword)
         val btnLogin = findViewById<Button>(R.id.btnLogin)
         val tvSignUp = findViewById<TextView>(R.id.tvSignUp)
-        val tvForgot = findViewById<TextView>(R.id.tvForgotPassword) // Added Reference
+        val tvForgot = findViewById<TextView>(R.id.tvForgotPassword)
 
         tvSignUp.setOnClickListener {
             val intent = Intent(this, SignupActivity::class.java)
             startActivity(intent)
         }
 
-        // --- NEW CLICK LISTENER ---
         tvForgot.setOnClickListener {
             val intent = Intent(this, ForgotPasswordActivity::class.java)
             startActivity(intent)
         }
 
         btnLogin.setOnClickListener {
-            val input = etUsername.text.toString()
-            val password = etPassword.text.toString()
+            val input = etUsername.text.toString().trim()
+            val password = etPassword.text.toString().trim()
 
             if (input.isEmpty() || password.isEmpty()) {
                 Toast.makeText(this, "Please enter all fields", Toast.LENGTH_SHORT).show()
@@ -49,17 +47,23 @@ class MainActivity : AppCompatActivity() {
                     val checkCredentials = dbHelper.checkUser(input, password)
 
                     if (checkCredentials) {
+                        // --- FIX: Resolve correct username from Email or Username input ---
+                        // If input is email, this returns the username. If username, it returns the username.
+                        // Fallback to 'input' only if null (though checkUser passed, so it shouldn't be null).
+                        val realUsername = dbHelper.getUsernameFromInput(input) ?: input
+
                         Toast.makeText(this, "Login Successful!", Toast.LENGTH_SHORT).show()
 
-                        val hasPic = dbHelper.hasProfilePicture(input)
+                        // Check profile picture using the RESOLVED username
+                        val hasPic = dbHelper.hasProfilePicture(realUsername)
 
                         if (hasPic) {
                             val intent = Intent(this, HomeActivity::class.java)
-                            intent.putExtra("CURRENT_USER", input)
+                            intent.putExtra("CURRENT_USER", realUsername)
                             startActivity(intent)
                         } else {
                             val intent = Intent(this, ProfileSetupActivity::class.java)
-                            intent.putExtra("CURRENT_USER", input)
+                            intent.putExtra("CURRENT_USER", realUsername)
                             startActivity(intent)
                         }
                         finish()

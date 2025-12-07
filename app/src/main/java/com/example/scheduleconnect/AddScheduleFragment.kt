@@ -22,6 +22,8 @@ import androidx.fragment.app.Fragment
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
+// Added Import for BottomNavigationView
+import com.google.android.material.bottomnavigation.BottomNavigationView
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.text.SimpleDateFormat
@@ -38,6 +40,7 @@ class AddScheduleFragment : Fragment() {
     private lateinit var etLocation: EditText
     private lateinit var etDescription: EditText
     private lateinit var btnAdd: Button
+    private lateinit var btnCancel: Button
 
     private lateinit var ivScheduleImage: ImageView
     private lateinit var btnSelectImage: Button
@@ -71,10 +74,27 @@ class AddScheduleFragment : Fragment() {
         tvDate = view.findViewById(R.id.etSchDate)
         etLocation = view.findViewById(R.id.etSchLocation)
         etDescription = view.findViewById(R.id.etSchDesc)
+
         btnAdd = view.findViewById(R.id.btnAddSchedule)
+        btnCancel = view.findViewById(R.id.btnCancelSchedule)
 
         ivScheduleImage = view.findViewById(R.id.ivScheduleImage)
         btnSelectImage = view.findViewById(R.id.btnSelectImage)
+
+        // --- FIXED: CANCEL BUTTON LOGIC ---
+        btnCancel.setOnClickListener {
+            clearInputFields()
+
+            // Instead of popping the back stack (which might go to 'Group'),
+            // we explicitly switch the Bottom Navigation Tab to 'Home'.
+            if (activity is HomeActivity) {
+                val bottomNav = requireActivity().findViewById<BottomNavigationView>(R.id.bottomNav)
+                bottomNav.selectedItemId = R.id.nav_home
+            } else {
+                // Fallback for safety
+                parentFragmentManager.popBackStack()
+            }
+        }
 
         btnSelectImage.setOnClickListener {
             try {
@@ -104,12 +124,13 @@ class AddScheduleFragment : Fragment() {
                 val success = dbHelper.addSchedule(currentUser, -1, title, dateStr, location, desc, "personal", imageBytes)
 
                 if (success) {
-                    // --- UPDATED: Save Notification to DB ---
                     dbHelper.addNotification(currentUser, "New Schedule Added", "You created schedule: $title", dateStr)
-
                     scheduleNotification(title, dateStr)
                     Toast.makeText(requireContext(), "Schedule Added Successfully!", Toast.LENGTH_SHORT).show()
                     clearInputFields()
+                    // Optional: You can also redirect to Home after adding if you prefer
+                    // val bottomNav = requireActivity().findViewById<BottomNavigationView>(R.id.bottomNav)
+                    // bottomNav.selectedItemId = R.id.nav_home
                 } else {
                     Toast.makeText(requireContext(), "Failed to add schedule", Toast.LENGTH_SHORT).show()
                 }
