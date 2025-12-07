@@ -28,7 +28,6 @@ class ScheduleDetailFragment : Fragment() {
     private lateinit var btnDelete: ImageView
     private lateinit var btnEdit: ImageView
 
-    // --- CHANGED: Now using Button type for new UI ---
     private lateinit var btnCancelPersonal: Button
     private lateinit var btnFinishSchedule: Button
 
@@ -69,7 +68,6 @@ class ScheduleDetailFragment : Fragment() {
         btnDelete = view.findViewById(R.id.btnDeleteSchedule)
         btnEdit = view.findViewById(R.id.btnEditSchedule)
 
-        // --- CHANGED: Casting to Button ---
         btnCancelPersonal = view.findViewById(R.id.btnCancelPersonal)
         btnFinishSchedule = view.findViewById(R.id.btnFinishSchedule)
 
@@ -160,6 +158,7 @@ class ScheduleDetailFragment : Fragment() {
     }
 
     private fun updateButtonsVisibility() {
+        // If history or cancelled/finished, hide almost everything
         if (isFromHistory || currentStatus == "FINISHED" || currentStatus == "CANCELLED") {
             btnFinishSchedule.visibility = View.GONE
             btnCancelPersonal.visibility = View.GONE
@@ -168,37 +167,57 @@ class ScheduleDetailFragment : Fragment() {
             layoutButtons.visibility = View.GONE
             layoutChangeMind.visibility = View.GONE
 
-            if (type == "shared") btnViewAttendees.visibility = View.VISIBLE
-            else btnViewAttendees.visibility = View.GONE
+            // Only show attendees if it was shared and user is Creator (following your rule)
+            // or if you want history to be viewable by everyone, remove the creator check here.
+            if (type == "shared" && currentUser == creator) {
+                btnViewAttendees.visibility = View.VISIBLE
+            } else {
+                btnViewAttendees.visibility = View.GONE
+            }
             return
         }
 
         if (type == "personal") {
+            // PERSONAL SCHEDULE
             layoutButtons.visibility = View.GONE
             layoutChangeMind.visibility = View.GONE
             btnViewAttendees.visibility = View.GONE
-            btnDelete.visibility = View.GONE
 
+            btnDelete.visibility = View.VISIBLE
             btnFinishSchedule.visibility = View.VISIBLE
             btnCancelPersonal.visibility = View.VISIBLE
             btnEdit.visibility = View.VISIBLE
 
         } else {
+            // SHARED SCHEDULE
             if (currentUser == creator) {
+                // --- CREATOR PERMISSIONS ---
+                // Can Edit, Delete, Finish
                 btnDelete.visibility = View.VISIBLE
                 btnEdit.visibility = View.VISIBLE
                 btnFinishSchedule.visibility = View.VISIBLE
+
+                // Can See Attendees (Only creator)
+                btnViewAttendees.visibility = View.VISIBLE
+
+                // Creator manages, doesn't usually RSVP in this flow
                 layoutButtons.visibility = View.GONE
                 layoutChangeMind.visibility = View.GONE
                 btnCancelPersonal.visibility = View.GONE
             } else {
+                // --- MEMBER PERMISSIONS ---
+                // Cannot Edit, Delete, Finish
                 btnDelete.visibility = View.GONE
                 btnEdit.visibility = View.GONE
                 btnFinishSchedule.visibility = View.GONE
                 btnCancelPersonal.visibility = View.GONE
+
+                // Cannot See Attendees (As per your request)
+                btnViewAttendees.visibility = View.GONE
+
+                // Can RSVP (Attend/Unsure/Not Attend)
                 refreshStatusUI()
             }
-            btnViewAttendees.visibility = View.VISIBLE
         }
     }
 
@@ -233,40 +252,60 @@ class ScheduleDetailFragment : Fragment() {
     }
 
     private fun showDeleteConfirmation() {
-        // ... (Same as your previous implementation)
-        val input = EditText(context)
-        input.hint = "Reason for deletion..."
-        input.layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        // 1. Inflate the new custom layout
+        val builder = AlertDialog.Builder(requireContext())
+        val view = LayoutInflater.from(context).inflate(R.layout.dialog_delete_confirmation, null)
 
+        // 2. Set the custom view to the builder
+        builder.setView(view)
+
+        val dialog = builder.create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+        // 3. Initialize UI elements
+        val tvTitle = view.findViewById<TextView>(R.id.tvDeleteTitle)
+        val tvMessage = view.findViewById<TextView>(R.id.tvDeleteMessage)
+        val etReason = view.findViewById<EditText>(R.id.etDeleteReason)
+        val btnCancel = view.findViewById<TextView>(R.id.btnCancelDelete)
+        val btnConfirm = view.findViewById<Button>(R.id.btnConfirmDelete)
+
+        // 4. Customize text based on Schedule Type
         if (type == "shared" && currentUser == creator) {
-            AlertDialog.Builder(requireContext())
-                .setTitle("Delete Shared Schedule")
-                .setMessage("Please provide a reason for deleting this schedule.")
-                .setView(input)
-                .setPositiveButton("DELETE") { _, _ ->
-                    val reason = input.text.toString().trim()
-                    val finalReason = if (reason.isNotEmpty()) reason else "No reason provided."
-                    if (dbHelper.deleteSchedule(schId)) {
-                        notifyAttendeesOfDeletion(finalReason)
-                        Toast.makeText(context, "Schedule Deleted", Toast.LENGTH_SHORT).show()
-                        parentFragmentManager.popBackStack()
-                    }
-                }
-                .setNegativeButton("Cancel", null)
-                .show()
+            tvTitle.text = "Delete Shared Schedule"
+            tvMessage.text = "This will notify all members. Please provide a reason."
+            etReason.visibility = View.VISIBLE
         } else {
-            AlertDialog.Builder(requireContext())
-                .setTitle("Delete Schedule")
-                .setMessage("Are you sure you want to delete this schedule?")
-                .setPositiveButton("Delete") { _, _ ->
-                    if (dbHelper.deleteSchedule(schId)) {
-                        Toast.makeText(context, "Schedule Deleted", Toast.LENGTH_SHORT).show()
-                        parentFragmentManager.popBackStack()
-                    }
-                }
-                .setNegativeButton("Cancel", null)
-                .show()
+            tvTitle.text = "Delete Schedule"
+            tvMessage.text = "Are you sure you want to delete this schedule?"
+            etReason.visibility = View.GONE
         }
+
+        // 5. Set Button Listeners
+        btnCancel.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        btnConfirm.setOnClickListener {
+            if (type == "shared" && currentUser == creator) {
+                val reason = etReason.text.toString().trim()
+                val finalReason = if (reason.isNotEmpty()) reason else "No reason provided."
+
+                if (dbHelper.deleteSchedule(schId)) {
+                    notifyAttendeesOfDeletion(finalReason)
+                    Toast.makeText(context, "Schedule Deleted", Toast.LENGTH_SHORT).show()
+                    dialog.dismiss()
+                    parentFragmentManager.popBackStack()
+                }
+            } else {
+                if (dbHelper.deleteSchedule(schId)) {
+                    Toast.makeText(context, "Schedule Deleted", Toast.LENGTH_SHORT).show()
+                    dialog.dismiss()
+                    parentFragmentManager.popBackStack()
+                }
+            }
+        }
+
+        dialog.show()
     }
 
     private fun notifyAttendeesOfDeletion(reason: String) {

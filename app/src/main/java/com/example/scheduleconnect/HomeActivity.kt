@@ -3,6 +3,7 @@ package com.example.scheduleconnect
 import android.os.Bundle
 import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat // Added Import
 import androidx.fragment.app.Fragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.imageview.ShapeableImageView
@@ -83,9 +84,11 @@ class HomeActivity : AppCompatActivity() {
                 ivProfile.setPadding(0, 0, 0, 0)
                 ivProfile.scaleType = ImageView.ScaleType.CENTER_CROP
             } else {
-                // No profile picture, use default iconessss
+                // No profile picture, use default icon
                 ivProfile.setImageResource(R.drawable.ic_person)
-                ivProfile.setColorFilter(getColor(R.color.app_red)) // Apply tint
+                // FIX: Use ContextCompat to get color safely
+                val color = ContextCompat.getColor(this, R.color.app_red)
+                ivProfile.setColorFilter(color)
                 ivProfile.setPadding(5, 5, 5, 5) // Add padding for icon look
                 ivProfile.scaleType = ImageView.ScaleType.FIT_CENTER
             }

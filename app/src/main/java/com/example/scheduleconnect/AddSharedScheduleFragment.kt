@@ -37,10 +37,11 @@ class AddSharedScheduleFragment : Fragment() {
 
     private lateinit var ivScheduleImage: ImageView
     private lateinit var btnSelectImage: Button
-    private lateinit var btnBack: ImageView // New Back Button
-    private lateinit var tvTitle: TextView // Header Title
+    private lateinit var btnBack: ImageView
+    private lateinit var tvTitle: TextView
 
     private var selectedImageBitmap: Bitmap? = null
+    private var currentUser: String = "" // Store current user globally in class
 
     private val imagePickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK && result.data != null) {
@@ -64,16 +65,20 @@ class AddSharedScheduleFragment : Fragment() {
         dbHelper = DatabaseHelper(requireContext())
         groupId = arguments?.getInt("GROUP_ID") ?: -1
 
+        // Get Current User
+        val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
+        currentUser = sharedPref.getString("username", "default_user") ?: "default_user"
+
         // Init Views
         etName = view.findViewById(R.id.etSchName)
         etDate = view.findViewById(R.id.etSchDate)
         etLoc = view.findViewById(R.id.etSchLocation)
         etDesc = view.findViewById(R.id.etSchDesc)
-        tvTitle = view.findViewById(R.id.tvAddScheduleTitle) // New Title Ref
+        tvTitle = view.findViewById(R.id.tvAddScheduleTitle)
 
         val btnAdd = view.findViewById<Button>(R.id.btnAddSchedule)
         val btnCancel = view.findViewById<Button>(R.id.btnCancelSchedule)
-        btnBack = view.findViewById(R.id.btnBackAdd) // New Back Button Ref
+        btnBack = view.findViewById(R.id.btnBackAdd)
 
         ivScheduleImage = view.findViewById(R.id.ivScheduleImage)
         btnSelectImage = view.findViewById(R.id.btnSelectImage)
@@ -115,9 +120,6 @@ class AddSharedScheduleFragment : Fragment() {
                 return@setOnClickListener
             }
 
-            val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
-            val currentUser = sharedPref.getString("username", "default_user") ?: "default_user"
-
             var imageBytes: ByteArray? = null
             if (selectedImageBitmap != null) {
                 val stream = ByteArrayOutputStream()
@@ -128,24 +130,11 @@ class AddSharedScheduleFragment : Fragment() {
             val success = dbHelper.addSchedule(currentUser, groupId, name, date, loc, desc, "shared", imageBytes)
 
             if (success) {
-                try {
-                    val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-                    val scheduleTime = sdf.parse(date)
-                    val currentTime = Date()
+                // 1. Notify other group members
+                notifyGroupMembers(name, date)
 
-                    if (scheduleTime != null) {
-                        val diff = scheduleTime.time - currentTime.time
-                        if (diff > 0) {
-                            val workRequest = OneTimeWorkRequestBuilder<NotificationWorker>()
-                                .setInitialDelay(diff, TimeUnit.MILLISECONDS)
-                                .setInputData(workDataOf("title" to "Shared Schedule: $name", "message" to "Upcoming shared event at $loc"))
-                                .build()
-                            WorkManager.getInstance(requireContext()).enqueue(workRequest)
-                        }
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+                // 2. Set Local Notification for yourself
+                scheduleLocalNotification(name, date, loc)
 
                 Toast.makeText(context, "Shared Schedule Added!", Toast.LENGTH_SHORT).show()
                 clearInputFields()
@@ -155,6 +144,39 @@ class AddSharedScheduleFragment : Fragment() {
             }
         }
         return view
+    }
+
+    private fun notifyGroupMembers(title: String, date: String) {
+        // Exclude currentUser so you don't get a notification for your own action
+        val members = dbHelper.getGroupMemberUsernames(groupId, currentUser)
+        val notifTitle = "New Group Schedule: $title"
+        val notifMsg = "Added by $currentUser for $date"
+        val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+
+        for (member in members) {
+            dbHelper.addNotification(member, notifTitle, notifMsg, currentDate)
+        }
+    }
+
+    private fun scheduleLocalNotification(name: String, date: String, loc: String) {
+        try {
+            val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+            val scheduleTime = sdf.parse(date)
+            val currentTime = Date()
+
+            if (scheduleTime != null) {
+                val diff = scheduleTime.time - currentTime.time
+                if (diff > 0) {
+                    val workRequest = OneTimeWorkRequestBuilder<NotificationWorker>()
+                        .setInitialDelay(diff, TimeUnit.MILLISECONDS)
+                        .setInputData(workDataOf("title" to "Shared Schedule: $name", "message" to "Upcoming shared event at $loc"))
+                        .build()
+                    WorkManager.getInstance(requireContext()).enqueue(workRequest)
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private fun clearInputFields() {

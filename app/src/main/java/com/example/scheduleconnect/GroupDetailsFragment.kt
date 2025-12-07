@@ -24,6 +24,9 @@ class GroupDetailsFragment : Fragment() {
     private lateinit var tvCreator: TextView
     private lateinit var ivGroupImage: ImageView
     private lateinit var recyclerMembers: RecyclerView
+
+    // Buttons
+    private lateinit var btnAddSchedule: Button // New
     private lateinit var btnLeave: Button
     private lateinit var btnDelete: Button
     private lateinit var btnBack: ImageView
@@ -34,11 +37,9 @@ class GroupDetailsFragment : Fragment() {
     private lateinit var currentUser: String
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        // Inflate Main UI
         val view = inflater.inflate(R.layout.fragment_group_details, container, false)
         dbHelper = DatabaseHelper(requireContext())
 
-        // Get Args
         groupId = arguments?.getInt("GROUP_ID") ?: -1
         groupName = arguments?.getString("GROUP_NAME") ?: "Unknown"
         groupCode = arguments?.getString("GROUP_CODE") ?: "N/A"
@@ -53,17 +54,17 @@ class GroupDetailsFragment : Fragment() {
         ivGroupImage = view.findViewById(R.id.ivGroupDetailImage)
         recyclerMembers = view.findViewById(R.id.recyclerGroupMembers)
 
+        btnAddSchedule = view.findViewById(R.id.btnAddGroupSchedule) // Bind new button
         btnLeave = view.findViewById(R.id.btnLeaveGroup)
         btnDelete = view.findViewById(R.id.btnDeleteGroup)
         btnBack = view.findViewById(R.id.btnBackGroupDetail)
 
-        // Set Data
         tvName.text = groupName
         tvCode.text = groupCode
         val creator = dbHelper.getGroupCreator(groupId)
         tvCreator.text = "Created by: $creator"
 
-        // Show/Hide buttons based on Admin status
+        // Logic for Admin/Member buttons
         if (currentUser == creator) {
             btnDelete.visibility = View.VISIBLE
             btnLeave.visibility = View.GONE
@@ -74,10 +75,21 @@ class GroupDetailsFragment : Fragment() {
 
         btnBack.setOnClickListener { parentFragmentManager.popBackStack() }
 
-        // Setup Members List
         setupMemberList(creator)
 
-        // Button Actions
+        // --- NEW: Add Shared Schedule Logic ---
+        btnAddSchedule.setOnClickListener {
+            val fragment = AddSharedScheduleFragment()
+            val bundle = Bundle()
+            bundle.putInt("GROUP_ID", groupId) // Pass the Group ID!
+            fragment.arguments = bundle
+
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.fragmentContainer, fragment)
+                .addToBackStack(null)
+                .commit()
+        }
+
         btnLeave.setOnClickListener {
             showConfirmationDialog("LEAVE GROUP?", "Are you sure you want to leave this group?") { leaveGroup() }
         }
@@ -89,6 +101,7 @@ class GroupDetailsFragment : Fragment() {
         return view
     }
 
+    // ... (Keep setupMemberList, showConfirmationDialog, leaveGroup, and deleteGroup EXACTLY as they are) ...
     private fun setupMemberList(creator: String) {
         val members = dbHelper.getGroupMemberUsernames(groupId, "")
 

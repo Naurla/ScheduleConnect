@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ScheduleConnect</string>
+
+    <string name="save">I-save</string>
+    <string name="cancel">Kanselahin</string>
+    <string name="delete">Burahin</string>
+    <string name="edit">I-edit</string>
+    <string name="back">Bumalik</string>
+
+    <string name="my_schedule">Aking Iskedyul</string>
+    <string name="upcoming">Parating</string>
+    <string name="history">Kasaysayan</string>
+    <string name="groups">Mga Grupo</string>
+    <string name="settings">Mga Setting</string>
+    <string name="add_schedule">Magdagdag ng Iskedyul</string>
+
+    <string name="change_language">Palitan ang Wika</string>
+    <string name="change_password">Palitan ang Password</string>
+    <string name="notifications">Mga Abiso</string>
+    <string name="security">Seguridad</string>
+    <string name="logout">Mag-logout</string>
+
+    <string name="select_language">Pumili ng Wika</string>
+    <string name="english">English</string>
+    <string name="filipino">Filipino</string>
+    <string name="save_changes">I-save ang Pagbabago</string>
+
+    <string name="are_you_sure">Sigurado ka ba?</string>
+    <string name="confirm_language_change">Magrerestart ang app upang palitan ang wika.</string>
+    <string name="yes">Oo</string>
+    <string name="no">Hindi</string>
+</resources>
