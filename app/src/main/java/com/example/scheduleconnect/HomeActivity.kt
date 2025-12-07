@@ -88,6 +88,7 @@ class HomeActivity : AppCompatActivity() {
                 ivProfile.setImageResource(R.drawable.ic_person)
                 // FIX: Use ContextCompat to get color safely
                 val color = ContextCompat.getColor(this, R.color.app_red)
+                ivProfile.imageTintList = null // FIX: Clear potential previous tint to prevent conflicts
                 ivProfile.setColorFilter(color)
                 ivProfile.setPadding(5, 5, 5, 5) // Add padding for icon look
                 ivProfile.scaleType = ImageView.ScaleType.FIT_CENTER

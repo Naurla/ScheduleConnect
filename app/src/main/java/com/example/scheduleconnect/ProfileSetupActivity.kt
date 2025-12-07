@@ -79,6 +79,14 @@ class ProfileSetupActivity : AppCompatActivity() {
                 if (currentUser.isNotEmpty()) {
                     val success = dbHelper.updateProfilePicture(currentUser, imageBytes)
                     if (success) {
+                        // --- FIX: Update SharedPreferences IMMEDIATELY here ---
+                        // This guarantees HomeActivity knows the user is logged in
+                        val sharedPref = getSharedPreferences("UserSession", Context.MODE_PRIVATE)
+                        val editor = sharedPref.edit()
+                        editor.putString("username", currentUser)
+                        editor.apply()
+                        // ----------------------------------------------------
+
                         Toast.makeText(this, "Profile Picture Saved!", Toast.LENGTH_SHORT).show()
                         navigateToHome()
                     } else {
@@ -99,6 +107,7 @@ class ProfileSetupActivity : AppCompatActivity() {
 
     private fun navigateToHome() {
         val intent = Intent(this, HomeActivity::class.java)
+        intent.putExtra("CURRENT_USER", currentUser)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
         finish()

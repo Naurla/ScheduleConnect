@@ -91,18 +91,14 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
     }
 
     override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
-        if (oldVersion < 9) try { db?.execSQL("ALTER TABLE $TABLE_USERS ADD COLUMN $COL_PROFILE_IMG BLOB") } catch (e: Exception) { }
-        if (oldVersion < 10) try { db?.execSQL("ALTER TABLE $TABLE_SCHEDULES ADD COLUMN $SCH_IMAGE BLOB") } catch (e: Exception) { }
-        if (oldVersion < 11) try { db?.execSQL("ALTER TABLE $TABLE_GROUPS ADD COLUMN $COL_GROUP_IMG BLOB") } catch (e: Exception) { }
-        if (oldVersion < 12) {
-            try { db?.execSQL("CREATE TABLE $TABLE_NOTIFICATIONS ($COL_NOTIF_ID INTEGER PRIMARY KEY AUTOINCREMENT, $COL_NOTIF_USER TEXT, $COL_NOTIF_TITLE TEXT, $COL_NOTIF_MSG TEXT, $COL_NOTIF_DATE TEXT)") } catch (e: Exception) { }
-        }
-        if (oldVersion < 13) {
-            try { db?.execSQL("ALTER TABLE $TABLE_SCHEDULES ADD COLUMN $SCH_STATUS TEXT DEFAULT 'ACTIVE'") } catch (e: Exception) { }
-        }
-        if (oldVersion < 14) {
-            try { db?.execSQL("ALTER TABLE $TABLE_GROUPS ADD COLUMN $COL_GROUP_CREATOR TEXT") } catch (e: Exception) { }
-        }
+        // --- FIX: Drop old tables and recreate them to ensure schema matches ---
+        db?.execSQL("DROP TABLE IF EXISTS $TABLE_USERS")
+        db?.execSQL("DROP TABLE IF EXISTS $TABLE_SCHEDULES")
+        db?.execSQL("DROP TABLE IF EXISTS $TABLE_GROUPS")
+        db?.execSQL("DROP TABLE IF EXISTS $TABLE_MEMBERS")
+        db?.execSQL("DROP TABLE IF EXISTS $TABLE_RSVP")
+        db?.execSQL("DROP TABLE IF EXISTS $TABLE_NOTIFICATIONS")
+        onCreate(db)
     }
 
     // --- USER METHODS ---

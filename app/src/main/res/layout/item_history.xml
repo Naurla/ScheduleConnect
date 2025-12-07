@@ -16,6 +16,15 @@
         android:orientation="vertical"
         android:padding="16dp">
 
+        <ImageView
+            android:id="@+id/ivHistoryImage"
+            android:layout_width="match_parent"
+            android:layout_height="120dp"
+            android:scaleType="centerCrop"
+            android:layout_marginBottom="10dp"
+            android:visibility="gone"
+            android:contentDescription="History Image" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
