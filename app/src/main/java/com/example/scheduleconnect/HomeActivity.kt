@@ -5,14 +5,21 @@ import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.android.material.imageview.ShapeableImageView
 
 class HomeActivity : AppCompatActivity() {
+
+    private lateinit var dbHelper: DatabaseHelper
+    private lateinit var ivProfile: ShapeableImageView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
 
-        // UPDATED: Retrieve username and save to SharedPreferences
+        dbHelper = DatabaseHelper(this)
+        ivProfile = findViewById(R.id.btnTopProfile)
+
+        // Retrieve username and save to SharedPreferences
         val username = intent.getStringExtra("CURRENT_USER")
         if (username != null) {
             val sharedPref = getSharedPreferences("UserSession", MODE_PRIVATE)
@@ -28,7 +35,7 @@ class HomeActivity : AppCompatActivity() {
             loadFragment(HomeFragment())
         }
 
-        // --- NEW: Handle Notification Bell Click ---
+        // --- Handle Notification Bell Click ---
         val btnNotif = findViewById<ImageView>(R.id.btnTopNotifications)
         btnNotif.setOnClickListener {
             supportFragmentManager.beginTransaction()
@@ -36,7 +43,11 @@ class HomeActivity : AppCompatActivity() {
                 .addToBackStack(null)
                 .commit()
         }
-        // ------------------------------------------
+
+        // --- Handle Top Profile Icon Click ---
+        ivProfile.setOnClickListener {
+            bottomNav.selectedItemId = R.id.nav_settings
+        }
 
         bottomNav.setOnItemSelectedListener { item ->
             var fragment: Fragment? = null
@@ -51,6 +62,33 @@ class HomeActivity : AppCompatActivity() {
                 loadFragment(fragment)
             }
             true
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        loadHeaderProfile()
+    }
+
+    private fun loadHeaderProfile() {
+        val sharedPref = getSharedPreferences("UserSession", MODE_PRIVATE)
+        val username = sharedPref.getString("username", "") ?: ""
+
+        if (username.isNotEmpty()) {
+            val bitmap = dbHelper.getProfilePicture(username)
+            if (bitmap != null) {
+                // User has a profile picture
+                ivProfile.setImageBitmap(bitmap)
+                ivProfile.imageTintList = null // Remove tint for real photo
+                ivProfile.setPadding(0, 0, 0, 0)
+                ivProfile.scaleType = ImageView.ScaleType.CENTER_CROP
+            } else {
+                // No profile picture, use default icon
+                ivProfile.setImageResource(R.drawable.ic_person)
+                ivProfile.setColorFilter(getColor(R.color.app_red)) // Apply tint
+                ivProfile.setPadding(5, 5, 5, 5) // Add padding for icon look
+                ivProfile.scaleType = ImageView.ScaleType.FIT_CENTER
+            }
         }
     }
 

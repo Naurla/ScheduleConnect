@@ -29,24 +29,38 @@
                 android:textSize="16sp"
                 android:layout_marginStart="8dp"/>
         </LinearLayout>
+
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
-            android:layout_centerVertical="true">
-            <ImageView
-                android:layout_width="30dp"
-                android:layout_height="30dp"
-                android:src="@android:drawable/stat_notify_chat"
+            android:layout_centerVertical="true"
+            android:gravity="center_vertical">
+
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/btnTopProfile"
+                android:layout_width="35dp"
+                android:layout_height="35dp"
+                android:src="@drawable/ic_person"
                 app:tint="@color/app_red"
-                android:layout_marginEnd="15dp"/>
+                android:scaleType="centerCrop"
+                app:shapeAppearanceOverlay="@style/CircleImageStyle"
+                app:strokeColor="@color/app_red"
+                app:strokeWidth="1dp"
+                android:layout_marginEnd="15dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackgroundBorderless"/>
 
             <ImageView
                 android:id="@+id/btnTopNotifications"
                 android:layout_width="30dp"
                 android:layout_height="30dp"
-                android:src="@android:drawable/ic_popup_reminder"
-                app:tint="@color/app_red"/>
+                android:src="@drawable/ic_settings_notifications"
+                app:tint="@color/app_red"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackgroundBorderless"/>
         </LinearLayout>
     </RelativeLayout>
 

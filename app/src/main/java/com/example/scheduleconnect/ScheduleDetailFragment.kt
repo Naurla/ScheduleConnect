@@ -28,7 +28,7 @@ class ScheduleDetailFragment : Fragment() {
     private lateinit var btnEdit: ImageView
 
     private lateinit var btnCancelPersonal: Button
-    private lateinit var btnFinishSchedule: Button // Renamed variable
+    private lateinit var btnFinishSchedule: Button
     private lateinit var btnViewAttendees: Button
 
     private lateinit var tvTitle: TextView
@@ -67,7 +67,7 @@ class ScheduleDetailFragment : Fragment() {
         btnEdit = view.findViewById(R.id.btnEditSchedule)
 
         btnCancelPersonal = view.findViewById(R.id.btnCancelPersonal)
-        btnFinishSchedule = view.findViewById(R.id.btnFinishSchedule) // Updated ID mapping
+        btnFinishSchedule = view.findViewById(R.id.btnFinishSchedule)
         btnViewAttendees = view.findViewById(R.id.btnViewAttendees)
 
         view.findViewById<ImageView>(R.id.btnBackDetail).setOnClickListener {
@@ -118,7 +118,6 @@ class ScheduleDetailFragment : Fragment() {
 
         btnCancelPersonal.setOnClickListener { showCancelConfirmation() }
 
-        // This delete click listener handles both Personal and Shared deletion logic
         btnDelete.setOnClickListener { showDeleteConfirmation() }
 
         return view
@@ -135,18 +134,29 @@ class ScheduleDetailFragment : Fragment() {
             tvTitle.text = schedule.title
             tvDate.text = schedule.date
             tvLoc.text = schedule.location
-            tvDesc.text = schedule.description
+
+            // --- UPDATED: Darker color for placeholder ---
+            if (schedule.description.trim().isEmpty()) {
+                tvDesc.text = "No description provided."
+                tvDesc.setTextColor(Color.parseColor("#555555")) // Darker gray instead of light #999
+                tvDesc.setTypeface(null, android.graphics.Typeface.ITALIC) // Optional: Make it italic
+            } else {
+                tvDesc.text = schedule.description
+                tvDesc.setTextColor(Color.parseColor("#333333")) // Standard dark text
+                tvDesc.setTypeface(null, android.graphics.Typeface.NORMAL)
+            }
+            // -------------------------------------
+
             creator = schedule.creator
             tvCreator.text = "Schedule by: $creator"
             currentStatus = schedule.status
-            groupId = schedule.groupId // Store group ID for notifications
+            groupId = schedule.groupId
 
             updateButtonsVisibility()
         }
     }
 
     private fun updateButtonsVisibility() {
-        // 1. Hide everything if History/Inactive
         if (isFromHistory || currentStatus == "FINISHED" || currentStatus == "CANCELLED") {
             btnFinishSchedule.visibility = View.GONE
             btnCancelPersonal.visibility = View.GONE
@@ -160,7 +170,6 @@ class ScheduleDetailFragment : Fragment() {
             return
         }
 
-        // 2. Personal Logic
         if (type == "personal") {
             layoutButtons.visibility = View.GONE
             layoutChangeMind.visibility = View.GONE
@@ -172,24 +181,18 @@ class ScheduleDetailFragment : Fragment() {
             btnEdit.visibility = View.VISIBLE
 
         } else {
-            // 3. Shared Logic
-            // If user is creator -> Show Admin controls, Hide RSVP
             if (currentUser == creator) {
                 btnDelete.visibility = View.VISIBLE
                 btnEdit.visibility = View.VISIBLE
                 btnFinishSchedule.visibility = View.VISIBLE
-
-                // Hide RSVP stuff for creator
                 layoutButtons.visibility = View.GONE
                 layoutChangeMind.visibility = View.GONE
-                btnCancelPersonal.visibility = View.GONE // Use delete instead of cancel for creator
+                btnCancelPersonal.visibility = View.GONE
             } else {
-                // Member -> Show RSVP, Hide Admin controls
                 btnDelete.visibility = View.GONE
                 btnEdit.visibility = View.GONE
                 btnFinishSchedule.visibility = View.GONE
                 btnCancelPersonal.visibility = View.GONE
-
                 refreshStatusUI()
             }
             btnViewAttendees.visibility = View.VISIBLE
@@ -216,10 +219,6 @@ class ScheduleDetailFragment : Fragment() {
 
     private fun showDeleteConfirmation() {
         if (type == "shared" && currentUser == creator) {
-            // --- Shared Deletion with Reason ---
-            val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_custom_modal, null)
-            // Ideally we create a layout with EditText, but to save creating a file, I'll programmatically create it or use a standard alert with a view.
-
             val input = EditText(context)
             input.hint = "Reason for deletion..."
             input.layoutParams = ViewGroup.LayoutParams(
@@ -244,7 +243,6 @@ class ScheduleDetailFragment : Fragment() {
                 .setNegativeButton("Cancel", null)
                 .show()
         } else {
-            // --- Personal Deletion ---
             AlertDialog.Builder(requireContext())
                 .setTitle("Delete Schedule")
                 .setMessage("Are you sure you want to delete this schedule?")
@@ -265,13 +263,11 @@ class ScheduleDetailFragment : Fragment() {
         val notifTitle = "Schedule Deleted: $title"
         val notifMessage = "Deleted by $creator. Reason: $reason"
 
-        // 1. Notify via App (DB)
         val memberUsernames = dbHelper.getGroupMemberUsernames(groupId, creator)
         for (user in memberUsernames) {
             dbHelper.addNotification(user, notifTitle, notifMessage, currentDate)
         }
 
-        // 2. Notify via Email
         val emails = dbHelper.getGroupMemberEmails(groupId, creator)
         if (emails.isNotEmpty()) {
             val emailBody = "Hello,\n\nThe shared schedule '$title' has been deleted by $creator.\n\nReason: $reason\n\nRegards,\nScheduleConnect Team"
