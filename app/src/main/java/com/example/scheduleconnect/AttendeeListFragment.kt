@@ -17,7 +17,6 @@ class AttendeeListFragment : Fragment() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var tvEmpty: TextView
 
-    // Counter Views
     private lateinit var tvCountGoing: TextView
     private lateinit var tvCountUnsure: TextView
     private lateinit var tvCountNotGoing: TextView
@@ -26,12 +25,10 @@ class AttendeeListFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_attendee_list, container, false)
         dbHelper = DatabaseHelper(requireContext())
 
-        // 1. Arguments
         val schId = arguments?.getInt("SCH_ID") ?: -1
         val title = arguments?.getString("SCH_TITLE") ?: "Schedule"
         val creator = arguments?.getString("SCH_CREATOR") ?: "Unknown"
 
-        // 2. Setup Header
         view.findViewById<TextView>(R.id.tvAttendeeTitle).text = title
         view.findViewById<TextView>(R.id.tvCreatorName).text = "Schedule by: $creator"
 
@@ -39,7 +36,6 @@ class AttendeeListFragment : Fragment() {
             parentFragmentManager.popBackStack()
         }
 
-        // 3. Init Views
         recyclerView = view.findViewById(R.id.recyclerAttendees)
         tvEmpty = view.findViewById(R.id.tvEmptyAttendees)
         tvCountGoing = view.findViewById(R.id.tvCountGoing)
@@ -56,7 +52,6 @@ class AttendeeListFragment : Fragment() {
     private fun loadAttendees(schId: Int) {
         val list = dbHelper.getScheduleAttendees(schId)
 
-        // --- NEW: Calculate Counts ---
         var goingCount = 0
         var unsureCount = 0
         var notGoingCount = 0
@@ -69,28 +64,33 @@ class AttendeeListFragment : Fragment() {
             }
         }
 
-        // Update Counter Text
-        tvCountGoing.text = "GOING: $goingCount"
-        tvCountUnsure.text = "UNSURE: $unsureCount"
-        tvCountNotGoing.text = "NOT GOING: $notGoingCount"
+        // Only show numbers
+        tvCountGoing.text = goingCount.toString()
+        tvCountUnsure.text = unsureCount.toString()
+        tvCountNotGoing.text = notGoingCount.toString()
 
-        // --- Populate List ---
         if (list.isEmpty()) {
             recyclerView.visibility = View.GONE
             tvEmpty.visibility = View.VISIBLE
         } else {
             recyclerView.visibility = View.VISIBLE
             tvEmpty.visibility = View.GONE
-            recyclerView.adapter = AttendeeAdapter(list)
+            // Pass dbHelper to adapter to load images
+            recyclerView.adapter = AttendeeAdapter(list, dbHelper)
         }
     }
 }
 
-class AttendeeAdapter(private val list: ArrayList<Map<String, String>>) : RecyclerView.Adapter<AttendeeAdapter.ViewHolder>() {
+class AttendeeAdapter(
+    private val list: ArrayList<Map<String, String>>,
+    private val dbHelper: DatabaseHelper
+) : RecyclerView.Adapter<AttendeeAdapter.ViewHolder>() {
 
     class ViewHolder(v: View) : RecyclerView.ViewHolder(v) {
-        val user: TextView = v.findViewById(R.id.tvAttUser)
-        val status: TextView = v.findViewById(R.id.tvAttStatus)
+        // FIXED IDs to match item_attendee.xml
+        val user: TextView = v.findViewById(R.id.tvAttendeeName)
+        val status: TextView = v.findViewById(R.id.tvAttendeeStatus)
+        val avatar: ImageView = v.findViewById(R.id.ivAttendeeAvatar)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -100,22 +100,33 @@ class AttendeeAdapter(private val list: ArrayList<Map<String, String>>) : Recycl
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = list[position]
+        val username = item["username"] ?: "Unknown"
 
-        holder.user.text = item["username"]?.uppercase()
+        holder.user.text = username
 
         when(item["status"]) {
             "GOING" -> {
-                holder.status.text = "I WILL ATTEND"
-                holder.status.setTextColor(Color.parseColor("#388E3C")) // Green
+                holder.status.text = "Going"
+                holder.status.setTextColor(Color.parseColor("#388E3C"))
             }
             "NOT GOING" -> {
-                holder.status.text = "I WILL NOT ATTEND"
-                holder.status.setTextColor(Color.parseColor("#D32F2F")) // Red
+                holder.status.text = "Not Going"
+                holder.status.setTextColor(Color.parseColor("#D32F2F"))
             }
             else -> {
-                holder.status.text = "UNSURE"
-                holder.status.setTextColor(Color.parseColor("#F57C00")) // Orange
+                holder.status.text = "Unsure"
+                holder.status.setTextColor(Color.parseColor("#F57C00"))
             }
+        }
+
+        // Load Profile Picture
+        val bmp = dbHelper.getProfilePicture(username)
+        if (bmp != null) {
+            holder.avatar.setImageBitmap(bmp)
+            holder.avatar.imageTintList = null // Remove gray tint for real photo
+        } else {
+            holder.avatar.setImageResource(R.drawable.ic_person)
+            holder.avatar.setColorFilter(Color.parseColor("#999999"))
         }
     }
 

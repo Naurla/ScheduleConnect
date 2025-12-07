@@ -1,168 +1,241 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/app_background"
-    android:padding="20dp">
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:paddingBottom="100dp"> <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="20dp">
+
+        <ImageView
+            android:id="@+id/btnBackAdd"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:padding="8dp"
+            android:src="@android:drawable/ic_menu_revert"
+            app:tint="@color/app_red"
+            android:background="@drawable/circle_background"
+            android:clickable="true"
+            android:focusable="true"/>
 
         <TextView
-            android:layout_width="wrap_content"
+            android:id="@+id/tvAddScheduleTitle"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:text="NEW SCHEDULE"
             android:textColor="@color/app_red"
-            android:textSize="24sp"
+            android:textSize="20sp"
             android:textStyle="bold"
-            android:layout_gravity="center"
-            android:layout_marginBottom="25dp"/>
+            android:gravity="center"
+            android:layout_marginEnd="40dp"/>
+    </LinearLayout>
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="SCHEDULE NAME:"
-            android:textColor="@color/app_red"
-            android:textStyle="bold"
-            android:textSize="12sp"
-            android:layout_marginBottom="5dp"/>
-        <EditText
-            android:id="@+id/etSchName"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:background="@drawable/rounded_edittext"
-            android:paddingStart="15dp"
-            android:textSize="14sp"
-            android:layout_marginBottom="15dp"/>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="SCHEDULE DATE &amp; TIME:"
-            android:textColor="@color/app_red"
-            android:textStyle="bold"
-            android:textSize="12sp"
-            android:layout_marginBottom="5dp"/>
-        <EditText
-            android:id="@+id/etSchDate"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:background="@drawable/rounded_edittext"
-            android:hint="Select Date and Time"
-            android:focusable="false"
-            android:clickable="true"
-            android:inputType="none"
-            android:textSize="14sp"
-            android:paddingStart="15dp"
-            android:layout_marginBottom="15dp"/>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="SCHEDULE LOCATION:"
-            android:textColor="@color/app_red"
-            android:textStyle="bold"
-            android:textSize="12sp"
-            android:layout_marginBottom="5dp"/>
-        <EditText
-            android:id="@+id/etSchLocation"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:background="@drawable/rounded_edittext"
-            android:paddingStart="15dp"
-            android:textSize="14sp"
-            android:layout_marginBottom="15dp"/>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="SCHEDULE DESCRIPTION (OPTIONAL):"
-            android:textColor="@color/app_red"
-            android:textStyle="bold"
-            android:textSize="12sp"
-            android:layout_marginBottom="5dp"/>
-        <EditText
-            android:id="@+id/etSchDesc"
-            android:layout_width="match_parent"
-            android:layout_height="100dp"
-            android:background="@drawable/rounded_edittext"
-            android:gravity="top|start"
-            android:padding="15dp"
-            android:textSize="14sp"
-            android:layout_marginBottom="15dp"/>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="SCHEDULE IMAGE (OPTIONAL):"
-            android:textColor="@color/app_red"
-            android:textStyle="bold"
-            android:textSize="12sp"
-            android:layout_marginBottom="5dp"/>
-
-        <LinearLayout
-            android:id="@+id/layoutImageSection"
+        <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="25dp"
-            android:background="@drawable/rounded_edittext"
-            android:padding="10dp">
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="@android:color/white"
+            android:layout_marginBottom="30dp">
 
-            <Button
-                android:id="@+id/btnSelectImage"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Select Image"
-                android:textSize="11sp"
-                android:backgroundTint="#555555"
-                android:textColor="@color/white"
-                android:layout_marginEnd="15dp"/>
+                android:orientation="vertical">
 
-            <ImageView
-                android:id="@+id/ivScheduleImage"
-                android:layout_width="0dp"
-                android:layout_height="80dp"
-                android:layout_weight="1"
-                android:scaleType="centerCrop"
-                android:src="@android:drawable/ic_menu_gallery"
-                android:background="#EEEEEE"/>
-        </LinearLayout>
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="8dp"
+                    android:background="@color/app_red"/>
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="20dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="24dp">
 
-            <Button
-                android:id="@+id/btnAddSchedule"
-                android:layout_width="0dp"
-                android:layout_height="60dp"
-                android:layout_weight="1"
-                android:text="ADD SCHEDULE"
-                android:backgroundTint="@color/app_red"
-                android:textColor="@color/white"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:layout_marginEnd="8dp"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="SCHEDULE NAME"
+                        android:textColor="@color/app_red"
+                        android:textStyle="bold"
+                        android:textSize="12sp"
+                        android:layout_marginBottom="8dp"/>
 
-            <Button
-                android:id="@+id/btnCancelSchedule"
-                android:layout_width="0dp"
-                android:layout_height="60dp"
-                android:layout_weight="1"
-                android:text="CANCEL"
-                android:backgroundTint="@color/app_red"
-                android:textColor="@color/white"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:layout_marginStart="8dp"/>
+                    <EditText
+                        android:id="@+id/etSchName"
+                        android:layout_width="match_parent"
+                        android:layout_height="50dp"
+                        android:background="@drawable/rounded_edittext"
+                        android:hint="e.g., Team Meeting"
+                        android:paddingStart="15dp"
+                        android:paddingEnd="15dp"
+                        android:textSize="14sp"
+                        android:drawableStart="@android:drawable/ic_menu_edit"
+                        android:drawableTint="@color/app_red"
+                        android:drawablePadding="12dp"
+                        android:layout_marginBottom="20dp"/>
 
-        </LinearLayout>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="DATE &amp; TIME"
+                        android:textColor="@color/app_red"
+                        android:textStyle="bold"
+                        android:textSize="12sp"
+                        android:layout_marginBottom="8dp"/>
+
+                    <EditText
+                        android:id="@+id/etSchDate"
+                        android:layout_width="match_parent"
+                        android:layout_height="50dp"
+                        android:background="@drawable/rounded_edittext"
+                        android:hint="Select Date and Time"
+                        android:paddingStart="15dp"
+                        android:paddingEnd="15dp"
+                        android:textSize="14sp"
+                        android:focusable="false"
+                        android:clickable="true"
+                        android:inputType="none"
+                        android:drawableStart="@android:drawable/ic_menu_today"
+                        android:drawableTint="@color/app_red"
+                        android:drawablePadding="12dp"
+                        android:layout_marginBottom="20dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="LOCATION"
+                        android:textColor="@color/app_red"
+                        android:textStyle="bold"
+                        android:textSize="12sp"
+                        android:layout_marginBottom="8dp"/>
+
+                    <EditText
+                        android:id="@+id/etSchLocation"
+                        android:layout_width="match_parent"
+                        android:layout_height="50dp"
+                        android:background="@drawable/rounded_edittext"
+                        android:hint="Where is it happening?"
+                        android:paddingStart="15dp"
+                        android:paddingEnd="15dp"
+                        android:textSize="14sp"
+                        android:drawableStart="@android:drawable/ic_menu_mylocation"
+                        android:drawableTint="@color/app_red"
+                        android:drawablePadding="12dp"
+                        android:layout_marginBottom="20dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="DESCRIPTION (OPTIONAL)"
+                        android:textColor="@color/app_red"
+                        android:textStyle="bold"
+                        android:textSize="12sp"
+                        android:layout_marginBottom="8dp"/>
+
+                    <EditText
+                        android:id="@+id/etSchDesc"
+                        android:layout_width="match_parent"
+                        android:layout_height="100dp"
+                        android:background="@drawable/rounded_edittext"
+                        android:hint="Add notes or details..."
+                        android:gravity="top|start"
+                        android:padding="15dp"
+                        android:textSize="14sp"
+                        android:drawableStart="@android:drawable/ic_menu_info_details"
+                        android:drawableTint="@color/app_red"
+                        android:drawablePadding="12dp"
+                        android:layout_marginBottom="20dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="IMAGE (OPTIONAL)"
+                        android:textColor="@color/app_red"
+                        android:textStyle="bold"
+                        android:textSize="12sp"
+                        android:layout_marginBottom="8dp"/>
+
+                    <LinearLayout
+                        android:id="@+id/layoutImageSection"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="30dp"
+                        android:background="@drawable/rounded_edittext"
+                        android:padding="8dp">
+
+                        <Button
+                            android:id="@+id/btnSelectImage"
+                            style="@style/Widget.MaterialComponents.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Select Image"
+                            android:textColor="@color/app_red"
+                            android:textStyle="bold"
+                            android:textSize="12sp"
+                            android:layout_marginEnd="15dp"/>
+
+                        <androidx.cardview.widget.CardView
+                            android:layout_width="80dp"
+                            android:layout_height="80dp"
+                            app:cardCornerRadius="8dp"
+                            app:cardElevation="0dp"
+                            app:cardBackgroundColor="#F5F5F5">
+                            <ImageView
+                                android:id="@+id/ivScheduleImage"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop"
+                                android:src="@android:drawable/ic_menu_gallery"
+                                android:padding="20dp"
+                                app:tint="#AAAAAA"/>
+                        </androidx.cardview.widget.CardView>
+                    </LinearLayout>
+
+                    <Button
+                        android:id="@+id/btnAddSchedule"
+                        android:layout_width="match_parent"
+                        android:layout_height="60dp"
+                        android:text="ADD SCHEDULE"
+                        android:backgroundTint="@color/app_red"
+                        android:textColor="@color/white"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        app:cornerRadius="12dp"
+                        android:layout_marginBottom="12dp"/>
+
+                    <Button
+                        android:id="@+id/btnCancelSchedule"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="60dp"
+                        android:text="CANCEL"
+                        android:textColor="@color/app_red"
+                        android:textStyle="bold"
+                        android:textSize="16sp"
+                        app:strokeColor="@color/app_red"
+                        app:strokeWidth="2dp"
+                        app:cornerRadius="12dp"/>
+
+                </LinearLayout>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
 
     </LinearLayout>
 </ScrollView>

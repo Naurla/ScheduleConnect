@@ -15,7 +15,6 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
@@ -35,6 +34,7 @@ class EditScheduleFragment : Fragment() {
     private lateinit var etDescription: EditText
     private lateinit var btnUpdate: Button
     private lateinit var btnCancel: Button
+    private lateinit var btnBack: ImageView // New Back Button
 
     private lateinit var ivScheduleImage: ImageView
     private lateinit var btnSelectImage: Button
@@ -49,6 +49,8 @@ class EditScheduleFragment : Fragment() {
                 try {
                     selectedImageBitmap = getResizedBitmap(imageUri)
                     ivScheduleImage.setImageBitmap(selectedImageBitmap)
+                    ivScheduleImage.setPadding(0,0,0,0) // Remove padding if image is set
+                    ivScheduleImage.imageTintList = null // Remove tint
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
@@ -66,6 +68,7 @@ class EditScheduleFragment : Fragment() {
         val loc = arguments?.getString("SCH_LOC") ?: ""
         val desc = arguments?.getString("SCH_DESC") ?: ""
 
+        // Initialize Views
         etTitle = view.findViewById(R.id.etEditSchName)
         etDate = view.findViewById(R.id.etEditSchDate)
         etLocation = view.findViewById(R.id.etEditSchLocation)
@@ -73,10 +76,12 @@ class EditScheduleFragment : Fragment() {
 
         btnUpdate = view.findViewById(R.id.btnUpdateSchedule)
         btnCancel = view.findViewById(R.id.btnCancelEdit)
+        btnBack = view.findViewById(R.id.btnBackEdit) // Bind new back button
 
         ivScheduleImage = view.findViewById(R.id.ivEditScheduleImage)
         btnSelectImage = view.findViewById(R.id.btnEditSelectImage)
 
+        // Set Existing Data
         etTitle.setText(title)
         etDate.setText(date)
         etLocation.setText(loc)
@@ -86,8 +91,13 @@ class EditScheduleFragment : Fragment() {
         if (existingSchedule?.image != null) {
             val bmp = BitmapFactory.decodeByteArray(existingSchedule.image, 0, existingSchedule.image.size)
             ivScheduleImage.setImageBitmap(bmp)
+            ivScheduleImage.setPadding(0,0,0,0)
+            ivScheduleImage.imageTintList = null
         }
 
+        // --- Listeners ---
+
+        btnBack.setOnClickListener { parentFragmentManager.popBackStack() }
         btnCancel.setOnClickListener { parentFragmentManager.popBackStack() }
 
         btnSelectImage.setOnClickListener {
@@ -114,7 +124,7 @@ class EditScheduleFragment : Fragment() {
                 val success = dbHelper.updateScheduleDetails(schId, newTitle, newDate, newLoc, newDesc, imageBytes)
 
                 if (success) {
-                    // --- NEW: Notify Attendees if Shared ---
+                    // Notify Attendees if Shared
                     if (existingSchedule != null && existingSchedule.type == "shared") {
                         notifyAttendeesOfUpdate(existingSchedule.groupId, existingSchedule.creator, newTitle, newDate, newLoc)
                     }

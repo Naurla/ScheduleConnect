@@ -34,19 +34,19 @@ class CreateGroupFragment : Fragment() {
     private lateinit var cardResults: CardView
     private val selectedUsers = ArrayList<String>()
 
-    // --- NEW: Image Variables ---
     private lateinit var ivGroupPreview: ImageView
     private var selectedBitmap: Bitmap? = null
 
-    // --- NEW: Image Picker Launcher ---
     private val imagePickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK && result.data != null) {
             val imageUri: Uri? = result.data?.data
             if (imageUri != null) {
                 try {
-                    // Resize to prevent crash
                     selectedBitmap = getResizedBitmap(imageUri)
                     ivGroupPreview.setImageBitmap(selectedBitmap)
+                    // Remove padding and tint when actual image is set
+                    ivGroupPreview.setPadding(0, 0, 0, 0)
+                    ivGroupPreview.imageTintList = null
                 } catch (e: Exception) {
                     e.printStackTrace()
                     Toast.makeText(requireContext(), "Error loading image", Toast.LENGTH_SHORT).show()
@@ -65,7 +65,7 @@ class CreateGroupFragment : Fragment() {
         val btnCreate = view.findViewById<Button>(R.id.btnFinalizeCreate)
         val btnBack = view.findViewById<ImageView>(R.id.btnBackCreate)
 
-        // --- NEW: Bind Image Views and Set Listener ---
+        // Image Selection
         val btnSelectImg = view.findViewById<Button>(R.id.btnSelectGroupImage)
         ivGroupPreview = view.findViewById(R.id.ivGroupImagePreview)
 
@@ -77,7 +77,6 @@ class CreateGroupFragment : Fragment() {
                 Toast.makeText(requireContext(), "Cannot open gallery", Toast.LENGTH_SHORT).show()
             }
         }
-        // -----------------------------
 
         recycler = view.findViewById(R.id.recyclerUserResults)
         cardResults = view.findViewById(R.id.cardSearchResults)
@@ -85,7 +84,6 @@ class CreateGroupFragment : Fragment() {
         // Setup Recycler
         recycler.layoutManager = LinearLayoutManager(context)
         adapter = UserInviteAdapter(ArrayList()) { username ->
-            // Callback when "INVITE +" is clicked
             if (!selectedUsers.contains(username)) {
                 selectedUsers.add(username)
                 Toast.makeText(context, "$username added to invite list", Toast.LENGTH_SHORT).show()
@@ -108,15 +106,12 @@ class CreateGroupFragment : Fragment() {
                     val results = dbHelper.searchUsers(query, currentUser)
 
                     if (results.isNotEmpty()) {
-                        // Show the grey box only if we have results
                         adapter.updateList(results)
                         cardResults.visibility = View.VISIBLE
                     } else {
-                        // Hide if no matches found
                         cardResults.visibility = View.GONE
                     }
                 } else {
-                    // Hide if search bar is empty
                     adapter.updateList(ArrayList())
                     cardResults.visibility = View.GONE
                 }
@@ -133,10 +128,8 @@ class CreateGroupFragment : Fragment() {
                 return@setOnClickListener
             }
 
-            // Generate Code
             val code = UUID.randomUUID().toString().substring(0, 6).uppercase()
 
-            // --- NEW: Convert Bitmap to ByteArray ---
             var imageBytes: ByteArray? = null
             if (selectedBitmap != null) {
                 val stream = ByteArrayOutputStream()
@@ -144,16 +137,13 @@ class CreateGroupFragment : Fragment() {
                 imageBytes = stream.toByteArray()
             }
 
-            // 1. Create Group (Updated Method Call)
             val newGroupId = dbHelper.createGroupGetId(groupName, code, currentUser, imageBytes)
 
             if (newGroupId != -1) {
-                // 2. Add Invited Users
                 for (user in selectedUsers) {
                     dbHelper.addMemberToGroup(newGroupId, user)
                 }
-
-                Toast.makeText(context, "Group Created with ${selectedUsers.size} members! Code: $code", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, "Group Created! Code: $code", Toast.LENGTH_LONG).show()
                 parentFragmentManager.popBackStack()
             } else {
                 Toast.makeText(context, "Failed to create group", Toast.LENGTH_SHORT).show()
@@ -163,18 +153,15 @@ class CreateGroupFragment : Fragment() {
         return view
     }
 
-    // --- NEW: Helper to Resize Image ---
     private fun getResizedBitmap(uri: Uri): Bitmap? {
         var inputStream: InputStream? = null
         try {
-            // 1. Decode dimensions only
             val options = BitmapFactory.Options()
             options.inJustDecodeBounds = true
             inputStream = requireContext().contentResolver.openInputStream(uri)
             BitmapFactory.decodeStream(inputStream, null, options)
             inputStream?.close()
 
-            // 2. Calculate scale factor (Target 500px)
             val REQUIRED_SIZE = 500
             var width_tmp = options.outWidth
             var height_tmp = options.outHeight
@@ -186,7 +173,6 @@ class CreateGroupFragment : Fragment() {
                 scale *= 2
             }
 
-            // 3. Load actual image with scaling
             val o2 = BitmapFactory.Options()
             o2.inSampleSize = scale
             inputStream = requireContext().contentResolver.openInputStream(uri)

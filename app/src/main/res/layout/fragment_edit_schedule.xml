@@ -4,155 +4,236 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/app_background"
-    android:padding="24dp">
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:paddingBottom="100dp"> <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="20dp">
+
+        <ImageView
+            android:id="@+id/btnBackEdit"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:padding="8dp"
+            android:src="@android:drawable/ic_menu_revert"
+            app:tint="@color/app_red"
+            android:background="@drawable/circle_background"
+            android:clickable="true"
+            android:focusable="true"/>
 
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:text="EDIT SCHEDULE"
             android:textColor="@color/app_red"
-            android:textSize="24sp"
+            android:textSize="20sp"
             android:textStyle="bold"
-            android:layout_gravity="center"
-            android:layout_marginBottom="25dp"/>
+            android:gravity="center"
+            android:layout_marginEnd="40dp"/>
+    </LinearLayout>
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="TITLE:"
-            android:textColor="@color/app_red"
-            android:textStyle="bold"
-            android:layout_marginBottom="5dp"/>
-        <EditText
-            android:id="@+id/etEditSchName"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:background="@drawable/rounded_edittext"
-            android:paddingStart="15dp"
-            android:layout_marginBottom="15dp"/>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="DATE &amp; TIME:"
-            android:textColor="@color/app_red"
-            android:textStyle="bold"
-            android:layout_marginBottom="5dp"/>
-        <EditText
-            android:id="@+id/etEditSchDate"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:background="@drawable/rounded_edittext"
-            android:paddingStart="15dp"
-            android:focusable="false"
-            android:clickable="true"
-            android:layout_marginBottom="15dp"/>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="LOCATION:"
-            android:textColor="@color/app_red"
-            android:textStyle="bold"
-            android:layout_marginBottom="5dp"/>
-        <EditText
-            android:id="@+id/etEditSchLocation"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:background="@drawable/rounded_edittext"
-            android:paddingStart="15dp"
-            android:layout_marginBottom="15dp"/>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="DESCRIPTION:"
-            android:textColor="@color/app_red"
-            android:textStyle="bold"
-            android:layout_marginBottom="5dp"/>
-        <EditText
-            android:id="@+id/etEditSchDesc"
-            android:layout_width="match_parent"
-            android:layout_height="100dp"
-            android:background="@drawable/rounded_edittext"
-            android:gravity="top|start"
-            android:padding="15dp"
-            android:layout_marginBottom="15dp"/>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="CHANGE IMAGE (OPTIONAL):"
-            android:textColor="@color/app_red"
-            android:textStyle="bold"
-            android:textSize="12sp"
-            android:layout_marginBottom="5dp"/>
-
-        <LinearLayout
-            android:id="@+id/layoutEditImageSection"
+        <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="25dp"
-            android:background="@drawable/rounded_edittext"
-            android:padding="8dp">
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="@android:color/white"
+            android:layout_marginBottom="30dp">
 
-            <Button
-                android:id="@+id/btnEditSelectImage"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Select Image"
-                android:textSize="11sp"
-                android:backgroundTint="#555555"
-                android:textColor="@color/white"
-                app:cornerRadius="8dp"
-                android:layout_marginEnd="15dp"/>
+                android:orientation="vertical">
 
-            <ImageView
-                android:id="@+id/ivEditScheduleImage"
-                android:layout_width="0dp"
-                android:layout_height="100dp"
-                android:layout_weight="1"
-                android:scaleType="centerCrop"
-                android:src="@android:drawable/ic_menu_gallery"
-                android:background="#EEEEEE"/>
-        </LinearLayout>
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="8dp"
+                    android:background="@color/app_red"/>
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="24dp">
 
-            <Button
-                android:id="@+id/btnUpdateSchedule"
-                android:layout_width="0dp"
-                android:layout_height="60dp"
-                android:layout_weight="1"
-                android:text="UPDATE"
-                android:backgroundTint="@color/app_red"
-                android:textColor="@color/white"
-                android:textStyle="bold"
-                app:cornerRadius="12dp"
-                android:layout_marginEnd="8dp"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="TITLE"
+                        android:textColor="@color/app_red"
+                        android:textStyle="bold"
+                        android:textSize="12sp"
+                        android:layout_marginBottom="8dp"/>
 
-            <Button
-                android:id="@+id/btnCancelEdit"
-                android:layout_width="0dp"
-                android:layout_height="60dp"
-                android:layout_weight="1"
-                android:text="CANCEL"
-                android:backgroundTint="@color/gray_text"
-                android:textColor="@color/white"
-                android:textStyle="bold"
-                app:cornerRadius="12dp"
-                android:layout_marginStart="8dp"/>
-        </LinearLayout>
+                    <EditText
+                        android:id="@+id/etEditSchName"
+                        android:layout_width="match_parent"
+                        android:layout_height="50dp"
+                        android:background="@drawable/rounded_edittext"
+                        android:hint="Schedule Title"
+                        android:paddingStart="15dp"
+                        android:paddingEnd="15dp"
+                        android:textSize="14sp"
+                        android:drawableStart="@android:drawable/ic_menu_edit"
+                        android:drawableTint="@color/app_red"
+                        android:drawablePadding="12dp"
+                        android:layout_marginBottom="20dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="DATE &amp; TIME"
+                        android:textColor="@color/app_red"
+                        android:textStyle="bold"
+                        android:textSize="12sp"
+                        android:layout_marginBottom="8dp"/>
+
+                    <EditText
+                        android:id="@+id/etEditSchDate"
+                        android:layout_width="match_parent"
+                        android:layout_height="50dp"
+                        android:background="@drawable/rounded_edittext"
+                        android:hint="Select Date"
+                        android:paddingStart="15dp"
+                        android:paddingEnd="15dp"
+                        android:textSize="14sp"
+                        android:focusable="false"
+                        android:clickable="true"
+                        android:drawableStart="@android:drawable/ic_menu_today"
+                        android:drawableTint="@color/app_red"
+                        android:drawablePadding="12dp"
+                        android:layout_marginBottom="20dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="LOCATION"
+                        android:textColor="@color/app_red"
+                        android:textStyle="bold"
+                        android:textSize="12sp"
+                        android:layout_marginBottom="8dp"/>
+
+                    <EditText
+                        android:id="@+id/etEditSchLocation"
+                        android:layout_width="match_parent"
+                        android:layout_height="50dp"
+                        android:background="@drawable/rounded_edittext"
+                        android:hint="Enter Location"
+                        android:paddingStart="15dp"
+                        android:paddingEnd="15dp"
+                        android:textSize="14sp"
+                        android:drawableStart="@android:drawable/ic_menu_mylocation"
+                        android:drawableTint="@color/app_red"
+                        android:drawablePadding="12dp"
+                        android:layout_marginBottom="20dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="DESCRIPTION"
+                        android:textColor="@color/app_red"
+                        android:textStyle="bold"
+                        android:textSize="12sp"
+                        android:layout_marginBottom="8dp"/>
+
+                    <EditText
+                        android:id="@+id/etEditSchDesc"
+                        android:layout_width="match_parent"
+                        android:layout_height="100dp"
+                        android:background="@drawable/rounded_edittext"
+                        android:hint="Add details..."
+                        android:gravity="top|start"
+                        android:padding="15dp"
+                        android:textSize="14sp"
+                        android:drawableStart="@android:drawable/ic_menu_info_details"
+                        android:drawableTint="@color/app_red"
+                        android:drawablePadding="12dp"
+                        android:layout_marginBottom="20dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="IMAGE (OPTIONAL)"
+                        android:textColor="@color/app_red"
+                        android:textStyle="bold"
+                        android:textSize="12sp"
+                        android:layout_marginBottom="8dp"/>
+
+                    <LinearLayout
+                        android:id="@+id/layoutEditImageSection"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="30dp"
+                        android:background="@drawable/rounded_edittext"
+                        android:padding="8dp">
+
+                        <Button
+                            android:id="@+id/btnEditSelectImage"
+                            style="@style/Widget.MaterialComponents.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Choose Photo"
+                            android:textColor="@color/app_red"
+                            android:textStyle="bold"
+                            android:textSize="12sp"
+                            android:layout_marginEnd="10dp"/>
+
+                        <androidx.cardview.widget.CardView
+                            android:layout_width="80dp"
+                            android:layout_height="80dp"
+                            app:cardCornerRadius="8dp"
+                            app:cardElevation="0dp"
+                            app:cardBackgroundColor="#F5F5F5">
+                            <ImageView
+                                android:id="@+id/ivEditScheduleImage"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop"
+                                android:src="@android:drawable/ic_menu_gallery"
+                                android:padding="20dp"
+                                app:tint="#AAAAAA"/>
+                        </androidx.cardview.widget.CardView>
+                    </LinearLayout>
+
+                    <Button
+                        android:id="@+id/btnUpdateSchedule"
+                        android:layout_width="match_parent"
+                        android:layout_height="60dp"
+                        android:text="UPDATE SCHEDULE"
+                        android:backgroundTint="@color/app_red"
+                        android:textColor="@color/white"
+                        android:textStyle="bold"
+                        android:textSize="16sp"
+                        app:cornerRadius="12dp"
+                        android:layout_marginBottom="12dp"/>
+
+                    <Button
+                        android:id="@+id/btnCancelEdit"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="60dp"
+                        android:text="CANCEL"
+                        android:textColor="@color/app_red"
+                        android:textStyle="bold"
+                        android:textSize="16sp"
+                        app:strokeColor="@color/app_red"
+                        app:strokeWidth="2dp"
+                        app:cornerRadius="12dp"/>
+
+                </LinearLayout>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
 
     </LinearLayout>
 </ScrollView>

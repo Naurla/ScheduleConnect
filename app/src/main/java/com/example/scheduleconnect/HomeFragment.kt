@@ -8,6 +8,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -18,7 +19,8 @@ class HomeFragment : Fragment() {
 
     private lateinit var dbHelper: DatabaseHelper
     private lateinit var recyclerView: RecyclerView
-    private lateinit var tvEmpty: TextView
+    private lateinit var layoutEmpty: LinearLayout // Changed from TextView to LinearLayout for better UI
+    private lateinit var tvEmptyText: TextView
     private lateinit var tabPersonal: TextView
     private lateinit var tabShared: TextView
     private lateinit var etSearch: EditText
@@ -35,7 +37,9 @@ class HomeFragment : Fragment() {
         dbHelper = DatabaseHelper(requireContext())
 
         recyclerView = view.findViewById(R.id.recyclerSchedules)
-        tvEmpty = view.findViewById(R.id.tvEmpty)
+        layoutEmpty = view.findViewById(R.id.layoutEmptyState) // Updated ID
+        tvEmptyText = view.findViewById(R.id.tvEmpty)
+
         tabPersonal = view.findViewById(R.id.tabYourSchedule)
         tabShared = view.findViewById(R.id.tabSharedSchedule)
         etSearch = view.findViewById(R.id.etSearch)
@@ -64,7 +68,7 @@ class HomeFragment : Fragment() {
             loadSchedules()
         }
 
-        // --- NEW: Search Logic ---
+        // Search Logic
         etSearch.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {}
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -79,24 +83,24 @@ class HomeFragment : Fragment() {
         return view
     }
 
-    // --- FIX: Updated to dynamically apply the red underline/selector ---
+    // --- Updated for Pill Style Tabs ---
     private fun updateTabStyles() {
         if (isPersonal) {
-            // Personal is selected: Apply red underline and color
-            tabPersonal.setTextColor(Color.parseColor("#8B1A1A"))
-            tabPersonal.setBackgroundResource(R.drawable.tab_selector)
+            // Personal Selected: Red Background, White Text
+            tabPersonal.setBackgroundResource(R.drawable.bg_tab_active)
+            tabPersonal.setTextColor(Color.WHITE)
 
-            // Shared is unselected: Remove underline and use black color
-            tabShared.setTextColor(Color.parseColor("#000000"))
+            // Shared Unselected: Transparent, Gray Text
             tabShared.setBackgroundResource(0)
+            tabShared.setTextColor(Color.parseColor("#757575"))
         } else {
-            // Personal is unselected
-            tabPersonal.setTextColor(Color.parseColor("#000000"))
+            // Personal Unselected
             tabPersonal.setBackgroundResource(0)
+            tabPersonal.setTextColor(Color.parseColor("#757575"))
 
-            // Shared is selected
-            tabShared.setTextColor(Color.parseColor("#8B1A1A"))
-            tabShared.setBackgroundResource(R.drawable.tab_selector)
+            // Shared Selected
+            tabShared.setBackgroundResource(R.drawable.bg_tab_active)
+            tabShared.setTextColor(Color.WHITE)
         }
     }
 
@@ -113,7 +117,6 @@ class HomeFragment : Fragment() {
         filterList(currentSearchText)
     }
 
-    // --- NEW: Filter Function ---
     private fun filterList(query: String) {
         val filteredList = ArrayList<Schedule>()
 
@@ -122,7 +125,7 @@ class HomeFragment : Fragment() {
         } else {
             val lowerCaseQuery = query.lowercase(Locale.getDefault())
             for (item in allSchedules) {
-                // Check Title or Description or Location
+                // Check Title or Location
                 if (item.title.lowercase(Locale.getDefault()).contains(lowerCaseQuery) ||
                     item.location.lowercase(Locale.getDefault()).contains(lowerCaseQuery)) {
                     filteredList.add(item)
@@ -133,14 +136,14 @@ class HomeFragment : Fragment() {
         // Update Adapter
         adapter.updateList(filteredList)
 
-        // Show/Hide Empty Text
+        // Show/Hide Empty State
         if (filteredList.isEmpty()) {
             recyclerView.visibility = View.GONE
-            tvEmpty.visibility = View.VISIBLE
-            tvEmpty.text = if (query.isEmpty()) "No schedules found" else "No result found"
+            layoutEmpty.visibility = View.VISIBLE
+            tvEmptyText.text = if (query.isEmpty()) "No schedules found" else "No results found"
         } else {
             recyclerView.visibility = View.VISIBLE
-            tvEmpty.visibility = View.GONE
+            layoutEmpty.visibility = View.GONE
         }
     }
 

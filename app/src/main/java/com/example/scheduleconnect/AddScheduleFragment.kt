@@ -39,6 +39,7 @@ class AddScheduleFragment : Fragment() {
     private lateinit var etDescription: EditText
     private lateinit var btnAdd: Button
     private lateinit var btnCancel: Button
+    private lateinit var btnBack: ImageView // New Back Button
 
     private lateinit var ivScheduleImage: ImageView
     private lateinit var btnSelectImage: Button
@@ -56,6 +57,8 @@ class AddScheduleFragment : Fragment() {
                 try {
                     selectedImageBitmap = getResizedBitmap(imageUri)
                     ivScheduleImage.setImageBitmap(selectedImageBitmap)
+                    ivScheduleImage.setPadding(0, 0, 0, 0)
+                    ivScheduleImage.imageTintList = null
                 } catch (e: Exception) {
                     e.printStackTrace()
                     Toast.makeText(requireContext(), "Error loading image", Toast.LENGTH_SHORT).show()
@@ -68,6 +71,7 @@ class AddScheduleFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_add_schedule, container, false)
         dbHelper = DatabaseHelper(requireContext())
 
+        // Init Views
         etTitle = view.findViewById(R.id.etSchName)
         tvDate = view.findViewById(R.id.etSchDate)
         etLocation = view.findViewById(R.id.etSchLocation)
@@ -75,23 +79,20 @@ class AddScheduleFragment : Fragment() {
 
         btnAdd = view.findViewById(R.id.btnAddSchedule)
         btnCancel = view.findViewById(R.id.btnCancelSchedule)
+        btnBack = view.findViewById(R.id.btnBackAdd) // Bind new back button
 
         ivScheduleImage = view.findViewById(R.id.ivScheduleImage)
         btnSelectImage = view.findViewById(R.id.btnSelectImage)
 
-        // --- FIXED CANCEL BUTTON LOGIC ---
+        // --- Logic: Back Button ---
+        btnBack.setOnClickListener {
+            handleBackNavigation()
+        }
+
+        // --- Logic: Cancel Button ---
         btnCancel.setOnClickListener {
             clearInputFields()
-
-            // Check if we are hosted by HomeActivity to access its BottomNav
-            if (requireActivity() is HomeActivity) {
-                val bottomNav = requireActivity().findViewById<BottomNavigationView>(R.id.bottomNav)
-                // Navigate back to the Home tab
-                bottomNav?.selectedItemId = R.id.nav_home
-            } else {
-                // Fallback for other containers
-                parentFragmentManager.popBackStack()
-            }
+            handleBackNavigation()
         }
 
         btnSelectImage.setOnClickListener {
@@ -134,12 +135,26 @@ class AddScheduleFragment : Fragment() {
                 scheduleNotification(title, dateStr)
                 Toast.makeText(requireContext(), "Personal Schedule Added!", Toast.LENGTH_SHORT).show()
                 clearInputFields()
+                // Optionally navigate back after success
+                // handleBackNavigation()
             } else {
                 Toast.makeText(requireContext(), "Failed to add schedule", Toast.LENGTH_SHORT).show()
             }
         }
 
         return view
+    }
+
+    private fun handleBackNavigation() {
+        // Check if we are hosted by HomeActivity to access its BottomNav
+        if (requireActivity() is HomeActivity) {
+            val bottomNav = requireActivity().findViewById<BottomNavigationView>(R.id.bottomNav)
+            // Navigate back to the Home tab
+            bottomNav?.selectedItemId = R.id.nav_home
+        } else {
+            // Fallback for other containers
+            parentFragmentManager.popBackStack()
+        }
     }
 
     private fun getResizedBitmap(uri: Uri): Bitmap? {
@@ -185,6 +200,8 @@ class AddScheduleFragment : Fragment() {
         tvDate.hint = "Select Date and Time"
         selectedImageBitmap = null
         ivScheduleImage.setImageResource(android.R.drawable.ic_menu_gallery)
+        ivScheduleImage.setPadding(20,20,20,20) // Reset padding for placeholder
+        ivScheduleImage.imageTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#AAAAAA"))
     }
 
     private fun scheduleNotification(title: String, dateStr: String) {

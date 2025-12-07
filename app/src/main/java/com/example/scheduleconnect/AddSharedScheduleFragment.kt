@@ -37,6 +37,9 @@ class AddSharedScheduleFragment : Fragment() {
 
     private lateinit var ivScheduleImage: ImageView
     private lateinit var btnSelectImage: Button
+    private lateinit var btnBack: ImageView // New Back Button
+    private lateinit var tvTitle: TextView // Header Title
+
     private var selectedImageBitmap: Bitmap? = null
 
     private val imagePickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -46,6 +49,8 @@ class AddSharedScheduleFragment : Fragment() {
                 try {
                     selectedImageBitmap = getResizedBitmap(imageUri)
                     ivScheduleImage.setImageBitmap(selectedImageBitmap)
+                    ivScheduleImage.setPadding(0, 0, 0, 0)
+                    ivScheduleImage.imageTintList = null
                 } catch (e: Exception) {
                     e.printStackTrace()
                     Toast.makeText(requireContext(), "Error loading image", Toast.LENGTH_SHORT).show()
@@ -59,18 +64,26 @@ class AddSharedScheduleFragment : Fragment() {
         dbHelper = DatabaseHelper(requireContext())
         groupId = arguments?.getInt("GROUP_ID") ?: -1
 
+        // Init Views
         etName = view.findViewById(R.id.etSchName)
         etDate = view.findViewById(R.id.etSchDate)
         etLoc = view.findViewById(R.id.etSchLocation)
         etDesc = view.findViewById(R.id.etSchDesc)
+        tvTitle = view.findViewById(R.id.tvAddScheduleTitle) // New Title Ref
 
         val btnAdd = view.findViewById<Button>(R.id.btnAddSchedule)
         val btnCancel = view.findViewById<Button>(R.id.btnCancelSchedule)
+        btnBack = view.findViewById(R.id.btnBackAdd) // New Back Button Ref
 
         ivScheduleImage = view.findViewById(R.id.ivScheduleImage)
         btnSelectImage = view.findViewById(R.id.btnSelectImage)
 
+        // Set Text specific to Shared Schedule
+        tvTitle.text = "ADD SHARED SCHEDULE"
         btnAdd.text = "ADD SHARED SCHEDULE"
+
+        // Logic
+        btnBack.setOnClickListener { parentFragmentManager.popBackStack() }
 
         btnCancel.setOnClickListener {
             clearInputFields()
@@ -94,7 +107,6 @@ class AddSharedScheduleFragment : Fragment() {
             val loc = etLoc.text.toString().trim()
             val desc = etDesc.text.toString().trim()
 
-            // --- UPDATED: Validation ---
             if (name.isEmpty() || date.isEmpty() || loc.isEmpty()) {
                 Toast.makeText(context, "Name, Date, and Location are required", Toast.LENGTH_SHORT).show()
                 if(name.isEmpty()) etName.error = "Required"
@@ -153,6 +165,8 @@ class AddSharedScheduleFragment : Fragment() {
         etDate.hint = "Select Date and Time"
         selectedImageBitmap = null
         ivScheduleImage.setImageResource(android.R.drawable.ic_menu_gallery)
+        ivScheduleImage.setPadding(20, 20, 20, 20)
+        ivScheduleImage.imageTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#AAAAAA"))
     }
 
     private fun showDateTimeDialog() {

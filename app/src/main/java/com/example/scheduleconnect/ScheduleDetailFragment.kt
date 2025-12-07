@@ -28,9 +28,9 @@ class ScheduleDetailFragment : Fragment() {
     private lateinit var btnDelete: ImageView
     private lateinit var btnEdit: ImageView
 
-    // --- FIX: Changed from Button to TextView to match the simplified UI ---
-    private lateinit var btnCancelPersonal: TextView
-    private lateinit var btnFinishSchedule: TextView
+    // --- CHANGED: Now using Button type for new UI ---
+    private lateinit var btnCancelPersonal: Button
+    private lateinit var btnFinishSchedule: Button
 
     private lateinit var btnViewAttendees: Button
 
@@ -69,7 +69,7 @@ class ScheduleDetailFragment : Fragment() {
         btnDelete = view.findViewById(R.id.btnDeleteSchedule)
         btnEdit = view.findViewById(R.id.btnEditSchedule)
 
-        // --- FIX: Corrected findViewById to use TextView ---
+        // --- CHANGED: Casting to Button ---
         btnCancelPersonal = view.findViewById(R.id.btnCancelPersonal)
         btnFinishSchedule = view.findViewById(R.id.btnFinishSchedule)
 
@@ -140,17 +140,15 @@ class ScheduleDetailFragment : Fragment() {
             tvDate.text = schedule.date
             tvLoc.text = schedule.location
 
-            // --- UPDATED: Darker color for placeholder ---
             if (schedule.description.trim().isEmpty()) {
                 tvDesc.text = "No description provided."
-                tvDesc.setTextColor(Color.parseColor("#555555"))
+                tvDesc.setTextColor(Color.parseColor("#999999"))
                 tvDesc.setTypeface(null, android.graphics.Typeface.ITALIC)
             } else {
                 tvDesc.text = schedule.description
-                tvDesc.setTextColor(Color.parseColor("#333333"))
+                tvDesc.setTextColor(Color.parseColor("#555555"))
                 tvDesc.setTypeface(null, android.graphics.Typeface.NORMAL)
             }
-            // -------------------------------------
 
             creator = schedule.creator
             tvCreator.text = "Schedule by: $creator"
@@ -205,13 +203,24 @@ class ScheduleDetailFragment : Fragment() {
     }
 
     private fun showCancelConfirmation() {
-        // --- FIX: Using System AlertDialog with clear messaging for confirmation ---
-        AlertDialog.Builder(requireContext())
-            .setTitle("CANCEL SCHEDULE?")
-            .setMessage("Are you sure you want to cancel this schedule? This action cannot be undone.")
-            .setPositiveButton("YES, CANCEL") { _, _ -> updateScheduleStatus("CANCELLED") }
-            .setNegativeButton("NO, GO BACK", null)
-            .show()
+        val builder = AlertDialog.Builder(requireContext())
+        val view = LayoutInflater.from(context).inflate(R.layout.dialog_cancel_confirmation, null)
+
+        builder.setView(view)
+        val dialog = builder.create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+        val btnNo = view.findViewById<TextView>(R.id.btnModalNo)
+        val btnYes = view.findViewById<Button>(R.id.btnModalYes)
+
+        btnNo.setOnClickListener { dialog.dismiss() }
+
+        btnYes.setOnClickListener {
+            updateScheduleStatus("CANCELLED")
+            dialog.dismiss()
+        }
+
+        dialog.show()
     }
 
     private fun updateScheduleStatus(status: String) {
@@ -224,22 +233,19 @@ class ScheduleDetailFragment : Fragment() {
     }
 
     private fun showDeleteConfirmation() {
-        if (type == "shared" && currentUser == creator) {
-            val input = EditText(context)
-            input.hint = "Reason for deletion..."
-            input.layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            )
+        // ... (Same as your previous implementation)
+        val input = EditText(context)
+        input.hint = "Reason for deletion..."
+        input.layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
 
+        if (type == "shared" && currentUser == creator) {
             AlertDialog.Builder(requireContext())
                 .setTitle("Delete Shared Schedule")
-                .setMessage("Please provide a reason for deleting this schedule. Attendees will be notified.")
+                .setMessage("Please provide a reason for deleting this schedule.")
                 .setView(input)
                 .setPositiveButton("DELETE") { _, _ ->
                     val reason = input.text.toString().trim()
                     val finalReason = if (reason.isNotEmpty()) reason else "No reason provided."
-
                     if (dbHelper.deleteSchedule(schId)) {
                         notifyAttendeesOfDeletion(finalReason)
                         Toast.makeText(context, "Schedule Deleted", Toast.LENGTH_SHORT).show()

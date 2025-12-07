@@ -36,7 +36,8 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
 
     companion object {
         private const val DATABASE_NAME = "ScheduleConnect.db"
-        private const val DATABASE_VERSION = 13
+        // Incremented to 14 to support the new group_creator column
+        private const val DATABASE_VERSION = 14
 
         // Table Names
         private const val TABLE_USERS = "users"
@@ -49,6 +50,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         // Columns
         private const val COL_PROFILE_IMG = "profile_image"
         private const val COL_GROUP_IMG = "group_image"
+        private const val COL_GROUP_CREATOR = "group_creator" // New Column
 
         // Schedule Columns
         const val SCH_ID = "schedule_id"
@@ -79,7 +81,8 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
     override fun onCreate(db: SQLiteDatabase?) {
         db?.execSQL("CREATE TABLE $TABLE_USERS (id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT, middle_name TEXT, last_name TEXT, gender TEXT, dob TEXT, email TEXT, phone TEXT, username TEXT, password TEXT, $COL_PROFILE_IMG BLOB)")
         db?.execSQL("CREATE TABLE $TABLE_SCHEDULES ($SCH_ID INTEGER PRIMARY KEY AUTOINCREMENT, $SCH_USERNAME TEXT, $SCH_GROUP_ID INTEGER DEFAULT -1, $SCH_TITLE TEXT, $SCH_DATE TEXT, $SCH_LOCATION TEXT, $SCH_DESC TEXT, $SCH_TYPE TEXT, $SCH_IMAGE BLOB, $SCH_STATUS TEXT DEFAULT 'ACTIVE')")
-        db?.execSQL("CREATE TABLE $TABLE_GROUPS (group_id INTEGER PRIMARY KEY AUTOINCREMENT, group_name TEXT, group_code TEXT, $COL_GROUP_IMG BLOB)")
+        // Updated Groups table to include creator
+        db?.execSQL("CREATE TABLE $TABLE_GROUPS (group_id INTEGER PRIMARY KEY AUTOINCREMENT, group_name TEXT, group_code TEXT, $COL_GROUP_CREATOR TEXT, $COL_GROUP_IMG BLOB)")
         db?.execSQL("CREATE TABLE $TABLE_MEMBERS (member_id INTEGER PRIMARY KEY AUTOINCREMENT, group_id INTEGER, username TEXT)")
         db?.execSQL("CREATE TABLE $TABLE_RSVP ($RSVP_ID INTEGER PRIMARY KEY AUTOINCREMENT, $RSVP_SCH_ID INTEGER, $RSVP_USER TEXT, $RSVP_STATUS INTEGER)")
         db?.execSQL("CREATE TABLE $TABLE_NOTIFICATIONS ($COL_NOTIF_ID INTEGER PRIMARY KEY AUTOINCREMENT, $COL_NOTIF_USER TEXT, $COL_NOTIF_TITLE TEXT, $COL_NOTIF_MSG TEXT, $COL_NOTIF_DATE TEXT)")
@@ -97,6 +100,12 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         if (oldVersion < 13) {
             try {
                 db?.execSQL("ALTER TABLE $TABLE_SCHEDULES ADD COLUMN $SCH_STATUS TEXT DEFAULT 'ACTIVE'")
+            } catch (e: Exception) { }
+        }
+        // New Upgrade for Version 14
+        if (oldVersion < 14) {
+            try {
+                db?.execSQL("ALTER TABLE $TABLE_GROUPS ADD COLUMN $COL_GROUP_CREATOR TEXT")
             } catch (e: Exception) { }
         }
     }
@@ -334,11 +343,9 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         return schedule
     }
 
-    // --- NEW: Get Emails of Group Members (Except Creator) ---
     fun getGroupMemberEmails(groupId: Int, creatorUsername: String): ArrayList<String> {
         val list = ArrayList<String>()
         val db = this.readableDatabase
-        // Select email from Users table where username matches members of the group, excluding the creator
         val query = """
             SELECT u.email 
             FROM $TABLE_USERS u
@@ -355,7 +362,6 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         return list
     }
 
-    // --- NEW: Helper to get all member usernames for in-app notifications ---
     fun getGroupMemberUsernames(groupId: Int, creatorUsername: String): ArrayList<String> {
         val list = ArrayList<String>()
         val db = this.readableDatabase
@@ -474,10 +480,14 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
     }
 
     // --- GROUP & RSVP METHODS ---
+
+    // Updated: Now saves the creator to the database
     fun createGroupGetId(name: String, code: String, creator: String, image: ByteArray? = null): Int {
         val db = this.writableDatabase
         val cv = ContentValues()
-        cv.put("group_name", name); cv.put("group_code", code)
+        cv.put("group_name", name)
+        cv.put("group_code", code)
+        cv.put(COL_GROUP_CREATOR, creator) // Save creator
         if (image != null) cv.put(COL_GROUP_IMG, image)
 
         val groupId = db.insert(TABLE_GROUPS, null, cv)
@@ -502,6 +512,59 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         }
         cursor.close(); return false
     }
+
+    // --- ADDED MISSING METHODS HERE ---
+
+    fun getGroupIdByCode(code: String): Int {
+        val db = this.readableDatabase
+        var id = -1
+        val cursor = db.rawQuery("SELECT group_id FROM $TABLE_GROUPS WHERE group_code = ?", arrayOf(code))
+        if (cursor.moveToFirst()) {
+            id = cursor.getInt(0)
+        }
+        cursor.close()
+        return id
+    }
+
+    fun isUserInGroup(groupId: Int, username: String): Boolean {
+        val db = this.readableDatabase
+        val cursor = db.rawQuery(
+            "SELECT * FROM $TABLE_MEMBERS WHERE group_id = ? AND username = ?",
+            arrayOf(groupId.toString(), username)
+        )
+        val exists = cursor.count > 0
+        cursor.close()
+        return exists
+    }
+
+    fun getGroupName(groupId: Int): String {
+        val db = this.readableDatabase
+        var name = ""
+        val cursor = db.rawQuery("SELECT group_name FROM $TABLE_GROUPS WHERE group_id = ?", arrayOf(groupId.toString()))
+        if (cursor.moveToFirst()) {
+            name = cursor.getString(0)
+        }
+        cursor.close()
+        return name
+    }
+
+    fun getGroupCreator(groupId: Int): String {
+        val db = this.readableDatabase
+        var creator = ""
+        // Use try-catch in case column doesn't exist yet on old installs
+        try {
+            val cursor = db.rawQuery("SELECT $COL_GROUP_CREATOR FROM $TABLE_GROUPS WHERE group_id = ?", arrayOf(groupId.toString()))
+            if (cursor.moveToFirst()) {
+                creator = cursor.getString(0) ?: ""
+            }
+            cursor.close()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return creator
+    }
+
+    // ------------------------------------
 
     fun addMemberToGroup(groupId: Int, username: String): Boolean {
         val db = this.writableDatabase

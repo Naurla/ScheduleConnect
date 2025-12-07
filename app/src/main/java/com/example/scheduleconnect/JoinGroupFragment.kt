@@ -2,49 +2,78 @@ package com.example.scheduleconnect
 
 import android.content.Context
 import android.os.Bundle
+import android.text.InputFilter
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
+import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class JoinGroupFragment : Fragment() {
 
     private lateinit var dbHelper: DatabaseHelper
+    private lateinit var etCode: EditText
+    private lateinit var btnJoin: Button
+    private lateinit var btnBack: ImageView // New Back Button
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.fragment_join_group, container, false)
         dbHelper = DatabaseHelper(requireContext())
 
-        val etCode = view.findViewById<EditText>(R.id.etJoinCode)
-        val btnJoin = view.findViewById<Button>(R.id.btnFinalizeJoin)
-        val btnBack = view.findViewById<ImageView>(R.id.btnBackJoin)
+        etCode = view.findViewById(R.id.etJoinCode)
+        btnJoin = view.findViewById(R.id.btnJoinGroupFinal)
+        btnBack = view.findViewById(R.id.btnBackJoin) // Bind new back button
+
+        // Optional: Force uppercase input filter
+        etCode.filters = arrayOf(InputFilter.AllCaps())
 
         btnBack.setOnClickListener {
             parentFragmentManager.popBackStack()
         }
 
         btnJoin.setOnClickListener {
-            val code = etCode.text.toString().uppercase().trim()
+            val code = etCode.text.toString().trim().uppercase()
 
             if (code.isEmpty()) {
-                etCode.error = "Code required"
+                etCode.error = "Please enter a code"
                 return@setOnClickListener
             }
 
+            // Get Current User
             val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
             val currentUser = sharedPref.getString("username", "default_user") ?: "default_user"
 
-            val success = dbHelper.joinGroup(currentUser, code)
+            val groupId = dbHelper.getGroupIdByCode(code)
 
-            if (success) {
-                Toast.makeText(context, "Joined Group Successfully!", Toast.LENGTH_SHORT).show()
-                parentFragmentManager.popBackStack() // Go back to Group List
+            if (groupId != -1) {
+                // Check if already a member
+                if (dbHelper.isUserInGroup(groupId, currentUser)) {
+                    Toast.makeText(context, "You are already in this group!", Toast.LENGTH_SHORT).show()
+                } else {
+                    if (dbHelper.addMemberToGroup(groupId, currentUser)) {
+
+                        // Notify Creator
+                        val groupName = dbHelper.getGroupName(groupId)
+                        val creator = dbHelper.getGroupCreator(groupId)
+                        val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+
+                        dbHelper.addNotification(creator, "New Member Joined", "$currentUser joined your group: $groupName", date)
+
+                        Toast.makeText(context, "Successfully Joined Group!", Toast.LENGTH_SHORT).show()
+                        parentFragmentManager.popBackStack()
+                    } else {
+                        Toast.makeText(context, "Failed to join group", Toast.LENGTH_SHORT).show()
+                    }
+                }
             } else {
-                Toast.makeText(context, "Invalid Code or Already Joined", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Invalid Group Code", Toast.LENGTH_SHORT).show()
             }
         }
 
