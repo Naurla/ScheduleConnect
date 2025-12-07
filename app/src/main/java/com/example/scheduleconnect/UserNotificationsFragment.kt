@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -17,17 +18,24 @@ class UserNotificationsFragment : Fragment() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var layoutEmpty: LinearLayout
     private lateinit var btnBack: ImageView
+    private lateinit var adapter: NotificationAdapter
+    private var currentUser: String = ""
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.fragment_user_notifications, container, false)
         dbHelper = DatabaseHelper(requireContext())
 
+        // --- MATCHING IDs FROM YOUR XML ---
         recyclerView = view.findViewById(R.id.recyclerUserNotifications)
         layoutEmpty = view.findViewById(R.id.layoutEmptyNotifs)
         btnBack = view.findViewById(R.id.btnBackUserNotif)
 
-        recyclerView.layoutManager = LinearLayoutManager(context)
+        val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
+        currentUser = sharedPref.getString("username", "") ?: ""
 
+        setupRecyclerView()
+
+        // Handle Back Button
         btnBack.setOnClickListener {
             parentFragmentManager.popBackStack()
         }
@@ -37,19 +45,53 @@ class UserNotificationsFragment : Fragment() {
         return view
     }
 
+    private fun setupRecyclerView() {
+        recyclerView.layoutManager = LinearLayoutManager(context)
+
+        // Initialize Adapter with Empty List and the required Click Listeners
+        adapter = NotificationAdapter(ArrayList(),
+            onMarkReadClick = { item ->
+                // When "Mark as Read" is clicked
+                dbHelper.markNotificationAsRead(item.id)
+                loadNotifications() // Refresh list
+                (activity as? HomeActivity)?.updateNotificationBadge() // Update Top Badge
+            },
+            onItemClick = { item ->
+                // When the card is clicked
+                if (!item.isRead) {
+                    dbHelper.markNotificationAsRead(item.id)
+                    (activity as? HomeActivity)?.updateNotificationBadge()
+                }
+
+                // Redirect Logic
+                if (item.type == "SCHEDULE" && item.relatedId != -1) {
+                    val fragment = ScheduleDetailFragment()
+                    val bundle = Bundle()
+                    bundle.putInt("SCHEDULE_ID", item.relatedId)
+                    fragment.arguments = bundle
+
+                    parentFragmentManager.beginTransaction()
+                        .replace(R.id.fragmentContainer, fragment)
+                        .addToBackStack(null)
+                        .commit()
+                }
+            }
+        )
+        recyclerView.adapter = adapter
+    }
+
     private fun loadNotifications() {
-        val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
-        val currentUser = sharedPref.getString("username", "default_user") ?: "default_user"
+        if (currentUser.isNotEmpty()) {
+            val list = dbHelper.getUserNotifications(currentUser)
 
-        val list = dbHelper.getUserNotifications(currentUser)
-
-        if (list.isEmpty()) {
-            recyclerView.visibility = View.GONE
-            layoutEmpty.visibility = View.VISIBLE
-        } else {
-            recyclerView.visibility = View.VISIBLE
-            layoutEmpty.visibility = View.GONE
-            recyclerView.adapter = NotificationAdapter(list)
+            if (list.isEmpty()) {
+                recyclerView.visibility = View.GONE
+                layoutEmpty.visibility = View.VISIBLE
+            } else {
+                recyclerView.visibility = View.VISIBLE
+                layoutEmpty.visibility = View.GONE
+                adapter.updateList(list)
+            }
         }
     }
 }

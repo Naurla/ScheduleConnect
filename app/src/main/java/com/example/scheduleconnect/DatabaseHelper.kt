@@ -36,11 +36,22 @@ data class Schedule(
 
 data class GroupInfo(val id: Int, val name: String, val code: String)
 
+// --- NEW: Updated Notification Item Class ---
+data class NotificationItem(
+    val id: Int,
+    val title: String,
+    val message: String,
+    val date: String,
+    val isRead: Boolean,
+    val relatedId: Int, // ID of the schedule or group
+    val type: String    // "SCHEDULE" or "GENERAL"
+)
+
 class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     companion object {
         private const val DATABASE_NAME = "ScheduleConnect.db"
-        private const val DATABASE_VERSION = 14
+        private const val DATABASE_VERSION = 15 // --- VERSION UPDATED ---
 
         // Table Names
         private const val TABLE_USERS = "users"
@@ -79,6 +90,10 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         private const val COL_NOTIF_TITLE = "title"
         private const val COL_NOTIF_MSG = "message"
         private const val COL_NOTIF_DATE = "date"
+        // --- NEW COLUMNS ---
+        private const val COL_NOTIF_READ = "is_read"
+        private const val COL_NOTIF_REL_ID = "related_id"
+        private const val COL_NOTIF_TYPE = "notif_type"
     }
 
     override fun onCreate(db: SQLiteDatabase?) {
@@ -87,11 +102,12 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         db?.execSQL("CREATE TABLE $TABLE_GROUPS (group_id INTEGER PRIMARY KEY AUTOINCREMENT, group_name TEXT, group_code TEXT, $COL_GROUP_CREATOR TEXT, $COL_GROUP_IMG BLOB)")
         db?.execSQL("CREATE TABLE $TABLE_MEMBERS (member_id INTEGER PRIMARY KEY AUTOINCREMENT, group_id INTEGER, username TEXT)")
         db?.execSQL("CREATE TABLE $TABLE_RSVP ($RSVP_ID INTEGER PRIMARY KEY AUTOINCREMENT, $RSVP_SCH_ID INTEGER, $RSVP_USER TEXT, $RSVP_STATUS INTEGER)")
-        db?.execSQL("CREATE TABLE $TABLE_NOTIFICATIONS ($COL_NOTIF_ID INTEGER PRIMARY KEY AUTOINCREMENT, $COL_NOTIF_USER TEXT, $COL_NOTIF_TITLE TEXT, $COL_NOTIF_MSG TEXT, $COL_NOTIF_DATE TEXT)")
+
+        // --- UPDATED TABLE CREATION ---
+        db?.execSQL("CREATE TABLE $TABLE_NOTIFICATIONS ($COL_NOTIF_ID INTEGER PRIMARY KEY AUTOINCREMENT, $COL_NOTIF_USER TEXT, $COL_NOTIF_TITLE TEXT, $COL_NOTIF_MSG TEXT, $COL_NOTIF_DATE TEXT, $COL_NOTIF_READ INTEGER DEFAULT 0, $COL_NOTIF_REL_ID INTEGER DEFAULT -1, $COL_NOTIF_TYPE TEXT DEFAULT 'GENERAL')")
     }
 
     override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
-        // --- FIX: Drop old tables and recreate them to ensure schema matches ---
         db?.execSQL("DROP TABLE IF EXISTS $TABLE_USERS")
         db?.execSQL("DROP TABLE IF EXISTS $TABLE_SCHEDULES")
         db?.execSQL("DROP TABLE IF EXISTS $TABLE_GROUPS")
@@ -454,7 +470,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         return list
     }
 
-    // --- RSVP & NOTIFICATIONS ---
+    // --- RSVP METHODS ---
     fun updateRSVP(scheduleId: Int, user: String, status: Int) {
         val db = this.writableDatabase
         val cursor = db.rawQuery("SELECT $RSVP_ID FROM $TABLE_RSVP WHERE $RSVP_SCH_ID = ? AND $RSVP_USER = ?", arrayOf(scheduleId.toString(), user))
@@ -492,27 +508,59 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         return list
     }
 
-    fun addNotification(user: String, title: String, message: String, date: String): Boolean {
+    // --- UPDATED NOTIFICATION METHODS ---
+
+    // Updated addNotification to include relatedId and type
+    fun addNotification(user: String, title: String, message: String, date: String, relatedId: Int = -1, type: String = "GENERAL"): Boolean {
         val db = this.writableDatabase
         val cv = ContentValues()
-        cv.put(COL_NOTIF_USER, user); cv.put(COL_NOTIF_TITLE, title); cv.put(COL_NOTIF_MSG, message); cv.put(COL_NOTIF_DATE, date)
+        cv.put(COL_NOTIF_USER, user)
+        cv.put(COL_NOTIF_TITLE, title)
+        cv.put(COL_NOTIF_MSG, message)
+        cv.put(COL_NOTIF_DATE, date)
+        cv.put(COL_NOTIF_READ, 0) // Default to unread
+        cv.put(COL_NOTIF_REL_ID, relatedId)
+        cv.put(COL_NOTIF_TYPE, type)
         return db.insert(TABLE_NOTIFICATIONS, null, cv) != -1L
     }
 
-    fun getUserNotifications(user: String): ArrayList<Map<String, String>> {
-        val list = ArrayList<Map<String, String>>()
+    // Now returns NotificationItem objects
+    fun getUserNotifications(user: String): ArrayList<NotificationItem> {
+        val list = ArrayList<NotificationItem>()
         val db = this.readableDatabase
         val cursor = db.rawQuery("SELECT * FROM $TABLE_NOTIFICATIONS WHERE $COL_NOTIF_USER = ? ORDER BY $COL_NOTIF_ID DESC", arrayOf(user))
         if (cursor.moveToFirst()) {
             do {
-                val map = HashMap<String, String>()
-                map["title"] = cursor.getString(cursor.getColumnIndexOrThrow(COL_NOTIF_TITLE))
-                map["message"] = cursor.getString(cursor.getColumnIndexOrThrow(COL_NOTIF_MSG))
-                map["date"] = cursor.getString(cursor.getColumnIndexOrThrow(COL_NOTIF_DATE))
-                list.add(map)
+                list.add(NotificationItem(
+                    cursor.getInt(cursor.getColumnIndexOrThrow(COL_NOTIF_ID)),
+                    cursor.getString(cursor.getColumnIndexOrThrow(COL_NOTIF_TITLE)),
+                    cursor.getString(cursor.getColumnIndexOrThrow(COL_NOTIF_MSG)),
+                    cursor.getString(cursor.getColumnIndexOrThrow(COL_NOTIF_DATE)),
+                    cursor.getInt(cursor.getColumnIndexOrThrow(COL_NOTIF_READ)) == 1,
+                    cursor.getInt(cursor.getColumnIndexOrThrow(COL_NOTIF_REL_ID)),
+                    cursor.getString(cursor.getColumnIndexOrThrow(COL_NOTIF_TYPE))
+                ))
             } while (cursor.moveToNext())
         }
         cursor.close()
         return list
+    }
+
+    // NEW: Mark as read
+    fun markNotificationAsRead(notifId: Int): Boolean {
+        val db = this.writableDatabase
+        val cv = ContentValues()
+        cv.put(COL_NOTIF_READ, 1)
+        return db.update(TABLE_NOTIFICATIONS, cv, "$COL_NOTIF_ID = ?", arrayOf(notifId.toString())) > 0
+    }
+
+    // NEW: Get unread count
+    fun getUnreadNotificationCount(user: String): Int {
+        val db = this.readableDatabase
+        val cursor = db.rawQuery("SELECT COUNT(*) FROM $TABLE_NOTIFICATIONS WHERE $COL_NOTIF_USER = ? AND $COL_NOTIF_READ = 0", arrayOf(user))
+        var count = 0
+        if (cursor.moveToFirst()) count = cursor.getInt(0)
+        cursor.close()
+        return count
     }
 }
