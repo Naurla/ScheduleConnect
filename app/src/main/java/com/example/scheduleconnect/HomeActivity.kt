@@ -83,7 +83,7 @@ class HomeActivity : AppCompatActivity() {
                 ivProfile.setPadding(0, 0, 0, 0)
                 ivProfile.scaleType = ImageView.ScaleType.CENTER_CROP
             } else {
-                // No profile picture, use default icon
+                // No profile picture, use default iconessss
                 ivProfile.setImageResource(R.drawable.ic_person)
                 ivProfile.setColorFilter(getColor(R.color.app_red)) // Apply tint
                 ivProfile.setPadding(5, 5, 5, 5) // Add padding for icon look
