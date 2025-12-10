@@ -327,24 +327,27 @@ class DatabaseHelper(context: Context) {
 
     fun getHistorySchedules(user: String, callback: (ArrayList<Schedule>) -> Unit) {
         val historyList = ArrayList<Schedule>()
+        val addedIds = HashSet<Int>() // --- FIX: Track IDs to prevent duplicates ---
 
-        // 1. Get Personal History
+        // 1. Get Schedules Created by YOU (Personal OR Shared)
         db.collection("schedules")
             .whereEqualTo("creator", user)
             .whereIn("status", listOf("FINISHED", "CANCELLED"))
             .get()
             .addOnSuccessListener { personalSnap ->
                 for (d in personalSnap) {
-                    historyList.add(d.toObject(Schedule::class.java))
+                    val sch = d.toObject(Schedule::class.java)
+                    historyList.add(sch)
+                    addedIds.add(sch.id) // Mark ID as added
                 }
 
-                // 2. Get Shared History (Schedules from your groups)
+                // 2. Get Schedules from Groups you are in (Shared)
                 getUserGroups(user) { groups ->
                     val groupIds = groups.map { it.id }
+
                     if (groupIds.isEmpty()) {
                         callback(historyList)
                     } else {
-                        // Max 10 groups for 'whereIn'. If more, this needs adjustment.
                         db.collection("schedules")
                             .whereEqualTo("type", "shared")
                             .whereIn("status", listOf("FINISHED", "CANCELLED"))
@@ -352,7 +355,13 @@ class DatabaseHelper(context: Context) {
                             .get()
                             .addOnSuccessListener { sharedSnap ->
                                 for (d in sharedSnap) {
-                                    historyList.add(d.toObject(Schedule::class.java))
+                                    val sch = d.toObject(Schedule::class.java)
+
+                                    // --- FIX: Only add if NOT already in the list ---
+                                    if (!addedIds.contains(sch.id)) {
+                                        historyList.add(sch)
+                                        addedIds.add(sch.id)
+                                    }
                                 }
                                 callback(historyList)
                             }
