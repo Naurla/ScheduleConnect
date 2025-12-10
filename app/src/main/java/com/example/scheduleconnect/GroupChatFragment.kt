@@ -71,7 +71,8 @@ class GroupChatFragment : Fragment() {
     }
 
     private fun sendMessage(message: String) {
-        dbHelper.sendGroupMessage(groupId, currentUser, message)
+        // --- UPDATED: Pass groupName here ---
+        dbHelper.sendGroupMessage(groupId, groupName, currentUser, message)
         etMessage.text.clear()
         // No need to manually reload; the SnapshotListener in DatabaseHelper will auto-update
     }

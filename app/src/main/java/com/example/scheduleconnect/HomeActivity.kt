@@ -7,13 +7,12 @@ import android.util.Base64
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
- import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.imageview.ShapeableImageView
 
-// --- FIX 1: Inherit from BaseActivity for Language Support ---
 class HomeActivity : AppCompatActivity() {
 
     private lateinit var dbHelper: DatabaseHelper
@@ -32,7 +31,6 @@ class HomeActivity : AppCompatActivity() {
         val sharedPref = getSharedPreferences("UserSession", Context.MODE_PRIVATE)
         val intentUsername = intent.getStringExtra("CURRENT_USER")
 
-        // --- FIX 2: Use "USERNAME" (Uppercase) to match MainActivity ---
         if (intentUsername != null) {
             currentUsername = intentUsername
             sharedPref.edit().putString("USERNAME", currentUsername).apply()
@@ -43,7 +41,28 @@ class HomeActivity : AppCompatActivity() {
         val bottomNav = findViewById<BottomNavigationView>(R.id.bottomNav)
 
         if (savedInstanceState == null) {
-            loadFragment(HomeFragment())
+            // --- NEW: Check for Redirection Intent Extras ---
+            val navigateTo = intent.getStringExtra("NAVIGATE_TO")
+
+            if (navigateTo == "CHAT") {
+                val groupId = intent.getIntExtra("GROUP_ID", -1)
+                val groupName = intent.getStringExtra("GROUP_NAME") ?: "Group Chat"
+
+                if (groupId != -1) {
+                    val fragment = GroupChatFragment()
+                    val bundle = Bundle()
+                    bundle.putInt("GROUP_ID", groupId)
+                    bundle.putString("GROUP_NAME", groupName)
+                    fragment.arguments = bundle
+                    loadFragment(fragment)
+                } else {
+                    // Fallback if ID is missing
+                    loadFragment(HomeFragment())
+                }
+            } else {
+                // Default: Load Home
+                loadFragment(HomeFragment())
+            }
         }
 
         val btnNotif = findViewById<ImageView>(R.id.btnTopNotifications)

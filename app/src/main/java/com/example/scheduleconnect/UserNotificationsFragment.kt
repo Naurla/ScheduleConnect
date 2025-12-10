@@ -28,7 +28,6 @@ class UserNotificationsFragment : Fragment() {
         layoutEmpty = view.findViewById(R.id.layoutEmptyNotifs)
         btnBack = view.findViewById(R.id.btnBackUserNotif)
 
-        // --- FIX: Use "username" (lowercase) to match HomeActivity ---
         val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
         currentUser = sharedPref.getString("USERNAME", "") ?: ""
 
@@ -49,11 +48,9 @@ class UserNotificationsFragment : Fragment() {
             onMarkReadClick = { item ->
                 dbHelper.markNotificationRead(item.id)
                 loadNotifications() // Refresh list
-                // Update badge in parent Activity
                 (activity as? HomeActivity)?.updateNotificationBadge()
             },
             onItemClick = { item ->
-                // --- FIX: Use 'read' property ---
                 if (!item.read) {
                     dbHelper.markNotificationRead(item.id)
                     (activity as? HomeActivity)?.updateNotificationBadge()
@@ -72,7 +69,6 @@ class UserNotificationsFragment : Fragment() {
                         .commit()
 
                 } else if (item.type == "GROUP" && item.relatedId != -1) {
-                    // Navigate to details if it's a general group notification
                     val fragment = GroupDetailsFragment()
                     val bundle = Bundle()
                     bundle.putInt("GROUP_ID", item.relatedId)
@@ -84,11 +80,23 @@ class UserNotificationsFragment : Fragment() {
                         .commit()
 
                 } else if ((item.type == "GROUP_INVITE" || item.type == "INVITE") && item.relatedId != -1) {
-                    // --- NEW FIX: Handle Invites and pass the Group Code ---
                     val fragment = JoinGroupFragment()
                     val bundle = Bundle()
-                    // Pass the code we fetched in DatabaseHelper
                     bundle.putString("group_code", item.groupCode)
+                    fragment.arguments = bundle
+
+                    parentFragmentManager.beginTransaction()
+                        .replace(R.id.fragmentContainer, fragment)
+                        .addToBackStack(null)
+                        .commit()
+
+                }
+                // --- NEW: Handle Chat Redirect ---
+                else if (item.type == "CHAT" && item.relatedId != -1) {
+                    val fragment = GroupChatFragment()
+                    val bundle = Bundle()
+                    bundle.putInt("GROUP_ID", item.relatedId) // relatedId is the groupId
+                    bundle.putString("GROUP_NAME", item.groupName) // synced groupName
                     fragment.arguments = bundle
 
                     parentFragmentManager.beginTransaction()

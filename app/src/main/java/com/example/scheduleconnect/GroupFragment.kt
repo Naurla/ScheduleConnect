@@ -23,9 +23,8 @@ class GroupFragment : Fragment() {
     private lateinit var adapter: GroupAdapter
     private lateinit var layoutEmpty: LinearLayout
     private lateinit var tvEmpty: TextView
-    private lateinit var etSearch: EditText // NEW: Search Bar
+    private lateinit var etSearch: EditText
 
-    // Keep the full list so we can filter from it
     private var allGroups = ArrayList<GroupInfo>()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -38,13 +37,14 @@ class GroupFragment : Fragment() {
         recycler = view.findViewById(R.id.recyclerGroups)
         layoutEmpty = view.findViewById(R.id.layoutEmptyGroups)
         tvEmpty = view.findViewById(R.id.tvEmptyGroups)
-        etSearch = view.findViewById(R.id.etSearchGroups) // NEW
+        etSearch = view.findViewById(R.id.etSearchGroups)
 
         recycler.layoutManager = LinearLayoutManager(context)
 
-        // Initialize adapter with empty list
+        // --- SCROLL FIX: Disable nested scrolling so the NestedScrollView handles it ---
+        recycler.isNestedScrollingEnabled = false
+
         adapter = GroupAdapter(ArrayList()) { group ->
-            // Open Details on Click
             val fragment = GroupDetailsFragment()
             val bundle = Bundle()
             bundle.putInt("GROUP_ID", group.id)
@@ -73,7 +73,6 @@ class GroupFragment : Fragment() {
                 .commit()
         }
 
-        // --- NEW: Search Logic ---
         etSearch.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {}
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -92,9 +91,7 @@ class GroupFragment : Fragment() {
         val currentUser = sharedPref.getString("USERNAME", "default_user") ?: "default_user"
 
         dbHelper.getUserGroups(currentUser) { groups ->
-            allGroups = groups // Save the full list
-
-            // Apply any existing search text (e.g., if screen rotated)
+            allGroups = groups
             filterList(etSearch.text.toString())
         }
     }
@@ -107,7 +104,6 @@ class GroupFragment : Fragment() {
         } else {
             val lowerCaseQuery = query.lowercase(Locale.getDefault())
             for (group in allGroups) {
-                // Search by Name OR Code
                 if (group.name.lowercase(Locale.getDefault()).contains(lowerCaseQuery) ||
                     group.code.lowercase(Locale.getDefault()).contains(lowerCaseQuery)) {
                     filteredList.add(group)
@@ -115,7 +111,6 @@ class GroupFragment : Fragment() {
             }
         }
 
-        // Update Adapter
         if (filteredList.isEmpty()) {
             recycler.visibility = View.GONE
             layoutEmpty.visibility = View.VISIBLE

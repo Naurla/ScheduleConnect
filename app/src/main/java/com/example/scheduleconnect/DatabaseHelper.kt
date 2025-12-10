@@ -4,6 +4,9 @@ import android.content.Context
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.storage.FirebaseStorage
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 // --- Data Classes ---
 
@@ -607,7 +610,9 @@ class DatabaseHelper(context: Context) {
     // CHAT METHODS (FIREBASE)
     // ==========================================
 
-    fun sendGroupMessage(groupId: Int, sender: String, message: String) {
+    // --- UPDATED: sendGroupMessage now handles Notifications ---
+    fun sendGroupMessage(groupId: Int, groupName: String, sender: String, message: String) {
+        // 1. Save the message to the Chat History
         val msgData = hashMapOf(
             "group_id" to groupId,
             "sender" to sender,
@@ -615,6 +620,41 @@ class DatabaseHelper(context: Context) {
             "timestamp" to System.currentTimeMillis()
         )
         db.collection("group_messages").add(msgData)
+
+        // 2. Notify other group members
+        // We exclude the 'sender' so you don't get a notification for your own message
+        getGroupMemberUsernames(groupId, sender) { members ->
+            if (members.isNotEmpty()) {
+                val dateFormat = SimpleDateFormat("MMM dd, hh:mm a", Locale.getDefault())
+                val dateStr = dateFormat.format(Date())
+
+                // Base ID to ensure uniqueness in the loop
+                val baseId = System.currentTimeMillis().toInt()
+
+                members.forEachIndexed { index, memberUsername ->
+                    // Generate a unique ID for each notification
+                    val uniqueId = baseId + index
+
+                    val title = "New Message: $groupName"
+                    // Create the notification item
+                    // type = "CHAT" so your UserNotificationsFragment knows to redirect to chat
+                    val notif = NotificationItem(
+                        id = uniqueId,
+                        username = memberUsername,
+                        title = title,
+                        message = "$sender: $message",
+                        date = dateStr,
+                        read = false,
+                        relatedId = groupId,
+                        type = "CHAT",
+                        groupName = groupName // Save name for easier display
+                    )
+
+                    // Save to Firestore 'notifications' collection
+                    db.collection("notifications").document(uniqueId.toString()).set(notif)
+                }
+            }
+        }
     }
 
     fun getGroupMessages(groupId: Int, callback: (ArrayList<ChatMessage>) -> Unit) {
@@ -637,3 +677,4 @@ class DatabaseHelper(context: Context) {
             }
     }
 }
+

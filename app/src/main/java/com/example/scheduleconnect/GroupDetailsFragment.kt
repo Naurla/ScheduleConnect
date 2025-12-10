@@ -17,7 +17,6 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -40,14 +39,13 @@ class GroupDetailsFragment : Fragment() {
 
     // Buttons
     private lateinit var btnAddSchedule: Button
-    private lateinit var btnInvite: Button // Matches XML now
+    private lateinit var btnInvite: Button
     private lateinit var btnLeave: Button
     private lateinit var btnDelete: Button
     private lateinit var btnBack: ImageView
     private lateinit var btnChat: ImageView
 
     private var groupId: Int = -1
-    // Stores the real name to fix the "Unknown" notification issue
     private var currentGroupName: String = ""
     private var groupCode: String = ""
     private lateinit var currentUser: String
@@ -67,15 +65,12 @@ class GroupDetailsFragment : Fragment() {
         tvName = view.findViewById(R.id.tvDetailGroupName)
         tvCode = view.findViewById(R.id.tvDetailGroupCode)
         tvCreator = view.findViewById(R.id.tvDetailGroupCreator)
-        ivGroupImage = view.findViewById(R.id.ivGroupDetailImage) // Corrected ID
+        ivGroupImage = view.findViewById(R.id.ivGroupDetailImage)
 
         recyclerMembers = view.findViewById(R.id.recyclerGroupMembers)
         recyclerSchedules = view.findViewById(R.id.recyclerGroupSchedules)
         btnAddSchedule = view.findViewById(R.id.btnAddGroupSchedule)
-
-        // This ID exists in the XML provided above
         btnInvite = view.findViewById(R.id.btnInviteMember)
-
         btnLeave = view.findViewById(R.id.btnLeaveGroup)
         btnDelete = view.findViewById(R.id.btnDeleteGroup)
         btnBack = view.findViewById(R.id.btnBackGroupDetail)
@@ -83,6 +78,15 @@ class GroupDetailsFragment : Fragment() {
 
         tvName.text = currentGroupName
         tvCode.text = groupCode
+
+        // --- SCROLLING FIX STARTS HERE ---
+        // We configure the RecyclerViews immediately so they don't block the main page scroll
+        recyclerMembers.layoutManager = LinearLayoutManager(context)
+        recyclerMembers.isNestedScrollingEnabled = false
+
+        recyclerSchedules.layoutManager = LinearLayoutManager(context)
+        recyclerSchedules.isNestedScrollingEnabled = false
+        // --- SCROLLING FIX ENDS HERE ---
 
         loadGroupDetails()
         setupScheduleList()
@@ -95,7 +99,7 @@ class GroupDetailsFragment : Fragment() {
             if (currentUser == creator) {
                 btnDelete.visibility = View.VISIBLE
                 btnLeave.visibility = View.GONE
-                btnInvite.visibility = View.VISIBLE // Only creator invites
+                btnInvite.visibility = View.VISIBLE
             } else {
                 btnDelete.visibility = View.GONE
                 btnLeave.visibility = View.VISIBLE
@@ -131,7 +135,6 @@ class GroupDetailsFragment : Fragment() {
                 .commit()
         }
 
-        // --- INVITE LOGIC ---
         btnInvite.setOnClickListener {
             showInviteDialog()
         }
@@ -153,7 +156,7 @@ class GroupDetailsFragment : Fragment() {
     }
 
     private fun setupScheduleList() {
-        recyclerSchedules.layoutManager = LinearLayoutManager(context)
+        // LayoutManager is already set in onCreateView for the fix
         scheduleAdapter = ScheduleAdapter(scheduleList)
         recyclerSchedules.adapter = scheduleAdapter
 
@@ -190,7 +193,6 @@ class GroupDetailsFragment : Fragment() {
     private fun loadGroupDetails() {
         dbHelper.getGroupDetails(groupId) { group ->
             if (group != null) {
-                // --- FIX: Update name from DB ---
                 currentGroupName = group.name
                 tvName.text = group.name
 
@@ -217,7 +219,8 @@ class GroupDetailsFragment : Fragment() {
 
     private fun setupMemberList(creator: String) {
         dbHelper.getGroupMemberUsernames(groupId, "") { members ->
-            recyclerMembers.layoutManager = LinearLayoutManager(context)
+            // LayoutManager is set in onCreateView
+
             recyclerMembers.adapter = object : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
                 inner class MemberViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -316,8 +319,6 @@ class GroupDetailsFragment : Fragment() {
                 Toast.makeText(context, "$targetUser is already in the group", Toast.LENGTH_SHORT).show()
             } else {
                 val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-
-                // --- FIX: Use correct group name ---
                 val message = "You have been invited to join $currentGroupName"
 
                 dbHelper.addNotification(
