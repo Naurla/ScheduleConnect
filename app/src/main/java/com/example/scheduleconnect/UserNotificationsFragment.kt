@@ -24,17 +24,16 @@ class UserNotificationsFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_user_notifications, container, false)
         dbHelper = DatabaseHelper(requireContext())
 
-        // --- MATCHING IDs FROM YOUR XML ---
         recyclerView = view.findViewById(R.id.recyclerUserNotifications)
         layoutEmpty = view.findViewById(R.id.layoutEmptyNotifs)
         btnBack = view.findViewById(R.id.btnBackUserNotif)
 
+        // --- FIX: Use "username" (lowercase) to match HomeActivity ---
         val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
         currentUser = sharedPref.getString("username", "") ?: ""
 
         setupRecyclerView()
 
-        // Handle Back Button
         btnBack.setOnClickListener {
             parentFragmentManager.popBackStack()
         }
@@ -46,18 +45,16 @@ class UserNotificationsFragment : Fragment() {
 
     private fun setupRecyclerView() {
         recyclerView.layoutManager = LinearLayoutManager(context)
-
-        // Initialize Adapter with Empty List and the required Click Listeners
         adapter = NotificationAdapter(ArrayList(),
             onMarkReadClick = { item ->
-                // When "Mark as Read" is clicked
                 dbHelper.markNotificationRead(item.id)
                 loadNotifications() // Refresh list
-                (activity as? HomeActivity)?.updateNotificationBadge() // Update Top Badge
+                // Update badge in parent Activity
+                (activity as? HomeActivity)?.updateNotificationBadge()
             },
             onItemClick = { item ->
-                // When the card is clicked
-                if (!item.isRead) {
+                // --- FIX: Use 'read' property ---
+                if (!item.read) {
                     dbHelper.markNotificationRead(item.id)
                     (activity as? HomeActivity)?.updateNotificationBadge()
                 }
@@ -73,13 +70,10 @@ class UserNotificationsFragment : Fragment() {
                         .replace(R.id.fragmentContainer, fragment)
                         .addToBackStack(null)
                         .commit()
-                }
-                // --- NEW BLOCK: Redirect to Group Details ---
-                else if (item.type == "GROUP" && item.relatedId != -1) {
+                } else if (item.type == "GROUP" && item.relatedId != -1) {
                     val fragment = GroupDetailsFragment()
                     val bundle = Bundle()
                     bundle.putInt("GROUP_ID", item.relatedId)
-                    // Note: Name and Code will be fetched inside GroupDetailsFragment
                     fragment.arguments = bundle
 
                     parentFragmentManager.beginTransaction()
@@ -94,7 +88,6 @@ class UserNotificationsFragment : Fragment() {
 
     private fun loadNotifications() {
         if (currentUser.isNotEmpty()) {
-            // --- ASYNC FETCH ---
             dbHelper.getUserNotifications(currentUser) { list ->
                 if (list.isEmpty()) {
                     recyclerView.visibility = View.GONE
@@ -103,7 +96,7 @@ class UserNotificationsFragment : Fragment() {
                     recyclerView.visibility = View.VISIBLE
                     layoutEmpty.visibility = View.GONE
 
-                    // Sort by Date/ID (Newest first) - assuming ID is time-based
+                    // Sort: Newest first
                     list.sortByDescending { it.id }
 
                     adapter.updateList(list)
@@ -112,4 +105,3 @@ class UserNotificationsFragment : Fragment() {
         }
     }
 }
-

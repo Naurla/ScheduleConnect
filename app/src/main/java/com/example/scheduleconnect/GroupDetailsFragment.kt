@@ -56,7 +56,7 @@ class GroupDetailsFragment : Fragment() {
         groupCode = arguments?.getString("GROUP_CODE") ?: "N/A"
 
         val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
-        currentUser = sharedPref.getString("username", "default_user") ?: "default_user"
+        currentUser = sharedPref.getString("USERNAME", "default_user") ?: "default_user"
 
         // Initialize Views
         tvName = view.findViewById(R.id.tvDetailGroupName)
@@ -223,19 +223,29 @@ class GroupDetailsFragment : Fragment() {
                             holder.tvStatus.setTextColor(Color.GRAY)
                         }
 
-                        // Load Profile Pic (Base64 check handled in DbHelper or here)
+                        // --- FIX STARTS HERE ---
                         dbHelper.getProfilePictureUrl(memberName) { url ->
-                            // Note: If profile pics are also Base64, you should update this logic similarly
-                            // But keeping your existing logic for now unless you say otherwise
                             if (url.isNotEmpty() && !url.startsWith("http")) {
                                 try {
                                     val decodedString = Base64.decode(url, Base64.DEFAULT)
                                     val decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
                                     holder.ivAvatar.setImageBitmap(decodedByte)
+
+                                    // CRITICAL FIX: Remove the gray tint!
+                                    holder.ivAvatar.imageTintList = null
                                     holder.ivAvatar.colorFilter = null
-                                } catch (e: Exception) {}
+
+                                } catch (e: Exception) {
+                                    holder.ivAvatar.setImageResource(R.drawable.ic_person)
+                                    holder.ivAvatar.setColorFilter(Color.GRAY)
+                                }
+                            } else {
+                                // Default state (Gray)
+                                holder.ivAvatar.setImageResource(R.drawable.ic_person)
+                                holder.ivAvatar.setColorFilter(Color.GRAY)
                             }
                         }
+                        // --- FIX ENDS HERE ---
                     }
                 }
                 override fun getItemCount(): Int = members.size

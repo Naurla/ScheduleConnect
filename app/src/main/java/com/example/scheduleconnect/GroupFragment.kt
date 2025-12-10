@@ -23,7 +23,7 @@ class GroupFragment : Fragment() {
         dbHelper = DatabaseHelper(requireContext())
 
         val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
-        currentUser = sharedPref.getString("username", "default_user") ?: "default_user"
+        currentUser = sharedPref.getString("USERNAME", "default_user") ?: "default_user"
 
         recyclerGroups = view.findViewById(R.id.recyclerGroups)
         tvNoGroups = view.findViewById(R.id.tvNoGroups)

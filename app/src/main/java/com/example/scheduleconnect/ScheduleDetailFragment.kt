@@ -2,9 +2,11 @@ package com.example.scheduleconnect
 
 import android.app.AlertDialog
 import android.content.Context
+import android.graphics.BitmapFactory // Added
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
+import android.util.Base64 // Added
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -15,7 +17,6 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
-import com.bumptech.glide.Glide // Ensure Glide is imported
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -39,7 +40,7 @@ class ScheduleDetailFragment : Fragment() {
     private lateinit var tvLoc: TextView
     private lateinit var tvDesc: TextView
     private lateinit var tvCreator: TextView
-    private lateinit var ivImage: ImageView // Added reference for Image
+    private lateinit var ivImage: ImageView
 
     private lateinit var currentUser: String
     private var schId: Int = -1
@@ -53,20 +54,23 @@ class ScheduleDetailFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_schedule_details, container, false)
         dbHelper = DatabaseHelper(requireContext())
 
-        schId = arguments?.getInt("SCH_ID") ?: -1
+        // --- FIX 1: MATCH THE KEY USED IN GROUP DETAILS ---
+        // We look for "SCHEDULE_ID" first. If not found, check "SCH_ID" (fallback).
+        schId = arguments?.getInt("SCHEDULE_ID", -1) ?: -1
+        if (schId == -1) {
+            schId = arguments?.getInt("SCH_ID", -1) ?: -1
+        }
 
-        // Note: We will fetch these details asynchronously to ensure freshness,
-        // but initial arguments are good for placeholders.
         creator = arguments?.getString("SCH_CREATOR") ?: "Unknown"
         type = arguments?.getString("SCH_TYPE") ?: "shared"
         isFromHistory = arguments?.getBoolean("IS_FROM_HISTORY", false) ?: false
 
         tvTitle = view.findViewById(R.id.tvDetailTitle)
         tvDate = view.findViewById(R.id.tvDetailDate)
-        tvLoc = view.findViewById(R.id.tvDetailLoc)
+        tvLoc = view.findViewById(R.id.tvDetailLoc) // XML ID Check
         tvDesc = view.findViewById(R.id.tvDetailDesc)
         tvCreator = view.findViewById(R.id.tvDetailCreator)
-        ivImage = view.findViewById(R.id.ivDetailImage) // Ensure this ID exists in XML
+        ivImage = view.findViewById(R.id.ivDetailImage)
 
         layoutButtons = view.findViewById(R.id.layoutRSVPButtons)
         layoutChangeMind = view.findViewById(R.id.layoutChangeMind)
@@ -84,7 +88,7 @@ class ScheduleDetailFragment : Fragment() {
         }
 
         val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
-        currentUser = sharedPref.getString("username", "default_user") ?: "default_user"
+        currentUser = sharedPref.getString("USERNAME", "default_user") ?: "default_user"
 
         view.findViewById<Button>(R.id.btnAttend).setOnClickListener { updateRSVP(1, "You are ATTENDING.") }
         view.findViewById<Button>(R.id.btnUnsure).setOnClickListener { updateRSVP(2, "Your status is UNSURE.") }
@@ -112,7 +116,6 @@ class ScheduleDetailFragment : Fragment() {
             val fragment = EditScheduleFragment()
             val bundle = Bundle()
             bundle.putInt("SCH_ID", schId)
-            // Passing data is okay, but EditFragment will also re-fetch to be safe
             bundle.putString("SCH_TITLE", tvTitle.text.toString())
             bundle.putString("SCH_DATE", tvDate.text.toString())
             bundle.putString("SCH_LOC", tvLoc.text.toString())
@@ -135,11 +138,14 @@ class ScheduleDetailFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        loadScheduleDetails()
+        if (schId != -1) {
+            loadScheduleDetails()
+        } else {
+            Toast.makeText(context, "Error: Invalid Schedule ID", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun loadScheduleDetails() {
-        // --- ASYNC FETCH ---
         dbHelper.getSchedule(schId) { schedule ->
             if (schedule != null) {
                 tvTitle.text = schedule.title
@@ -157,25 +163,35 @@ class ScheduleDetailFragment : Fragment() {
                 }
 
                 creator = schedule.creator
-                tvCreator.text = "Schedule by: $creator"
+                if (schedule.type == "shared") {
+                    tvCreator.text = "Created by: $creator"
+                    tvCreator.visibility = View.VISIBLE
+                } else {
+                    tvCreator.visibility = View.GONE
+                }
+
                 currentStatus = schedule.status
                 groupId = schedule.groupId
-                type = schedule.type // Ensure type is updated from DB
+                type = schedule.type
 
-                // --- GLIDE IMAGE LOADING ---
+                // --- FIX 2: BASE64 IMAGE LOADING (REPLACED GLIDE) ---
                 if (schedule.imageUrl.isNotEmpty()) {
-                    ivImage.visibility = View.VISIBLE
-                    Glide.with(this)
-                        .load(schedule.imageUrl)
-                        .placeholder(android.R.drawable.ic_menu_gallery)
-                        .into(ivImage)
+                    try {
+                        val decodedString = Base64.decode(schedule.imageUrl, Base64.DEFAULT)
+                        val decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
+                        ivImage.setImageBitmap(decodedByte)
+                        ivImage.visibility = View.VISIBLE
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        ivImage.visibility = View.GONE
+                    }
                 } else {
                     ivImage.visibility = View.GONE
                 }
+                // ---------------------------------------------------
 
                 updateButtonsVisibility()
 
-                // Refresh RSVP UI if user is not creator
                 if (type == "shared" && currentUser != creator) {
                     refreshStatusUI()
                 }
@@ -329,8 +345,6 @@ class ScheduleDetailFragment : Fragment() {
                 dbHelper.addNotification(user, notifTitle, notifMessage, currentDate)
             }
         }
-
-        // Email logic would be asynchronous here too if fully implemented
     }
 
     private fun updateRSVP(status: Int, msg: String) {
@@ -340,7 +354,6 @@ class ScheduleDetailFragment : Fragment() {
     }
 
     private fun refreshStatusUI() {
-        // --- ASYNC RSVP CHECK ---
         dbHelper.getUserRSVPStatus(schId, currentUser) { status ->
             if (status == 0) {
                 layoutButtons.visibility = View.VISIBLE

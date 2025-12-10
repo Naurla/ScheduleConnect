@@ -47,7 +47,7 @@ class AddScheduleFragment : Fragment() {
 
     private val currentUser: String by lazy {
         requireActivity().getSharedPreferences("UserSession", android.content.Context.MODE_PRIVATE)
-            .getString("username", "default_user") ?: "default_user"
+            .getString("USERNAME", "default_user") ?: "default_user"
     }
 
     private val imagePickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->

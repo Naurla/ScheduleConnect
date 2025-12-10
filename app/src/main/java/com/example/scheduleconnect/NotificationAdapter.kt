@@ -9,7 +9,6 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
-// FIX: This class MUST accept 'ArrayList<NotificationItem>'
 class NotificationAdapter(
     private var list: ArrayList<NotificationItem>,
     private val onMarkReadClick: (NotificationItem) -> Unit,
@@ -37,8 +36,8 @@ class NotificationAdapter(
         holder.msg.text = item.message
         holder.date.text = item.date
 
-        // Logic: Show/Hide "Mark as Read" based on status
-        if (item.isRead) {
+        // --- FIX: Use 'read' instead of 'isRead' ---
+        if (item.read) {
             holder.root.setBackgroundColor(Color.WHITE)
             holder.title.setTypeface(null, Typeface.NORMAL)
             holder.markRead.visibility = View.GONE

@@ -83,7 +83,12 @@ class HomeFragment : Fragment() {
         return view
     }
 
-    // --- Updated for Pill Style Tabs ---
+    // --- FIX: Added onResume to refresh list when coming back ---
+    override fun onResume() {
+        super.onResume()
+        loadSchedules()
+    }
+
     private fun updateTabStyles() {
         if (isPersonal) {
             // Personal Selected: Red Background, White Text
@@ -107,14 +112,14 @@ class HomeFragment : Fragment() {
     private fun loadSchedules() {
         val type = if (isPersonal) "personal" else "shared"
         val sharedPref = requireActivity().getSharedPreferences("UserSession", android.content.Context.MODE_PRIVATE)
-        val currentUser = sharedPref.getString("username", "default_user") ?: "default_user"
+        // --- FIX: Use "USERNAME" to match MainActivity ---
+        val currentUser = sharedPref.getString("USERNAME", "default_user") ?: "default_user"
 
-        // --- FIXED: Async Call with Callback ---
         dbHelper.getSchedules(currentUser, type) { fetchedList ->
             // This code runs when Firebase returns data
             allSchedules = fetchedList
 
-            // 2. Apply current search filter (if any text exists)
+            // Apply current search filter (if any text exists)
             val currentSearchText = etSearch.text.toString()
             filterList(currentSearchText)
         }
@@ -160,9 +165,10 @@ class HomeFragment : Fragment() {
         bundle.putString("SCH_DESC", schedule.description)
         bundle.putString("SCH_CREATOR", schedule.creator)
         bundle.putString("SCH_TYPE", schedule.type)
+        // --- FIX: Added Image URL passing ---
+        bundle.putString("SCH_IMAGE", schedule.imageUrl)
 
         fragment.arguments = bundle
-
         parentFragmentManager.beginTransaction()
             .replace(R.id.fragmentContainer, fragment)
             .addToBackStack(null)

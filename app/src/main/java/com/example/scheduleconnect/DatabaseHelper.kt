@@ -8,7 +8,6 @@ import com.google.firebase.storage.FirebaseStorage
 // --- Data Classes ---
 
 data class UserDataModel(
-    // NOTE: These properties must be manually mapped from snake_case Firebase keys
     val username: String = "",
     val firstName: String = "",
     val middleName: String = "",
@@ -17,7 +16,7 @@ data class UserDataModel(
     val dob: String = "",
     val email: String = "",
     val phone: String = "",
-    val profileImageUrl: String = "" // Holds the Base64 string
+    val profileImageUrl: String = ""
 )
 
 data class Schedule(
@@ -33,20 +32,23 @@ data class Schedule(
     val status: String = "ACTIVE"
 )
 
+// --- FIX 1: Retained 'creator' field (Vital for your previous fix) ---
 data class GroupInfo(
     val id: Int = 0,
     val name: String = "",
     val code: String = "",
-    val imageUrl: String = ""
+    val imageUrl: String = "",
+    val creator: String = ""
 )
 
+// --- UPDATED: Changed 'isRead' to 'read' for Firestore compatibility ---
 data class NotificationItem(
     val id: Int = 0,
     val username: String = "",
     val title: String = "",
     val message: String = "",
     val date: String = "",
-    val isRead: Boolean = false,
+    val read: Boolean = false, // Changed from isRead
     val relatedId: Int = -1,
     val type: String = ""
 )
@@ -94,7 +96,6 @@ class DatabaseHelper(context: Context) {
     }
 
     fun addUser(fName: String, mName: String, lName: String, gender: String, dob: String, email: String, phone: String, user: String, pass: String, callback: (Boolean) -> Unit) {
-        // FIX: Use snake_case keys for initial save (matching your Firebase structure)
         val userData = hashMapOf(
             "first_name" to fName, "middle_name" to mName, "last_name" to lName,
             "gender" to gender, "dob" to dob, "email" to email, "phone" to phone,
@@ -114,7 +115,6 @@ class DatabaseHelper(context: Context) {
         }
     }
 
-    // FIX: Manually map fields when retrieving data from Firestore
     fun getUserDetails(username: String, callback: (UserDataModel?) -> Unit) {
         db.collection("users").document(username).get()
             .addOnSuccessListener { doc ->
@@ -122,14 +122,14 @@ class DatabaseHelper(context: Context) {
                     val data = doc.data
                     val user = UserDataModel(
                         username = doc.id,
-                        firstName = data?.get("first_name") as? String ?: "", // MANUAL MAPPING
-                        middleName = data?.get("middle_name") as? String ?: "", // MANUAL MAPPING
-                        lastName = data?.get("last_name") as? String ?: "", // MANUAL MAPPING
+                        firstName = data?.get("first_name") as? String ?: "",
+                        middleName = data?.get("middle_name") as? String ?: "",
+                        lastName = data?.get("last_name") as? String ?: "",
                         gender = data?.get("gender") as? String ?: "",
                         dob = data?.get("dob") as? String ?: "",
                         email = data?.get("email") as? String ?: "",
                         phone = data?.get("phone") as? String ?: "",
-                        profileImageUrl = data?.get("profile_image_url") as? String ?: "" // MANUAL MAPPING
+                        profileImageUrl = data?.get("profile_image_url") as? String ?: ""
                     )
                     callback(user)
                 }
@@ -138,12 +138,11 @@ class DatabaseHelper(context: Context) {
             .addOnFailureListener { callback(null) }
     }
 
-    // FIX: Corrected keys to match Firebase for saving all fields
     fun updateUserInfo(username: String, fName: String, mName: String, lName: String, gender: String, dob: String, phone: String, email: String, callback: (Boolean) -> Unit) {
         val updates = hashMapOf<String, Any>(
-            "first_name" to fName, // MATCHES FIREBASE STRUCTURE
-            "middle_name" to mName, // MATCHES FIREBASE STRUCTURE
-            "last_name" to lName, // MATCHES FIREBASE STRUCTURE
+            "first_name" to fName,
+            "middle_name" to mName,
+            "last_name" to lName,
             "gender" to gender,
             "dob" to dob,
             "phone" to phone,
@@ -199,9 +198,7 @@ class DatabaseHelper(context: Context) {
         }.addOnFailureListener { onComplete("") }
     }
 
-    // FIX: Base64 Update function
     fun updateProfilePictureBase64(username: String, base64Image: String, callback: (Boolean) -> Unit) {
-        // We save the Base64 string directly into the 'profile_image_url' field (snake_case)
         db.collection("users").document(username).update("profile_image_url", base64Image)
             .addOnSuccessListener { callback(true) }
             .addOnFailureListener { callback(false) }
@@ -209,7 +206,7 @@ class DatabaseHelper(context: Context) {
 
     fun getProfilePictureUrl(username: String, callback: (String) -> Unit) {
         db.collection("users").document(username).get()
-            .addOnSuccessListener { callback(it.getString("profile_image_url") ?: "") } // Key corrected
+            .addOnSuccessListener { callback(it.getString("profile_image_url") ?: "") }
             .addOnFailureListener { callback("") }
     }
 
@@ -241,7 +238,7 @@ class DatabaseHelper(context: Context) {
 
         if (type == "personal") {
             db.collection("schedules")
-                .whereEqualTo("creator", user) // FIX: Changed 'username' to 'creator' (matches data class)
+                .whereEqualTo("creator", user)
                 .whereEqualTo("type", "personal")
                 .whereEqualTo("status", "ACTIVE")
                 .get()
@@ -251,7 +248,6 @@ class DatabaseHelper(context: Context) {
                 }
                 .addOnFailureListener { callback(list) }
         } else {
-            // SHARED SCHEDULES (For Home Fragment)
             getUserGroups(user) { groups ->
                 val groupIds = groups.map { it.id }
                 if (groupIds.isEmpty()) { callback(list); return@getUserGroups }
@@ -259,7 +255,6 @@ class DatabaseHelper(context: Context) {
                 db.collection("schedules")
                     .whereEqualTo("type", "shared")
                     .whereEqualTo("status", "ACTIVE")
-                    // FIX: Changed 'group_id' to 'groupId' (matches data class)
                     .whereIn("groupId", groupIds)
                     .get()
                     .addOnSuccessListener { res ->
@@ -274,7 +269,7 @@ class DatabaseHelper(context: Context) {
     fun getGroupSchedules(groupId: Int, callback: (ArrayList<Schedule>) -> Unit) {
         val list = ArrayList<Schedule>()
         db.collection("schedules")
-            .whereEqualTo("groupId", groupId) // specific group only
+            .whereEqualTo("groupId", groupId)
             .whereEqualTo("status", "ACTIVE")
             .get()
             .addOnSuccessListener { res ->
@@ -355,8 +350,9 @@ class DatabaseHelper(context: Context) {
         saveGroupData(id, name, code, base64Image, creator, callback)
     }
 
+    // --- FIX 2: Explicitly saves 'creator' (Vital) ---
     private fun saveGroupData(id: Int, name: String, code: String, imageUrl: String, creator: String, callback: (Int) -> Unit) {
-        val group = GroupInfo(id, name, code, imageUrl)
+        val group = GroupInfo(id, name, code, imageUrl, creator)
         db.collection("groups").document(id.toString()).set(group).addOnSuccessListener {
             addMemberToGroup(id, creator) { callback(id) }
         }.addOnFailureListener { callback(-1) }
@@ -419,8 +415,18 @@ class DatabaseHelper(context: Context) {
         }.addOnFailureListener { callback(ArrayList()) }
     }
 
+    // --- FIX 3: Fetches real creator from DB ---
     fun getGroupCreator(groupId: Int, callback: (String) -> Unit) {
-        callback("Admin")
+        db.collection("groups").document(groupId.toString()).get()
+            .addOnSuccessListener { document ->
+                if (document != null && document.exists()) {
+                    val creator = document.getString("creator") ?: "Unknown"
+                    callback(creator)
+                } else {
+                    callback("Unknown")
+                }
+            }
+            .addOnFailureListener { callback("Unknown") }
     }
 
     fun getGroupMemberUsernames(groupId: Int, exclude: String, callback: (ArrayList<String>) -> Unit) {
@@ -450,11 +456,12 @@ class DatabaseHelper(context: Context) {
     }
 
     // ==========================================
-    // NOTIFICATIONS & RSVP
+    // NOTIFICATIONS & RSVP (UPDATED)
     // ==========================================
 
     fun addNotification(user: String, title: String, msg: String, date: String, relatedId: Int = -1, type: String = "GENERAL") {
         val id = System.currentTimeMillis().toInt()
+        // Updated: uses 'read' instead of 'isRead'
         val notif = NotificationItem(id, user, title, msg, date, false, relatedId, type)
         db.collection("notifications").document(id.toString()).set(notif)
     }
@@ -465,20 +472,24 @@ class DatabaseHelper(context: Context) {
             .get()
             .addOnSuccessListener { res ->
                 val list = ArrayList<NotificationItem>()
-                for (d in res) list.add(d.toObject(NotificationItem::class.java))
+                for (d in res) {
+                    // This will now map correctly to 'read' in the data class
+                    list.add(d.toObject(NotificationItem::class.java))
+                }
                 callback(list)
             }
             .addOnFailureListener { callback(ArrayList()) }
     }
 
     fun markNotificationRead(id: Int) {
-        db.collection("notifications").document(id.toString()).update("isRead", true)
+        // Updated: 'read' instead of 'isRead'
+        db.collection("notifications").document(id.toString()).update("read", true)
     }
 
     fun getUnreadNotificationCount(user: String, callback: (Int) -> Unit) {
         db.collection("notifications")
             .whereEqualTo("username", user)
-            .whereEqualTo("isRead", false)
+            .whereEqualTo("read", false) // Updated: 'read' instead of 'isRead'
             .get()
             .addOnSuccessListener { callback(it.size()) }
             .addOnFailureListener { callback(0) }

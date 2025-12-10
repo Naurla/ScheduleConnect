@@ -34,8 +34,7 @@
                 android:id="@+id/viewUnreadDot"
                 android:layout_width="8dp"
                 android:layout_height="8dp"
-                android:background="@drawable/circle_background"
-                android:backgroundTint="#FF0000"
+                android:background="@drawable/bg_notification_badge"
                 android:visibility="gone"/>
         </LinearLayout>
 

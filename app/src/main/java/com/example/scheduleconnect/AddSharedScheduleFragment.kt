@@ -63,11 +63,14 @@ class AddSharedScheduleFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.fragment_add_schedule, container, false)
         dbHelper = DatabaseHelper(requireContext())
+
+        // Critical: Ensure groupId is passed from previous fragment
         groupId = arguments?.getInt("GROUP_ID") ?: -1
 
         // Get Current User
         val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
-        currentUser = sharedPref.getString("username", "default_user") ?: "default_user"
+        // FIX: Ensure this matches MainActivity (USERNAME vs username)
+        currentUser = sharedPref.getString("USERNAME", "default_user") ?: "default_user"
 
         // Init Views
         etName = view.findViewById(R.id.etSchName)
@@ -137,10 +140,10 @@ class AddSharedScheduleFragment : Fragment() {
                 btnAdd.text = "ADD SHARED SCHEDULE"
 
                 if (success) {
-                    // 1. Notify other group members
+                    // 1. Send Notifications to Group Members (Remote DB)
                     notifyGroupMembers(name, date)
 
-                    // 2. Set Local Notification for yourself
+                    // 2. Schedule Local Notification (Phone System - from Friend's Code)
                     scheduleLocalNotification(name, date, loc)
 
                     Toast.makeText(context, "Shared Schedule Added!", Toast.LENGTH_SHORT).show()
@@ -154,19 +157,25 @@ class AddSharedScheduleFragment : Fragment() {
         return view
     }
 
-    private fun notifyGroupMembers(title: String, date: String) {
-        val notifTitle = "New Group Schedule: $title"
-        val notifMsg = "Added by $currentUser for $date"
-        val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+    private fun notifyGroupMembers(scheduleTitle: String, date: String) {
+        if (groupId == -1) return
 
-        // --- ASYNC Get Members ---
-        dbHelper.getGroupMemberUsernames(groupId, currentUser) { members ->
+        val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        val notifTitle = "New Group Schedule"
+        val notifMsg = "$currentUser added '$scheduleTitle' for $date"
+
+        // Fetch all members of this group
+        dbHelper.getGroupMemberUsernames(groupId, "") { members ->
             for (member in members) {
-                dbHelper.addNotification(member, notifTitle, notifMsg, currentDate)
+                if (member != currentUser) {
+                    // Using the detailed notification method to include groupId and type
+                    dbHelper.addNotification(member, notifTitle, notifMsg, currentDate, groupId, "SCHEDULE")
+                }
             }
         }
     }
 
+    // --- NEW FEATURE FROM FRIEND: WorkManager for Local Notifications ---
     private fun scheduleLocalNotification(name: String, date: String, loc: String) {
         try {
             val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())

@@ -28,19 +28,20 @@ class HomeActivity : AppCompatActivity() {
         ivProfile = findViewById(R.id.btnTopProfile)
         tvBadge = findViewById(R.id.tvNotificationBadge)
 
-        // Session
+        // --- FIX: Use lowercase "username" to match Fragments ---
         val sharedPref = getSharedPreferences("UserSession", Context.MODE_PRIVATE)
         val intentUsername = intent.getStringExtra("CURRENT_USER")
 
         if (intentUsername != null) {
             currentUsername = intentUsername
-            sharedPref.edit().putString("USERNAME", currentUsername).apply()
+            sharedPref.edit().putString("username", currentUsername).apply() // FIX: lowercase key
         } else {
-            currentUsername = sharedPref.getString("USERNAME", "") ?: ""
+            currentUsername = sharedPref.getString("username", "") ?: "" // FIX: lowercase key
         }
 
         val bottomNav = findViewById<BottomNavigationView>(R.id.bottomNav)
 
+        // Load HomeFragment by default
         if (savedInstanceState == null) {
             loadFragment(HomeFragment())
         }
@@ -48,9 +49,11 @@ class HomeActivity : AppCompatActivity() {
         // Notification Click
         val btnNotif = findViewById<ImageView>(R.id.btnTopNotifications)
         btnNotif.setOnClickListener {
+            // Logic to highlight the 'Home' tab visually or uncheck others
             bottomNav.menu.setGroupCheckable(0, true, false)
             for (i in 0 until bottomNav.menu.size()) bottomNav.menu.getItem(i).isChecked = false
             bottomNav.menu.setGroupCheckable(0, true, true)
+
             loadFragment(UserNotificationsFragment())
         }
 
@@ -78,16 +81,13 @@ class HomeActivity : AppCompatActivity() {
         updateNotificationBadge()
     }
 
-    // --- UPDATED: Decode Base64 from Firestore ---
     fun updateNavigationHeader() {
         if (currentUsername.isNotEmpty()) {
             dbHelper.getUserDetails(currentUsername) { user ->
                 if (user != null && user.profileImageUrl.isNotEmpty()) {
                     try {
-                        // Decode Base64 String
                         val decodedByte = Base64.decode(user.profileImageUrl, Base64.DEFAULT)
                         val bitmap = BitmapFactory.decodeByteArray(decodedByte, 0, decodedByte.size)
-
                         ivProfile.setImageBitmap(bitmap)
                         ivProfile.setPadding(0, 0, 0, 0)
                     } catch (e: Exception) {
@@ -109,7 +109,7 @@ class HomeActivity : AppCompatActivity() {
         ivProfile.scaleType = ImageView.ScaleType.FIT_CENTER
     }
 
-     fun updateNotificationBadge() {
+    fun updateNotificationBadge() {
         if (currentUsername.isNotEmpty()) {
             dbHelper.getUnreadNotificationCount(currentUsername) { count ->
                 if (count > 0) {

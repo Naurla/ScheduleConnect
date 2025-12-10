@@ -41,6 +41,9 @@ class CreateGroupFragment : Fragment() {
     private lateinit var ivGroupPreview: ImageView
     private var selectedBitmap: Bitmap? = null
 
+    // Class property to hold the user
+    private var currentUser: String = ""
+
     // Image Picker Launcher
     private val imagePickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK && result.data != null) {
@@ -49,7 +52,6 @@ class CreateGroupFragment : Fragment() {
                 try {
                     selectedBitmap = getResizedBitmap(imageUri)
                     ivGroupPreview.setImageBitmap(selectedBitmap)
-                    // Remove padding and tint when actual image is set
                     ivGroupPreview.setPadding(0, 0, 0, 0)
                     ivGroupPreview.imageTintList = null
                 } catch (e: Exception) {
@@ -86,7 +88,6 @@ class CreateGroupFragment : Fragment() {
         recycler = view.findViewById(R.id.recyclerUserResults)
         cardResults = view.findViewById(R.id.cardSearchResults)
 
-        // Setup Recycler
         recycler.layoutManager = LinearLayoutManager(context)
         adapter = UserInviteAdapter(ArrayList()) { username ->
             if (!selectedUsers.contains(username)) {
@@ -96,9 +97,9 @@ class CreateGroupFragment : Fragment() {
         }
         recycler.adapter = adapter
 
-        // Get Current User
+        // --- FIX IS HERE: Use "USERNAME" to match MainActivity ---
         val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
-        val currentUser = sharedPref.getString("username", "default_user") ?: "default_user"
+        currentUser = sharedPref.getString("USERNAME", "default_user") ?: "default_user"
 
         // Search Logic
         etSearch.addTextChangedListener(object : TextWatcher {
@@ -108,7 +109,6 @@ class CreateGroupFragment : Fragment() {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 val query = s.toString().trim()
                 if (query.isNotEmpty()) {
-                    // --- ASYNC SEARCH ---
                     dbHelper.searchUsers(query, currentUser) { results ->
                         if (results.isNotEmpty()) {
                             adapter.updateList(results)
@@ -126,7 +126,6 @@ class CreateGroupFragment : Fragment() {
 
         btnBack.setOnClickListener { parentFragmentManager.popBackStack() }
 
-        // --- CREATE GROUP LOGIC (UPDATED WITH NOTIFICATIONS) ---
         btnCreate.setOnClickListener {
             val groupName = etGroupName.text.toString().trim()
 
@@ -137,36 +136,30 @@ class CreateGroupFragment : Fragment() {
 
             val code = UUID.randomUUID().toString().substring(0, 6).uppercase()
 
-            // 1. Convert Image to Base64 String
             var base64Image = ""
             if (selectedBitmap != null) {
                 val stream = ByteArrayOutputStream()
-                // Compress heavily (50) to keep string short for Firestore
                 selectedBitmap!!.compress(Bitmap.CompressFormat.JPEG, 50, stream)
                 val byteArrays = stream.toByteArray()
                 base64Image = Base64.encodeToString(byteArrays, Base64.DEFAULT)
             }
 
-            // 2. Disable button to prevent double clicks
             btnCreate.isEnabled = false
             btnCreate.text = "Creating..."
 
-            // 3. Call Database Helper using the NEW method
+            // Now 'currentUser' holds the correct username
             dbHelper.createGroupWithBase64(groupName, code, currentUser, base64Image) { newGroupId ->
-
-                // Ensure UI updates run on main thread
                 activity?.runOnUiThread {
                     btnCreate.isEnabled = true
                     btnCreate.text = "Create Group"
 
                     if (newGroupId != -1) {
-                        // Success: Add invited users
                         val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
 
                         for (user in selectedUsers) {
                             dbHelper.addMemberToGroup(newGroupId, user) { success ->
                                 if (success) {
-                                    // --- SEND NOTIFICATION TO INVITED USER ---
+                                    // Send notification to invited user
                                     dbHelper.addNotification(
                                         user = user,
                                         title = "Group Invitation",
@@ -181,7 +174,6 @@ class CreateGroupFragment : Fragment() {
                         Toast.makeText(context, "Group Created! Code: $code", Toast.LENGTH_LONG).show()
                         parentFragmentManager.popBackStack()
                     } else {
-                        // Failure
                         Toast.makeText(context, "Failed to create group. Check connection.", Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -200,7 +192,7 @@ class CreateGroupFragment : Fragment() {
             BitmapFactory.decodeStream(inputStream, null, options)
             inputStream?.close()
 
-            val REQUIRED_SIZE = 300 // Reduced size for Firestore
+            val REQUIRED_SIZE = 300
             var width_tmp = options.outWidth
             var height_tmp = options.outHeight
             var scale = 1
@@ -225,4 +217,3 @@ class CreateGroupFragment : Fragment() {
         }
     }
 }
-

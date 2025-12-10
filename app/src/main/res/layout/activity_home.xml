@@ -34,8 +34,10 @@
             android:layout_marginStart="12dp"/>
 
         <androidx.constraintlayout.widget.ConstraintLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content">
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:clipChildren="false"
+            android:clipToPadding="false">
 
             <ImageView
                 android:id="@+id/btnTopNotifications"
@@ -45,14 +47,14 @@
                 app:tint="@color/app_red"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintTop_toTopOf="parent"/>
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"/>
 
             <TextView
                 android:id="@+id/tvNotificationBadge"
                 android:layout_width="16dp"
                 android:layout_height="16dp"
-                android:background="@drawable/circle_background"
-                android:backgroundTint="#FF0000"
+                android:background="@drawable/bg_notification_badge"
                 android:gravity="center"
                 android:text="1"
                 android:textColor="@android:color/white"
@@ -62,8 +64,8 @@
                 app:layout_constraintEnd_toEndOf="@id/btnTopNotifications"
                 app:layout_constraintTop_toTopOf="@id/btnTopNotifications"
                 android:layout_marginEnd="-4dp"
-                android:layout_marginTop="-4dp" />
-
+                android:layout_marginTop="-4dp"
+                android:elevation="10dp"/>
         </androidx.constraintlayout.widget.ConstraintLayout>
 
         <com.google.android.material.imageview.ShapeableImageView

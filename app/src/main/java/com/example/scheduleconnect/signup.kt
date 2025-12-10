@@ -2,6 +2,8 @@ package com.example.scheduleconnect
 
 import android.app.DatePickerDialog
 import android.app.ProgressDialog
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -185,7 +187,6 @@ class SignupActivity : AppCompatActivity() {
         if (pass != confirmPass) { etConfirmPassword.error = "No match"; goToStep(2); return }
 
         // --- FIREBASE UPDATES: ASYNC CHECK ---
-        // We must check if the user exists asynchronously now
         val progressDialog = ProgressDialog(this)
         progressDialog.setMessage("Checking availability...")
         progressDialog.setCancelable(false)
@@ -329,8 +330,20 @@ class SignupActivity : AppCompatActivity() {
         dbHelper.addUser(fName, mName, lName, gender, dob, email, phone, user, pass) { success ->
             progressDialog.dismiss()
             if (success) {
+                // --- CRITICAL FIX START: SAVE SESSION CORRECTLY ---
+                val sharedPref = getSharedPreferences("UserSession", Context.MODE_PRIVATE)
+                val editor = sharedPref.edit()
+                editor.putString("USERNAME", user) // KEY MUST BE "USERNAME" (Caps)
+                editor.apply()
+
                 Toast.makeText(this, "Registration Successful!", Toast.LENGTH_SHORT).show()
-                finish()
+
+                // Pass the user to Profile Setup
+                val intent = Intent(this, ProfileSetupActivity::class.java)
+                intent.putExtra("CURRENT_USER", user)
+                startActivity(intent)
+                finish() // Close this activity
+                // --- CRITICAL FIX END ---
             } else {
                 Toast.makeText(this, "Registration Failed", Toast.LENGTH_SHORT).show()
             }

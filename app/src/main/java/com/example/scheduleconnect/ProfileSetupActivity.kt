@@ -52,13 +52,13 @@ class ProfileSetupActivity : AppCompatActivity() {
 
         dbHelper = DatabaseHelper(this)
 
-        // Retrieve username passed from MainActivity or Login
+        // Retrieve username passed from SignupActivity
         currentUser = intent.getStringExtra("CURRENT_USER") ?: ""
 
         // Fallback: Try fetching from SharedPreferences if Intent is empty
         if (currentUser.isEmpty()) {
             val sharedPref = getSharedPreferences("UserSession", Context.MODE_PRIVATE)
-            currentUser = sharedPref.getString("USERNAME", "") ?: "" // Changed to match other files ("USERNAME")
+            currentUser = sharedPref.getString("USERNAME", "") ?: "" // FIXED KEY: "USERNAME"
         }
 
         ivProfile = findViewById(R.id.ivSetupProfileImage)
@@ -87,10 +87,10 @@ class ProfileSetupActivity : AppCompatActivity() {
                         btnSave.text = "SAVE & CONTINUE"
 
                         if (success) {
-                            // Update SharedPreferences
+                            // Update SharedPreferences (FIXED KEY)
                             val sharedPref = getSharedPreferences("UserSession", Context.MODE_PRIVATE)
                             val editor = sharedPref.edit()
-                            editor.putString("USERNAME", currentUser)
+                            editor.putString("USERNAME", currentUser) // FIXED KEY: "USERNAME"
                             editor.apply()
 
                             Toast.makeText(this, "Profile Picture Saved!", Toast.LENGTH_SHORT).show()
@@ -108,6 +108,13 @@ class ProfileSetupActivity : AppCompatActivity() {
         }
 
         tvSkip.setOnClickListener {
+            // Ensure session is saved before skipping (FIXED KEY)
+            if (currentUser.isNotEmpty()) {
+                val sharedPref = getSharedPreferences("UserSession", Context.MODE_PRIVATE)
+                if (!sharedPref.contains("USERNAME")) {
+                    sharedPref.edit().putString("USERNAME", currentUser).apply() // FIXED KEY: "USERNAME"
+                }
+            }
             navigateToHome()
         }
     }
