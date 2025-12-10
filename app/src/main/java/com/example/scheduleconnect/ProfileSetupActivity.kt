@@ -36,7 +36,7 @@ class ProfileSetupActivity : AppCompatActivity() {
                     selectedBitmap = getResizedBitmap(imageUri)
                     ivProfile.setImageBitmap(selectedBitmap)
                     ivProfile.imageTintList = null // Remove tint
-                    ivProfile.setPadding(0,0,0,0) // Full bleed
+                    ivProfile.setPadding(0, 0, 0, 0) // Full bleed
                 } catch (e: Exception) {
                     e.printStackTrace()
                     Toast.makeText(this, "Failed to load image", Toast.LENGTH_SHORT).show()
@@ -77,20 +77,27 @@ class ProfileSetupActivity : AppCompatActivity() {
                 val imageBytes = stream.toByteArray()
 
                 if (currentUser.isNotEmpty()) {
-                    val success = dbHelper.updateProfilePicture(currentUser, imageBytes)
-                    if (success) {
-                        // --- FIX: Update SharedPreferences IMMEDIATELY here ---
-                        // This guarantees HomeActivity knows the user is logged in
-                        val sharedPref = getSharedPreferences("UserSession", Context.MODE_PRIVATE)
-                        val editor = sharedPref.edit()
-                        editor.putString("username", currentUser)
-                        editor.apply()
-                        // ----------------------------------------------------
+                    // Disable button
+                    btnSave.isEnabled = false
+                    btnSave.text = "Uploading..."
 
-                        Toast.makeText(this, "Profile Picture Saved!", Toast.LENGTH_SHORT).show()
-                        navigateToHome()
-                    } else {
-                        Toast.makeText(this, "Database Error", Toast.LENGTH_SHORT).show()
+                    // --- ASYNC SAVE ---
+                    dbHelper.updateProfilePicture(currentUser, imageBytes) { success ->
+                        btnSave.isEnabled = true
+                        btnSave.text = "SAVE & CONTINUE"
+
+                        if (success) {
+                            // Update SharedPreferences IMMEDIATELY here
+                            val sharedPref = getSharedPreferences("UserSession", Context.MODE_PRIVATE)
+                            val editor = sharedPref.edit()
+                            editor.putString("username", currentUser)
+                            editor.apply()
+
+                            Toast.makeText(this, "Profile Picture Saved!", Toast.LENGTH_SHORT).show()
+                            navigateToHome()
+                        } else {
+                            Toast.makeText(this, "Database Error. Try again.", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 } else {
                     Toast.makeText(this, "User not found. Please log in again.", Toast.LENGTH_SHORT).show()

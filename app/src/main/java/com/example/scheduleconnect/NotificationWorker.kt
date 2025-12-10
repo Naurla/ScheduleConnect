@@ -5,12 +5,14 @@ import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
 import androidx.core.app.NotificationCompat
-import androidx.work.Worker
+import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
-class NotificationWorker(context: Context, workerParams: WorkerParameters) : Worker(context, workerParams) {
+class NotificationWorker(context: Context, workerParams: WorkerParameters) : CoroutineWorker(context, workerParams) {
 
-    override fun doWork(): Result {
+    override suspend fun doWork(): Result {
         val title = inputData.getString("title") ?: "Schedule Reminder"
         val message = inputData.getString("message") ?: "You have an upcoming schedule!"
 
@@ -27,6 +29,7 @@ class NotificationWorker(context: Context, workerParams: WorkerParameters) : Wor
         // 2. Handle DND Logic
         if (dndEnabled) {
             // DND is ON: Send delayed email instead of App Notification
+            // We use 'suspend' here to wait for the database fetch to complete
             sendDelayedEmail(title, message)
         } else {
             // Normal Mode: Show App Notification
@@ -52,7 +55,7 @@ class NotificationWorker(context: Context, workerParams: WorkerParameters) : Wor
         }
 
         val notification = NotificationCompat.Builder(applicationContext, channelId)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_launcher_foreground) // Ensure you have this icon or change to R.drawable.ic_home
             .setContentTitle(title)
             .setContentText(message)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -62,19 +65,27 @@ class NotificationWorker(context: Context, workerParams: WorkerParameters) : Wor
         notificationManager.notify(notificationId, notification)
     }
 
-    private fun sendDelayedEmail(title: String, message: String) {
-        // Retrieve current user email
+    private suspend fun sendDelayedEmail(title: String, message: String) {
+        // Retrieve current user username
         val userPref = applicationContext.getSharedPreferences("UserSession", Context.MODE_PRIVATE)
         val username = userPref.getString("username", "") ?: ""
 
         if (username.isNotEmpty()) {
             val dbHelper = DatabaseHelper(applicationContext)
-            val userDetails = dbHelper.getUserDetails(username)
+
+            // --- ASYNC WRAPPER ---
+            // This converts the callback-based Firebase call into a suspend function
+            // so the Worker waits for the result before finishing.
+            val userDetails = suspendCoroutine<UserDataModel?> { continuation ->
+                dbHelper.getUserDetails(username) { user ->
+                    continuation.resume(user)
+                }
+            }
 
             if (userDetails != null && userDetails.email.isNotEmpty()) {
                 val emailBody = "Hello ${userDetails.firstName},\n\nYou have missed a notification because 'Do Not Disturb' is on.\n\nNotification: $title\nDetails: $message\n\nRegards,\nScheduleConnect Team"
 
-                // Send Email (This runs in background via Coroutine inside EmailHelper)
+                // Send Email
                 EmailHelper.sendEmail(listOf(userDetails.email), "Missed Notification: $title", emailBody)
             }
         }

@@ -19,6 +19,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
+import com.bumptech.glide.Glide // Import Glide
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.util.Calendar
@@ -51,7 +52,7 @@ class EditProfileFragment : Fragment() {
                     selectedBitmap = getResizedBitmap(imageUri)
                     ivProfile.setImageBitmap(selectedBitmap)
                     ivProfile.imageTintList = null
-                    ivProfile.setPadding(0,0,0,0)
+                    ivProfile.setPadding(0, 0, 0, 0)
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
@@ -107,23 +108,32 @@ class EditProfileFragment : Fragment() {
     }
 
     private fun loadCurrentData() {
-        val user = dbHelper.getUserDetails(currentUser)
-        if (user != null) {
-            etUsername.setText(user.username) // Show Username
-            etFirst.setText(user.firstName)
-            etMiddle.setText(user.middleName)
-            etLast.setText(user.lastName)
-            etEmail.setText(user.email)
-            etPhone.setText(user.phone)
-            etGender.setText(user.gender)
-            etDOB.setText(user.dob)
-        }
+        // --- ASYNC FETCH ---
+        dbHelper.getUserDetails(currentUser) { user ->
+            if (user != null) {
+                etUsername.setText(user.username)
+                etFirst.setText(user.firstName)
+                etMiddle.setText(user.middleName)
+                etLast.setText(user.lastName)
+                etEmail.setText(user.email)
+                etPhone.setText(user.phone)
+                etGender.setText(user.gender)
+                etDOB.setText(user.dob)
 
-        val bmp = dbHelper.getProfilePicture(currentUser)
-        if (bmp != null) {
-            ivProfile.setImageBitmap(bmp)
-            ivProfile.imageTintList = null
-            ivProfile.setPadding(0,0,0,0)
+                // Load Profile Picture using Glide
+                if (user.profileImageUrl.isNotEmpty()) {
+                    Glide.with(this)
+                        .load(user.profileImageUrl)
+                        .placeholder(R.drawable.ic_person)
+                        .circleCrop()
+                        .into(ivProfile)
+
+                    ivProfile.setPadding(0, 0, 0, 0)
+                    ivProfile.imageTintList = null
+                }
+            } else {
+                Toast.makeText(context, "Failed to load user details", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -141,21 +151,40 @@ class EditProfileFragment : Fragment() {
             return
         }
 
-        val successInfo = dbHelper.updateUserInfo(currentUser, fName, mName, lName, gender, dob, phone, email)
+        btnSave.isEnabled = false
+        btnSave.text = "Saving..."
 
-        var successImage = true
-        if (selectedBitmap != null) {
-            val stream = ByteArrayOutputStream()
-            selectedBitmap!!.compress(Bitmap.CompressFormat.PNG, 100, stream)
-            val bytes = stream.toByteArray()
-            successImage = dbHelper.updateProfilePicture(currentUser, bytes)
+        // 1. Update Text Info
+        dbHelper.updateUserInfo(currentUser, fName, mName, lName, gender, dob, phone, email) { success ->
+            if (success) {
+                // 2. Check if image needs updating
+                if (selectedBitmap != null) {
+                    val stream = ByteArrayOutputStream()
+                    selectedBitmap!!.compress(Bitmap.CompressFormat.PNG, 100, stream)
+                    val bytes = stream.toByteArray()
+
+                    dbHelper.updateProfilePicture(currentUser, bytes) { imgSuccess ->
+                        finishUpdate(imgSuccess)
+                    }
+                } else {
+                    finishUpdate(true)
+                }
+            } else {
+                Toast.makeText(context, "Update failed", Toast.LENGTH_SHORT).show()
+                btnSave.isEnabled = true
+                btnSave.text = "SAVE CHANGES"
+            }
         }
+    }
 
-        if (successInfo && successImage) {
+    private fun finishUpdate(success: Boolean) {
+        if (success) {
             Toast.makeText(context, "Profile Updated!", Toast.LENGTH_SHORT).show()
             parentFragmentManager.popBackStack()
         } else {
-            Toast.makeText(context, "Update failed", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Failed to update profile picture", Toast.LENGTH_SHORT).show()
+            btnSave.isEnabled = true
+            btnSave.text = "SAVE CHANGES"
         }
     }
 

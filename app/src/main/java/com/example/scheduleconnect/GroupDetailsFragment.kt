@@ -15,6 +15,7 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide // Import Glide
 
 class GroupDetailsFragment : Fragment() {
 
@@ -26,7 +27,7 @@ class GroupDetailsFragment : Fragment() {
     private lateinit var recyclerMembers: RecyclerView
 
     // Buttons
-    private lateinit var btnAddSchedule: Button // New
+    private lateinit var btnAddSchedule: Button
     private lateinit var btnLeave: Button
     private lateinit var btnDelete: Button
     private lateinit var btnBack: ImageView
@@ -54,34 +55,38 @@ class GroupDetailsFragment : Fragment() {
         ivGroupImage = view.findViewById(R.id.ivGroupDetailImage)
         recyclerMembers = view.findViewById(R.id.recyclerGroupMembers)
 
-        btnAddSchedule = view.findViewById(R.id.btnAddGroupSchedule) // Bind new button
+        btnAddSchedule = view.findViewById(R.id.btnAddGroupSchedule)
         btnLeave = view.findViewById(R.id.btnLeaveGroup)
         btnDelete = view.findViewById(R.id.btnDeleteGroup)
         btnBack = view.findViewById(R.id.btnBackGroupDetail)
 
         tvName.text = groupName
         tvCode.text = groupCode
-        val creator = dbHelper.getGroupCreator(groupId)
-        tvCreator.text = "Created by: $creator"
 
-        // Logic for Admin/Member buttons
-        if (currentUser == creator) {
-            btnDelete.visibility = View.VISIBLE
-            btnLeave.visibility = View.GONE
-        } else {
-            btnDelete.visibility = View.GONE
-            btnLeave.visibility = View.VISIBLE
+        // --- ASYNC: Get Creator info to set button visibility ---
+        dbHelper.getGroupCreator(groupId) { creator ->
+            tvCreator.text = "Created by: $creator"
+
+            // Logic for Admin/Member buttons
+            if (currentUser == creator) {
+                btnDelete.visibility = View.VISIBLE
+                btnLeave.visibility = View.GONE
+            } else {
+                btnDelete.visibility = View.GONE
+                btnLeave.visibility = View.VISIBLE
+            }
+
+            // Load members after we know who the creator is (for styling)
+            setupMemberList(creator)
         }
 
         btnBack.setOnClickListener { parentFragmentManager.popBackStack() }
 
-        setupMemberList(creator)
-
-        // --- NEW: Add Shared Schedule Logic ---
+        // Add Shared Schedule Logic
         btnAddSchedule.setOnClickListener {
             val fragment = AddSharedScheduleFragment()
             val bundle = Bundle()
-            bundle.putInt("GROUP_ID", groupId) // Pass the Group ID!
+            bundle.putInt("GROUP_ID", groupId)
             fragment.arguments = bundle
 
             parentFragmentManager.beginTransaction()
@@ -101,57 +106,62 @@ class GroupDetailsFragment : Fragment() {
         return view
     }
 
-    // ... (Keep setupMemberList, showConfirmationDialog, leaveGroup, and deleteGroup EXACTLY as they are) ...
     private fun setupMemberList(creator: String) {
-        val members = dbHelper.getGroupMemberUsernames(groupId, "")
+        // --- ASYNC: Get member list ---
+        dbHelper.getGroupMemberUsernames(groupId, "") { members ->
 
-        recyclerMembers.layoutManager = LinearLayoutManager(context)
-        recyclerMembers.adapter = object : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+            recyclerMembers.layoutManager = LinearLayoutManager(context)
+            recyclerMembers.adapter = object : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-            inner class MemberViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-                val tvUsername: TextView = view.findViewById(R.id.tvAttendeeName)
-                val tvStatus: TextView = view.findViewById(R.id.tvAttendeeStatus)
-                val ivAvatar: ImageView = view.findViewById(R.id.ivAttendeeAvatar)
-            }
+                inner class MemberViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+                    val tvUsername: TextView = view.findViewById(R.id.tvAttendeeName)
+                    val tvStatus: TextView = view.findViewById(R.id.tvAttendeeStatus)
+                    val ivAvatar: ImageView = view.findViewById(R.id.ivAttendeeAvatar)
+                }
 
-            override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-                // IMPORTANT: Inflate item_attendee.xml
-                val v = LayoutInflater.from(parent.context).inflate(R.layout.item_attendee, parent, false)
-                return MemberViewHolder(v)
-            }
+                override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+                    val v = LayoutInflater.from(parent.context).inflate(R.layout.item_attendee, parent, false)
+                    return MemberViewHolder(v)
+                }
 
-            override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-                val memberName = members[position]
-                if (holder is MemberViewHolder) {
-                    holder.tvUsername.text = memberName
+                override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+                    val memberName = members[position]
+                    if (holder is MemberViewHolder) {
+                        holder.tvUsername.text = memberName
 
-                    if (memberName == creator) {
-                        holder.tvStatus.text = "Admin"
-                        holder.tvStatus.setTextColor(Color.parseColor("#8B1A1A"))
-                    } else {
-                        holder.tvStatus.text = "Member"
-                        holder.tvStatus.setTextColor(Color.GRAY)
-                    }
+                        if (memberName == creator) {
+                            holder.tvStatus.text = "Admin"
+                            holder.tvStatus.setTextColor(Color.parseColor("#8B1A1A"))
+                        } else {
+                            holder.tvStatus.text = "Member"
+                            holder.tvStatus.setTextColor(Color.GRAY)
+                        }
 
-                    // Attempt to load profile pic
-                    val bmp = dbHelper.getProfilePicture(memberName)
-                    if (bmp != null) {
-                        holder.ivAvatar.setImageBitmap(bmp)
-                        holder.ivAvatar.imageTintList = null
-                    } else {
-                        holder.ivAvatar.setImageResource(R.drawable.ic_person)
-                        holder.ivAvatar.setColorFilter(Color.parseColor("#999999"))
+                        // --- ASYNC: Load profile picture with Glide ---
+                        dbHelper.getProfilePictureUrl(memberName) { url ->
+                            if (url.isNotEmpty()) {
+                                Glide.with(holder.itemView.context)
+                                    .load(url)
+                                    .circleCrop()
+                                    .placeholder(R.drawable.ic_person)
+                                    .into(holder.ivAvatar)
+
+                                holder.ivAvatar.colorFilter = null
+                            } else {
+                                holder.ivAvatar.setImageResource(R.drawable.ic_person)
+                                holder.ivAvatar.setColorFilter(Color.parseColor("#999999"))
+                            }
+                        }
                     }
                 }
-            }
 
-            override fun getItemCount(): Int = members.size
+                override fun getItemCount(): Int = members.size
+            }
         }
     }
 
     private fun showConfirmationDialog(title: String, message: String, onConfirm: () -> Unit) {
         val builder = AlertDialog.Builder(requireContext())
-        // IMPORTANT: Inflate dialog_generic_confirmation.xml
         val view = LayoutInflater.from(context).inflate(R.layout.dialog_generic_confirmation, null)
 
         builder.setView(view)
@@ -177,19 +187,26 @@ class GroupDetailsFragment : Fragment() {
     }
 
     private fun leaveGroup() {
-        val db = dbHelper.writableDatabase
-        db.delete("group_members", "group_id=? AND username=?", arrayOf(groupId.toString(), currentUser))
-        Toast.makeText(context, "Left group", Toast.LENGTH_SHORT).show()
-        parentFragmentManager.popBackStack()
+        // --- ASYNC: Leave Group ---
+        dbHelper.leaveGroup(groupId, currentUser) { success ->
+            if (success) {
+                Toast.makeText(context, "Left group", Toast.LENGTH_SHORT).show()
+                parentFragmentManager.popBackStack()
+            } else {
+                Toast.makeText(context, "Failed to leave group", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun deleteGroup() {
-        val db = dbHelper.writableDatabase
-        db.delete("schedule_groups", "group_id=?", arrayOf(groupId.toString()))
-        db.delete("group_members", "group_id=?", arrayOf(groupId.toString()))
-        db.delete("schedules", "group_id=?", arrayOf(groupId.toString()))
-
-        Toast.makeText(context, "Group deleted", Toast.LENGTH_SHORT).show()
-        parentFragmentManager.popBackStack()
+        // --- ASYNC: Delete Group ---
+        dbHelper.deleteGroup(groupId) { success ->
+            if (success) {
+                Toast.makeText(context, "Group deleted", Toast.LENGTH_SHORT).show()
+                parentFragmentManager.popBackStack()
+            } else {
+                Toast.makeText(context, "Failed to delete group", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 }

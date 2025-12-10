@@ -39,7 +39,7 @@ class AddScheduleFragment : Fragment() {
     private lateinit var etDescription: EditText
     private lateinit var btnAdd: Button
     private lateinit var btnCancel: Button
-    private lateinit var btnBack: ImageView // New Back Button
+    private lateinit var btnBack: ImageView
 
     private lateinit var ivScheduleImage: ImageView
     private lateinit var btnSelectImage: Button
@@ -79,7 +79,7 @@ class AddScheduleFragment : Fragment() {
 
         btnAdd = view.findViewById(R.id.btnAddSchedule)
         btnCancel = view.findViewById(R.id.btnCancelSchedule)
-        btnBack = view.findViewById(R.id.btnBackAdd) // Bind new back button
+        btnBack = view.findViewById(R.id.btnBackAdd)
 
         ivScheduleImage = view.findViewById(R.id.ivScheduleImage)
         btnSelectImage = view.findViewById(R.id.btnSelectImage)
@@ -121,6 +121,7 @@ class AddScheduleFragment : Fragment() {
                 return@setOnClickListener
             }
 
+            // Convert Bitmap to Byte Array (DatabaseHelper will handle upload)
             var imageBytes: ByteArray? = null
             if (selectedImageBitmap != null) {
                 val stream = ByteArrayOutputStream()
@@ -128,17 +129,28 @@ class AddScheduleFragment : Fragment() {
                 imageBytes = stream.toByteArray()
             }
 
-            val success = dbHelper.addSchedule(currentUser, -1, title, dateStr, location, desc, "personal", imageBytes)
+            // --- FIREBASE ASYNC SAVE ---
+            btnAdd.isEnabled = false // Disable button while saving
+            btnAdd.text = "Saving..."
 
-            if (success) {
-                dbHelper.addNotification(currentUser, "New Schedule Added", "You created schedule: $title", dateStr)
-                scheduleNotification(title, dateStr)
-                Toast.makeText(requireContext(), "Personal Schedule Added!", Toast.LENGTH_SHORT).show()
-                clearInputFields()
-                // Optionally navigate back after success
-                // handleBackNavigation()
-            } else {
-                Toast.makeText(requireContext(), "Failed to add schedule", Toast.LENGTH_SHORT).show()
+            dbHelper.addSchedule(currentUser, -1, title, dateStr, location, desc, "personal", imageBytes) { success ->
+                // This block runs ONLY when Firebase finishes
+                btnAdd.isEnabled = true
+                btnAdd.text = "ADD SCHEDULE"
+
+                if (success) {
+                    // Add Notification (Fire and forget)
+                    dbHelper.addNotification(currentUser, "New Schedule Added", "You created schedule: $title", dateStr)
+
+                    scheduleNotification(title, dateStr)
+                    Toast.makeText(requireContext(), "Personal Schedule Added!", Toast.LENGTH_SHORT).show()
+
+                    clearInputFields()
+                    // Optionally navigate back automatically
+                    handleBackNavigation()
+                } else {
+                    Toast.makeText(requireContext(), "Failed to add schedule. Try again.", Toast.LENGTH_SHORT).show()
+                }
             }
         }
 
@@ -200,7 +212,7 @@ class AddScheduleFragment : Fragment() {
         tvDate.hint = "Select Date and Time"
         selectedImageBitmap = null
         ivScheduleImage.setImageResource(android.R.drawable.ic_menu_gallery)
-        ivScheduleImage.setPadding(20,20,20,20) // Reset padding for placeholder
+        ivScheduleImage.setPadding(20,20,20,20)
         ivScheduleImage.imageTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#AAAAAA"))
     }
 

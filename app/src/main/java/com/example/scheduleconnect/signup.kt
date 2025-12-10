@@ -9,7 +9,7 @@ import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.textfield.TextInputEditText
-import com.hbb20.CountryCodePicker // Make sure you have this library dependency
+import com.hbb20.CountryCodePicker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -47,6 +47,7 @@ class SignupActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_signup)
 
+        // dbHelper is now the new Firebase-based class
         dbHelper = DatabaseHelper(this)
 
         // Initialize Views
@@ -179,13 +180,27 @@ class SignupActivity : AppCompatActivity() {
 
         // --- VALIDATION STEP 3: ACCOUNT ---
         if (user.isEmpty()) { etUsername.error = "Required"; goToStep(2); return }
-        if (dbHelper.checkUsernameOrEmail(user)) { etUsername.error = "Taken"; goToStep(2); return }
         if (pass.isEmpty()) { etPassword.error = "Required"; goToStep(2); return }
         if (pass.length < 8) { etPassword.error = "Min 8 chars"; goToStep(2); return }
         if (pass != confirmPass) { etConfirmPassword.error = "No match"; goToStep(2); return }
 
-        // --- START EMAIL VERIFICATION ---
-        sendVerificationEmail(email, fName, mName, lName, gender, dob, phone, user, pass)
+        // --- FIREBASE UPDATES: ASYNC CHECK ---
+        // We must check if the user exists asynchronously now
+        val progressDialog = ProgressDialog(this)
+        progressDialog.setMessage("Checking availability...")
+        progressDialog.setCancelable(false)
+        progressDialog.show()
+
+        dbHelper.checkUsernameOrEmail(user) { exists ->
+            progressDialog.dismiss()
+            if (exists) {
+                etUsername.error = "Taken"
+                goToStep(2)
+            } else {
+                // If username is free, proceed to email verification
+                sendVerificationEmail(email, fName, mName, lName, gender, dob, phone, user, pass)
+            }
+        }
     }
 
     private fun sendVerificationEmail(
@@ -305,12 +320,20 @@ class SignupActivity : AppCompatActivity() {
         fName: String, mName: String, lName: String,
         gender: String, dob: String, email: String, phone: String, user: String, pass: String
     ) {
-        val isInserted = dbHelper.addUser(fName, mName, lName, gender, dob, email, phone, user, pass)
-        if (isInserted) {
-            Toast.makeText(this, "Registration Successful!", Toast.LENGTH_SHORT).show()
-            finish()
-        } else {
-            Toast.makeText(this, "Registration Failed", Toast.LENGTH_SHORT).show()
+        // --- FIREBASE UPDATE: ASYNC SAVE ---
+        val progressDialog = ProgressDialog(this)
+        progressDialog.setMessage("Creating Account...")
+        progressDialog.setCancelable(false)
+        progressDialog.show()
+
+        dbHelper.addUser(fName, mName, lName, gender, dob, email, phone, user, pass) { success ->
+            progressDialog.dismiss()
+            if (success) {
+                Toast.makeText(this, "Registration Successful!", Toast.LENGTH_SHORT).show()
+                finish()
+            } else {
+                Toast.makeText(this, "Registration Failed", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 

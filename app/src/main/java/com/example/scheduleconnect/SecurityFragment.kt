@@ -56,14 +56,16 @@ class SecurityFragment : Fragment() {
         val username = sharedPref.getString("username", "") ?: ""
 
         if (username.isNotEmpty()) {
-            val user = dbHelper.getUserDetails(username)
-            if (user != null) {
-                fullEmail = user.email
-                // Start with hidden state
-                isEmailVisible = false
-                updateEmailDisplay()
-            } else {
-                tvEmail.text = "Email not found"
+            // --- ASYNC FETCH ---
+            dbHelper.getUserDetails(username) { user ->
+                if (user != null) {
+                    fullEmail = user.email
+                    // Start with hidden state
+                    isEmailVisible = false
+                    updateEmailDisplay()
+                } else {
+                    tvEmail.text = "Email not found"
+                }
             }
         }
     }
@@ -72,9 +74,11 @@ class SecurityFragment : Fragment() {
         if (isEmailVisible) {
             tvEmail.text = fullEmail
             btnToggle.alpha = 1.0f // Fully opaque when visible
+//            btnToggle.setImageResource(R.drawable.ic_eye_off) // Optional: Change icon if you have ic_eye_off
         } else {
             tvEmail.text = maskEmail(fullEmail)
             btnToggle.alpha = 0.5f // Semi-transparent when hidden
+//            btnToggle.setImageResource(R.drawable.ic_eye) // Optional: Change icon if you have ic_eye
         }
     }
 

@@ -7,6 +7,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import com.bumptech.glide.Glide // Import Glide
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.imageview.ShapeableImageView
 
@@ -14,7 +15,7 @@ class HomeActivity : AppCompatActivity() {
 
     private lateinit var dbHelper: DatabaseHelper
     private lateinit var ivProfile: ShapeableImageView
-    private lateinit var tvBadge: TextView // Reference to the badge
+    private lateinit var tvBadge: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -22,7 +23,7 @@ class HomeActivity : AppCompatActivity() {
 
         dbHelper = DatabaseHelper(this)
         ivProfile = findViewById(R.id.btnTopProfile)
-        tvBadge = findViewById(R.id.tvNotificationBadge) // Init badge
+        tvBadge = findViewById(R.id.tvNotificationBadge)
 
         // Retrieve username and save to SharedPreferences
         val username = intent.getStringExtra("CURRENT_USER")
@@ -68,43 +69,52 @@ class HomeActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         loadHeaderProfile()
-        updateNotificationBadge() // Check for unread notifs every time
+        updateNotificationBadge()
     }
 
-    // --- NEW: Update Badge Visibility and Count ---
+    // --- UPDATED: Async Badge Count ---
     fun updateNotificationBadge() {
         val sharedPref = getSharedPreferences("UserSession", MODE_PRIVATE)
         val username = sharedPref.getString("username", "") ?: ""
 
         if (username.isNotEmpty()) {
-            val count = dbHelper.getUnreadNotificationCount(username)
-            if (count > 0) {
-                tvBadge.text = if (count > 99) "99+" else count.toString()
-                tvBadge.visibility = View.VISIBLE
-            } else {
-                tvBadge.visibility = View.GONE
+            // Use callback
+            dbHelper.getUnreadNotificationCount(username) { count ->
+                if (count > 0) {
+                    tvBadge.text = if (count > 99) "99+" else count.toString()
+                    tvBadge.visibility = View.VISIBLE
+                } else {
+                    tvBadge.visibility = View.GONE
+                }
             }
         }
     }
 
+    // --- UPDATED: Async Profile Picture with Glide ---
     private fun loadHeaderProfile() {
         val sharedPref = getSharedPreferences("UserSession", MODE_PRIVATE)
         val username = sharedPref.getString("username", "") ?: ""
 
         if (username.isNotEmpty()) {
-            val bitmap = dbHelper.getProfilePicture(username)
-            if (bitmap != null) {
-                ivProfile.setImageBitmap(bitmap)
-                ivProfile.imageTintList = null
-                ivProfile.setPadding(0, 0, 0, 0)
-                ivProfile.scaleType = ImageView.ScaleType.CENTER_CROP
-            } else {
-                ivProfile.setImageResource(R.drawable.ic_person)
-                val color = ContextCompat.getColor(this, R.color.app_red)
-                ivProfile.imageTintList = null
-                ivProfile.setColorFilter(color)
-                ivProfile.setPadding(5, 5, 5, 5)
-                ivProfile.scaleType = ImageView.ScaleType.FIT_CENTER
+            dbHelper.getProfilePictureUrl(username) { url ->
+                if (url.isNotEmpty()) {
+                    // Load with Glide
+                    Glide.with(this)
+                        .load(url)
+                        .placeholder(R.drawable.ic_person)
+                        .centerCrop()
+                        .into(ivProfile)
+
+                    ivProfile.setPadding(0, 0, 0, 0)
+                } else {
+                    // Default State
+                    ivProfile.setImageResource(R.drawable.ic_person)
+                    val color = ContextCompat.getColor(this, R.color.app_red)
+                    ivProfile.imageTintList = null
+                    ivProfile.setColorFilter(color)
+                    ivProfile.setPadding(5, 5, 5, 5)
+                    ivProfile.scaleType = ImageView.ScaleType.FIT_CENTER
+                }
             }
         }
     }

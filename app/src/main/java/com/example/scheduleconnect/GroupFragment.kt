@@ -50,27 +50,29 @@ class GroupFragment : Fragment() {
     }
 
     private fun loadGroups() {
-        val groups = dbHelper.getUserGroups(currentUser)
-        if (groups.isEmpty()) {
-            recyclerGroups.visibility = View.GONE
-            tvNoGroups.visibility = View.VISIBLE
-        } else {
-            recyclerGroups.visibility = View.VISIBLE
-            tvNoGroups.visibility = View.GONE
+        // --- UPDATED: Async Call with Callback ---
+        dbHelper.getUserGroups(currentUser) { groups ->
+            if (groups.isEmpty()) {
+                recyclerGroups.visibility = View.GONE
+                tvNoGroups.visibility = View.VISIBLE
+            } else {
+                recyclerGroups.visibility = View.VISIBLE
+                tvNoGroups.visibility = View.GONE
 
-            recyclerGroups.adapter = GroupAdapter(groups) { selectedGroup ->
-                // Navigate to Group Details
-                val fragment = GroupDetailsFragment()
-                val bundle = Bundle()
-                bundle.putInt("GROUP_ID", selectedGroup.id)
-                bundle.putString("GROUP_NAME", selectedGroup.name)
-                bundle.putString("GROUP_CODE", selectedGroup.code)
-                fragment.arguments = bundle
+                recyclerGroups.adapter = GroupAdapter(groups) { selectedGroup ->
+                    // Navigate to Group Details
+                    val fragment = GroupDetailsFragment()
+                    val bundle = Bundle()
+                    bundle.putInt("GROUP_ID", selectedGroup.id)
+                    bundle.putString("GROUP_NAME", selectedGroup.name)
+                    bundle.putString("GROUP_CODE", selectedGroup.code)
+                    fragment.arguments = bundle
 
-                parentFragmentManager.beginTransaction()
-                    .replace(R.id.fragmentContainer, fragment)
-                    .addToBackStack(null)
-                    .commit()
+                    parentFragmentManager.beginTransaction()
+                        .replace(R.id.fragmentContainer, fragment)
+                        .addToBackStack(null)
+                        .commit()
+                }
             }
         }
     }

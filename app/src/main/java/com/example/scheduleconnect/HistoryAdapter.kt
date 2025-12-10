@@ -1,6 +1,5 @@
 package com.example.scheduleconnect
 
-import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.view.LayoutInflater
@@ -9,6 +8,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide // Import Glide
 
 class HistoryAdapter(private val scheduleList: ArrayList<Schedule>) :
     RecyclerView.Adapter<HistoryAdapter.ViewHolder>() {
@@ -23,7 +23,7 @@ class HistoryAdapter(private val scheduleList: ArrayList<Schedule>) :
         val title: TextView = view.findViewById(R.id.tvHistoryTitle)
         val date: TextView = view.findViewById(R.id.tvHistoryDate)
         val status: TextView = view.findViewById(R.id.tvHistoryStatus)
-        // ADDED: Reference to the ImageView
+        // Reference to the ImageView
         val image: ImageView = view.findViewById(R.id.ivHistoryImage)
     }
 
@@ -39,15 +39,16 @@ class HistoryAdapter(private val scheduleList: ArrayList<Schedule>) :
         holder.date.text = item.date
         holder.status.text = item.status
 
-        // --- ADDED: Logic to display image ---
-        if (item.image != null && item.image.isNotEmpty()) {
-            try {
-                val bitmap = BitmapFactory.decodeByteArray(item.image, 0, item.image.size)
-                holder.image.setImageBitmap(bitmap)
-                holder.image.visibility = View.VISIBLE
-            } catch (e: Exception) {
-                holder.image.visibility = View.GONE
-            }
+        // --- UPDATED: Glide for Image URLs ---
+        // We now check 'imageUrl' string instead of 'image' byte array
+        if (item.imageUrl.isNotEmpty()) {
+            holder.image.visibility = View.VISIBLE
+
+            Glide.with(holder.itemView.context)
+                .load(item.imageUrl)
+                .placeholder(android.R.drawable.ic_menu_gallery) // Placeholder while loading
+                .centerCrop()
+                .into(holder.image)
         } else {
             holder.image.visibility = View.GONE
         }

@@ -89,25 +89,49 @@ class ForgotPasswordActivity : AppCompatActivity() {
     }
 
     private fun handleSendOTP() {
+        // Disable button to prevent double-click
+        btnSendOTP.isEnabled = false
+        btnSendOTP.text = "Checking..."
+
         if (isEmailMethod) {
             val email = etEmail.text.toString().trim()
-            if (email.isEmpty()) { etEmail.error = "Required"; return }
+            if (email.isEmpty()) {
+                etEmail.error = "Required"
+                btnSendOTP.isEnabled = true
+                btnSendOTP.text = "SEND OTP"
+                return
+            }
 
-            if (dbHelper.checkEmail(email)) {
-                targetIdentifier = email
-                sendEmailOTP(email)
-            } else {
-                Toast.makeText(this, "Email not found in database", Toast.LENGTH_SHORT).show()
+            // --- ASYNC CHECK EMAIL ---
+            dbHelper.checkEmail(email) { exists ->
+                if (exists) {
+                    targetIdentifier = email
+                    sendEmailOTP(email)
+                } else {
+                    Toast.makeText(this, "Email not found in database", Toast.LENGTH_SHORT).show()
+                    btnSendOTP.isEnabled = true
+                    btnSendOTP.text = "SEND OTP"
+                }
             }
         } else {
-            if (!ccp.isValidFullNumber) { etPhone.error = "Invalid Number"; return }
+            if (!ccp.isValidFullNumber) {
+                etPhone.error = "Invalid Number"
+                btnSendOTP.isEnabled = true
+                btnSendOTP.text = "SEND OTP"
+                return
+            }
             val fullPhone = ccp.fullNumberWithPlus
 
-            if (dbHelper.checkPhone(fullPhone)) {
-                targetIdentifier = fullPhone
-                sendSMSOTP(fullPhone)
-            } else {
-                Toast.makeText(this, "Phone number not found", Toast.LENGTH_SHORT).show()
+            // --- ASYNC CHECK PHONE ---
+            dbHelper.checkPhone(fullPhone) { exists ->
+                if (exists) {
+                    targetIdentifier = fullPhone
+                    sendSMSOTP(fullPhone)
+                } else {
+                    Toast.makeText(this, "Phone number not found", Toast.LENGTH_SHORT).show()
+                    btnSendOTP.isEnabled = true
+                    btnSendOTP.text = "SEND OTP"
+                }
             }
         }
     }
@@ -140,11 +164,16 @@ class ForgotPasswordActivity : AppCompatActivity() {
 
                 withContext(Dispatchers.Main) {
                     pd.dismiss()
+                    // Re-enable button (though dialog will block it anyway)
+                    btnSendOTP.isEnabled = true
+                    btnSendOTP.text = "SEND OTP"
                     showVerificationDialog(otp)
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     pd.dismiss()
+                    btnSendOTP.isEnabled = true
+                    btnSendOTP.text = "SEND OTP"
                     Toast.makeText(this@ForgotPasswordActivity, "Error sending Email: ${e.message}", Toast.LENGTH_LONG).show()
                 }
             }
@@ -154,6 +183,8 @@ class ForgotPasswordActivity : AppCompatActivity() {
     private fun sendSMSOTP(phone: String) {
         if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.SEND_SMS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.SEND_SMS), 1)
+            btnSendOTP.isEnabled = true
+            btnSendOTP.text = "SEND OTP"
             return
         }
 
@@ -162,10 +193,15 @@ class ForgotPasswordActivity : AppCompatActivity() {
             val smsManager = SmsManager.getDefault()
             smsManager.sendTextMessage(phone, null, "Your OTP is: $otp", null, null)
             Toast.makeText(this, "OTP sent to $phone", Toast.LENGTH_SHORT).show()
+
+            btnSendOTP.isEnabled = true
+            btnSendOTP.text = "SEND OTP"
             showVerificationDialog(otp)
         } catch (e: Exception) {
             // Fallback for demo if SMS fails (e.g. emulator)
             Toast.makeText(this, "SMS Failed (Simulated OTP: $otp)", Toast.LENGTH_LONG).show()
+            btnSendOTP.isEnabled = true
+            btnSendOTP.text = "SEND OTP"
             showVerificationDialog(otp)
         }
     }
@@ -210,12 +246,21 @@ class ForgotPasswordActivity : AppCompatActivity() {
         if (pass.length < 8) { etNewPass.error = "Min 8 chars"; return }
         if (pass != confirm) { etConfirmPass.error = "Passwords do not match"; return }
 
-        val success = dbHelper.updatePassword(targetIdentifier, pass, isEmailMethod)
-        if (success) {
-            Toast.makeText(this, "Password Updated! Please Login.", Toast.LENGTH_LONG).show()
-            finish()
-        } else {
-            Toast.makeText(this, "Database Error", Toast.LENGTH_SHORT).show()
+        // --- ASYNC PASSWORD UPDATE ---
+        val btnReset = findViewById<Button>(R.id.btnFinalizeReset)
+        btnReset.isEnabled = false
+        btnReset.text = "Updating..."
+
+        dbHelper.updatePassword(targetIdentifier, pass, isEmailMethod) { success ->
+            btnReset.isEnabled = true
+            btnReset.text = "RESET PASSWORD"
+
+            if (success) {
+                Toast.makeText(this, "Password Updated! Please Login.", Toast.LENGTH_LONG).show()
+                finish()
+            } else {
+                Toast.makeText(this, "Database Error", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 }

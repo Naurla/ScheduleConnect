@@ -15,6 +15,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.cardview.widget.CardView
 import androidx.fragment.app.Fragment
+import com.bumptech.glide.Glide // Import Glide
 
 class SettingsFragment : Fragment() {
 
@@ -84,21 +85,30 @@ class SettingsFragment : Fragment() {
         val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
         val username = sharedPref.getString("username", "User") ?: "User"
 
-        val userDetails = dbHelper.getUserDetails(username)
-        if (userDetails != null) {
-            val fullName = "${userDetails.firstName} ${userDetails.lastName}".trim()
-            tvName.text = if (fullName.isNotEmpty()) fullName else username
-        } else {
-            tvName.text = username
-        }
+        // --- ASYNC FETCH ---
+        dbHelper.getUserDetails(username) { user ->
+            if (user != null) {
+                // Update Name
+                val fullName = "${user.firstName} ${user.lastName}".trim()
+                tvName.text = if (fullName.isNotEmpty()) fullName else user.username
 
-        val bmp = dbHelper.getProfilePicture(username)
-        if (bmp != null) {
-            ivProfile.setImageBitmap(bmp)
-            ivProfile.imageTintList = null
-        } else {
-            ivProfile.setImageResource(R.drawable.ic_person)
-            ivProfile.setColorFilter(Color.parseColor("#999999"))
+                // Update Profile Picture using Glide
+                if (user.profileImageUrl.isNotEmpty()) {
+                    Glide.with(this)
+                        .load(user.profileImageUrl)
+                        .placeholder(R.drawable.ic_person)
+                        .circleCrop()
+                        .into(ivProfile)
+
+                    ivProfile.imageTintList = null
+                } else {
+                    // Default State
+                    ivProfile.setImageResource(R.drawable.ic_person)
+                    ivProfile.setColorFilter(Color.parseColor("#999999"))
+                }
+            } else {
+                tvName.text = username
+            }
         }
     }
 

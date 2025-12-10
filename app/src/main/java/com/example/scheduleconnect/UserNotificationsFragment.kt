@@ -7,7 +7,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -52,14 +51,14 @@ class UserNotificationsFragment : Fragment() {
         adapter = NotificationAdapter(ArrayList(),
             onMarkReadClick = { item ->
                 // When "Mark as Read" is clicked
-                dbHelper.markNotificationAsRead(item.id)
+                dbHelper.markNotificationRead(item.id) // Method name corrected
                 loadNotifications() // Refresh list
                 (activity as? HomeActivity)?.updateNotificationBadge() // Update Top Badge
             },
             onItemClick = { item ->
                 // When the card is clicked
                 if (!item.isRead) {
-                    dbHelper.markNotificationAsRead(item.id)
+                    dbHelper.markNotificationRead(item.id) // Method name corrected
                     (activity as? HomeActivity)?.updateNotificationBadge()
                 }
 
@@ -67,7 +66,7 @@ class UserNotificationsFragment : Fragment() {
                 if (item.type == "SCHEDULE" && item.relatedId != -1) {
                     val fragment = ScheduleDetailFragment()
                     val bundle = Bundle()
-                    bundle.putInt("SCHEDULE_ID", item.relatedId)
+                    bundle.putInt("SCH_ID", item.relatedId) // Changed key to match ScheduleDetailFragment
                     fragment.arguments = bundle
 
                     parentFragmentManager.beginTransaction()
@@ -82,15 +81,20 @@ class UserNotificationsFragment : Fragment() {
 
     private fun loadNotifications() {
         if (currentUser.isNotEmpty()) {
-            val list = dbHelper.getUserNotifications(currentUser)
+            // --- ASYNC FETCH ---
+            dbHelper.getUserNotifications(currentUser) { list ->
+                if (list.isEmpty()) {
+                    recyclerView.visibility = View.GONE
+                    layoutEmpty.visibility = View.VISIBLE
+                } else {
+                    recyclerView.visibility = View.VISIBLE
+                    layoutEmpty.visibility = View.GONE
 
-            if (list.isEmpty()) {
-                recyclerView.visibility = View.GONE
-                layoutEmpty.visibility = View.VISIBLE
-            } else {
-                recyclerView.visibility = View.VISIBLE
-                layoutEmpty.visibility = View.GONE
-                adapter.updateList(list)
+                    // Sort by Date/ID (Newest first) - assuming ID is time-based
+                    list.sortByDescending { it.id }
+
+                    adapter.updateList(list)
+                }
             }
         }
     }

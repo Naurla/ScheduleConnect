@@ -19,7 +19,7 @@ class HomeFragment : Fragment() {
 
     private lateinit var dbHelper: DatabaseHelper
     private lateinit var recyclerView: RecyclerView
-    private lateinit var layoutEmpty: LinearLayout // Changed from TextView to LinearLayout for better UI
+    private lateinit var layoutEmpty: LinearLayout
     private lateinit var tvEmptyText: TextView
     private lateinit var tabPersonal: TextView
     private lateinit var tabShared: TextView
@@ -37,7 +37,7 @@ class HomeFragment : Fragment() {
         dbHelper = DatabaseHelper(requireContext())
 
         recyclerView = view.findViewById(R.id.recyclerSchedules)
-        layoutEmpty = view.findViewById(R.id.layoutEmptyState) // Updated ID
+        layoutEmpty = view.findViewById(R.id.layoutEmptyState)
         tvEmptyText = view.findViewById(R.id.tvEmpty)
 
         tabPersonal = view.findViewById(R.id.tabYourSchedule)
@@ -109,12 +109,15 @@ class HomeFragment : Fragment() {
         val sharedPref = requireActivity().getSharedPreferences("UserSession", android.content.Context.MODE_PRIVATE)
         val currentUser = sharedPref.getString("username", "default_user") ?: "default_user"
 
-        // 1. Fetch from DB
-        allSchedules = dbHelper.getSchedules(currentUser, type)
+        // --- FIXED: Async Call with Callback ---
+        dbHelper.getSchedules(currentUser, type) { fetchedList ->
+            // This code runs when Firebase returns data
+            allSchedules = fetchedList
 
-        // 2. Apply current search filter (if any text exists)
-        val currentSearchText = etSearch.text.toString()
-        filterList(currentSearchText)
+            // 2. Apply current search filter (if any text exists)
+            val currentSearchText = etSearch.text.toString()
+            filterList(currentSearchText)
+        }
     }
 
     private fun filterList(query: String) {

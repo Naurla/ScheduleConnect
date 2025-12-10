@@ -103,13 +103,14 @@ class CreateGroupFragment : Fragment() {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 val query = s.toString().trim()
                 if (query.isNotEmpty()) {
-                    val results = dbHelper.searchUsers(query, currentUser)
-
-                    if (results.isNotEmpty()) {
-                        adapter.updateList(results)
-                        cardResults.visibility = View.VISIBLE
-                    } else {
-                        cardResults.visibility = View.GONE
+                    // --- ASYNC SEARCH ---
+                    dbHelper.searchUsers(query, currentUser) { results ->
+                        if (results.isNotEmpty()) {
+                            adapter.updateList(results)
+                            cardResults.visibility = View.VISIBLE
+                        } else {
+                            cardResults.visibility = View.GONE
+                        }
                     }
                 } else {
                     adapter.updateList(ArrayList())
@@ -121,7 +122,7 @@ class CreateGroupFragment : Fragment() {
         btnBack.setOnClickListener { parentFragmentManager.popBackStack() }
 
         btnCreate.setOnClickListener {
-            val groupName = etGroupName.text.toString()
+            val groupName = etGroupName.text.toString().trim()
 
             if (groupName.isEmpty()) {
                 etGroupName.error = "Group Name required"
@@ -137,16 +138,27 @@ class CreateGroupFragment : Fragment() {
                 imageBytes = stream.toByteArray()
             }
 
-            val newGroupId = dbHelper.createGroupGetId(groupName, code, currentUser, imageBytes)
+            // Disable button to prevent double-click
+            btnCreate.isEnabled = false
+            btnCreate.text = "Creating..."
 
-            if (newGroupId != -1) {
-                for (user in selectedUsers) {
-                    dbHelper.addMemberToGroup(newGroupId, user)
+            // --- ASYNC CREATE GROUP ---
+            dbHelper.createGroup(groupName, code, currentUser, imageBytes) { newGroupId ->
+                // This block runs when group creation is done (or failed)
+                btnCreate.isEnabled = true
+
+                if (newGroupId != -1) {
+                    // Add invited users
+                    for (user in selectedUsers) {
+                        dbHelper.addMemberToGroup(newGroupId, user) {
+                            // Can add notification logic here if desired
+                        }
+                    }
+                    Toast.makeText(context, "Group Created! Code: $code", Toast.LENGTH_LONG).show()
+                    parentFragmentManager.popBackStack()
+                } else {
+                    Toast.makeText(context, "Failed to create group", Toast.LENGTH_SHORT).show()
                 }
-                Toast.makeText(context, "Group Created! Code: $code", Toast.LENGTH_LONG).show()
-                parentFragmentManager.popBackStack()
-            } else {
-                Toast.makeText(context, "Failed to create group", Toast.LENGTH_SHORT).show()
             }
         }
 

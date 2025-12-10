@@ -10,6 +10,7 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide // Import Glide
 
 class AttendeeListFragment : Fragment() {
 
@@ -50,33 +51,34 @@ class AttendeeListFragment : Fragment() {
     }
 
     private fun loadAttendees(schId: Int) {
-        val list = dbHelper.getScheduleAttendees(schId)
+        // --- UPDATED: Async call with callback ---
+        dbHelper.getScheduleAttendees(schId) { list ->
+            var goingCount = 0
+            var unsureCount = 0
+            var notGoingCount = 0
 
-        var goingCount = 0
-        var unsureCount = 0
-        var notGoingCount = 0
-
-        for (item in list) {
-            when (item["status"]) {
-                "GOING" -> goingCount++
-                "UNSURE" -> unsureCount++
-                "NOT GOING" -> notGoingCount++
+            for (item in list) {
+                when (item["status"]) {
+                    "GOING" -> goingCount++
+                    "UNSURE" -> unsureCount++
+                    "NOT GOING" -> notGoingCount++
+                }
             }
-        }
 
-        // Only show numbers
-        tvCountGoing.text = goingCount.toString()
-        tvCountUnsure.text = unsureCount.toString()
-        tvCountNotGoing.text = notGoingCount.toString()
+            // Only show numbers
+            tvCountGoing.text = goingCount.toString()
+            tvCountUnsure.text = unsureCount.toString()
+            tvCountNotGoing.text = notGoingCount.toString()
 
-        if (list.isEmpty()) {
-            recyclerView.visibility = View.GONE
-            tvEmpty.visibility = View.VISIBLE
-        } else {
-            recyclerView.visibility = View.VISIBLE
-            tvEmpty.visibility = View.GONE
-            // Pass dbHelper to adapter to load images
-            recyclerView.adapter = AttendeeAdapter(list, dbHelper)
+            if (list.isEmpty()) {
+                recyclerView.visibility = View.GONE
+                tvEmpty.visibility = View.VISIBLE
+            } else {
+                recyclerView.visibility = View.VISIBLE
+                tvEmpty.visibility = View.GONE
+                // Pass dbHelper to adapter to load images
+                recyclerView.adapter = AttendeeAdapter(list, dbHelper)
+            }
         }
     }
 }
@@ -87,7 +89,6 @@ class AttendeeAdapter(
 ) : RecyclerView.Adapter<AttendeeAdapter.ViewHolder>() {
 
     class ViewHolder(v: View) : RecyclerView.ViewHolder(v) {
-        // FIXED IDs to match item_attendee.xml
         val user: TextView = v.findViewById(R.id.tvAttendeeName)
         val status: TextView = v.findViewById(R.id.tvAttendeeStatus)
         val avatar: ImageView = v.findViewById(R.id.ivAttendeeAvatar)
@@ -119,14 +120,22 @@ class AttendeeAdapter(
             }
         }
 
-        // Load Profile Picture
-        val bmp = dbHelper.getProfilePicture(username)
-        if (bmp != null) {
-            holder.avatar.setImageBitmap(bmp)
-            holder.avatar.imageTintList = null // Remove gray tint for real photo
-        } else {
-            holder.avatar.setImageResource(R.drawable.ic_person)
-            holder.avatar.setColorFilter(Color.parseColor("#999999"))
+        // --- UPDATED: Async Image Load with Glide ---
+        dbHelper.getProfilePictureUrl(username) { url ->
+            if (url.isNotEmpty()) {
+                Glide.with(holder.itemView.context)
+                    .load(url)
+                    .circleCrop() // Makes the image round
+                    .placeholder(R.drawable.ic_person)
+                    .into(holder.avatar)
+
+                holder.avatar.colorFilter = null // Remove gray tint for real photo
+                holder.avatar.setPadding(0, 0, 0, 0)
+            } else {
+                holder.avatar.setImageResource(R.drawable.ic_person)
+                holder.avatar.setColorFilter(Color.parseColor("#999999"))
+                holder.avatar.setPadding(5, 5, 5, 5) // Add padding for default icon
+            }
         }
     }
 

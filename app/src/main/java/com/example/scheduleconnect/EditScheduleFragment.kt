@@ -18,6 +18,7 @@ import android.widget.ImageView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
+import com.bumptech.glide.Glide // Ensure Glide is imported
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.text.SimpleDateFormat
@@ -34,13 +35,13 @@ class EditScheduleFragment : Fragment() {
     private lateinit var etDescription: EditText
     private lateinit var btnUpdate: Button
     private lateinit var btnCancel: Button
-    private lateinit var btnBack: ImageView // New Back Button
-
+    private lateinit var btnBack: ImageView
     private lateinit var ivScheduleImage: ImageView
     private lateinit var btnSelectImage: Button
     private var selectedImageBitmap: Bitmap? = null
 
     private var schId: Int = -1
+    private var currentSchedule: Schedule? = null // Store the loaded schedule
 
     private val imagePickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK && result.data != null) {
@@ -49,8 +50,8 @@ class EditScheduleFragment : Fragment() {
                 try {
                     selectedImageBitmap = getResizedBitmap(imageUri)
                     ivScheduleImage.setImageBitmap(selectedImageBitmap)
-                    ivScheduleImage.setPadding(0,0,0,0) // Remove padding if image is set
-                    ivScheduleImage.imageTintList = null // Remove tint
+                    ivScheduleImage.setPadding(0, 0, 0, 0)
+                    ivScheduleImage.imageTintList = null
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
@@ -63,40 +64,47 @@ class EditScheduleFragment : Fragment() {
         dbHelper = DatabaseHelper(requireContext())
 
         schId = arguments?.getInt("SCH_ID") ?: -1
-        val title = arguments?.getString("SCH_TITLE") ?: ""
-        val date = arguments?.getString("SCH_DATE") ?: ""
-        val loc = arguments?.getString("SCH_LOC") ?: ""
-        val desc = arguments?.getString("SCH_DESC") ?: ""
 
-        // Initialize Views
+        // Init Views
         etTitle = view.findViewById(R.id.etEditSchName)
         etDate = view.findViewById(R.id.etEditSchDate)
         etLocation = view.findViewById(R.id.etEditSchLocation)
         etDescription = view.findViewById(R.id.etEditSchDesc)
-
         btnUpdate = view.findViewById(R.id.btnUpdateSchedule)
         btnCancel = view.findViewById(R.id.btnCancelEdit)
-        btnBack = view.findViewById(R.id.btnBackEdit) // Bind new back button
-
+        btnBack = view.findViewById(R.id.btnBackEdit)
         ivScheduleImage = view.findViewById(R.id.ivEditScheduleImage)
         btnSelectImage = view.findViewById(R.id.btnEditSelectImage)
 
-        // Set Existing Data
-        etTitle.setText(title)
-        etDate.setText(date)
-        etLocation.setText(loc)
-        etDescription.setText(desc)
+        // --- ASYNC LOAD DATA ---
+        // Instead of immediate return, we wait for the callback
+        dbHelper.getSchedule(schId) { schedule ->
+            if (schedule != null) {
+                currentSchedule = schedule // Save for later use (notifications)
 
-        val existingSchedule = dbHelper.getSchedule(schId)
-        if (existingSchedule?.image != null) {
-            val bmp = BitmapFactory.decodeByteArray(existingSchedule.image, 0, existingSchedule.image.size)
-            ivScheduleImage.setImageBitmap(bmp)
-            ivScheduleImage.setPadding(0,0,0,0)
-            ivScheduleImage.imageTintList = null
+                etTitle.setText(schedule.title)
+                etDate.setText(schedule.date)
+                etLocation.setText(schedule.location)
+                etDescription.setText(schedule.description)
+
+                // Load image using Glide if URL exists
+                if (schedule.imageUrl.isNotEmpty()) {
+                    Glide.with(requireContext())
+                        .load(schedule.imageUrl)
+                        .placeholder(android.R.drawable.ic_menu_gallery)
+                        .centerCrop()
+                        .into(ivScheduleImage)
+
+                    ivScheduleImage.setPadding(0, 0, 0, 0)
+                    ivScheduleImage.imageTintList = null
+                }
+            } else {
+                Toast.makeText(context, "Error loading schedule", Toast.LENGTH_SHORT).show()
+                parentFragmentManager.popBackStack()
+            }
         }
 
         // --- Listeners ---
-
         btnBack.setOnClickListener { parentFragmentManager.popBackStack() }
         btnCancel.setOnClickListener { parentFragmentManager.popBackStack() }
 
@@ -108,12 +116,16 @@ class EditScheduleFragment : Fragment() {
         etDate.setOnClickListener { showDateTimeDialog() }
 
         btnUpdate.setOnClickListener {
-            val newTitle = etTitle.text.toString()
-            val newDate = etDate.text.toString()
-            val newLoc = etLocation.text.toString()
-            val newDesc = etDescription.text.toString()
+            val newTitle = etTitle.text.toString().trim()
+            val newDate = etDate.text.toString().trim()
+            val newLoc = etLocation.text.toString().trim()
+            val newDesc = etDescription.text.toString().trim()
 
             if (newTitle.isNotEmpty() && newDate.isNotEmpty()) {
+                // Disable button to prevent double clicks
+                btnUpdate.isEnabled = false
+                btnUpdate.text = "Updating..."
+
                 var imageBytes: ByteArray? = null
                 if (selectedImageBitmap != null) {
                     val stream = ByteArrayOutputStream()
@@ -121,18 +133,22 @@ class EditScheduleFragment : Fragment() {
                     imageBytes = stream.toByteArray()
                 }
 
-                val success = dbHelper.updateScheduleDetails(schId, newTitle, newDate, newLoc, newDesc, imageBytes)
+                // --- ASYNC UPDATE ---
+                dbHelper.updateScheduleDetails(schId, newTitle, newDate, newLoc, newDesc, imageBytes) { success ->
+                    btnUpdate.isEnabled = true
+                    btnUpdate.text = "UPDATE SCHEDULE"
 
-                if (success) {
-                    // Notify Attendees if Shared
-                    if (existingSchedule != null && existingSchedule.type == "shared") {
-                        notifyAttendeesOfUpdate(existingSchedule.groupId, existingSchedule.creator, newTitle, newDate, newLoc)
+                    if (success) {
+                        // Notify Attendees if Shared
+                        if (currentSchedule != null && currentSchedule!!.type == "shared") {
+                            notifyAttendeesOfUpdate(currentSchedule!!.groupId, currentSchedule!!.creator, newTitle, newDate, newLoc)
+                        }
+
+                        Toast.makeText(requireContext(), "Schedule Updated!", Toast.LENGTH_SHORT).show()
+                        parentFragmentManager.popBackStack()
+                    } else {
+                        Toast.makeText(requireContext(), "Failed to update", Toast.LENGTH_SHORT).show()
                     }
-
-                    Toast.makeText(requireContext(), "Schedule Updated!", Toast.LENGTH_SHORT).show()
-                    parentFragmentManager.popBackStack()
-                } else {
-                    Toast.makeText(requireContext(), "Failed to update", Toast.LENGTH_SHORT).show()
                 }
             } else {
                 Toast.makeText(requireContext(), "Name and Date required", Toast.LENGTH_SHORT).show()
@@ -147,17 +163,14 @@ class EditScheduleFragment : Fragment() {
         val notifTitle = "Schedule Updated: $title"
         val notifMessage = "Details have changed. New Date: $date, Loc: $loc"
 
-        // 1. Notify via App
-        val memberUsernames = dbHelper.getGroupMemberUsernames(groupId, creator)
-        for (user in memberUsernames) {
-            dbHelper.addNotification(user, notifTitle, notifMessage, currentDate)
-        }
+        // 1. Get members asynchronously
+        dbHelper.getGroupMemberUsernames(groupId, creator) { memberUsernames ->
+            // 2. Loop and notify via App
+            for (user in memberUsernames) {
+                dbHelper.addNotification(user, notifTitle, notifMessage, currentDate)
+            }
 
-        // 2. Notify via Email
-        val emails = dbHelper.getGroupMemberEmails(groupId, creator)
-        if (emails.isNotEmpty()) {
-            val emailBody = "Hello,\n\nThe shared schedule '$title' has been updated by $creator.\n\nNew Details:\nDate: $date\nLocation: $loc\n\nPlease check the app for more info.\n\nRegards,\nScheduleConnect Team"
-            EmailHelper.sendEmail(emails, "Schedule Update: $title", emailBody)
+            // 3. (Optional) Email notification logic would go here if enabled
         }
     }
 

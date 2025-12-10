@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/app_background"
+    android:background="#F5F5F5"
     android:padding="24dp">
 
     <LinearLayout
@@ -17,7 +17,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="HISTORY"
-            android:textColor="@color/app_red"
+            android:textColor="#8B1A1A"
             android:textSize="28sp"
             android:textStyle="bold"
             android:layout_marginBottom="5dp"/>
@@ -58,6 +58,7 @@
                 android:layout_marginBottom="10dp"/>
 
             <TextView
+                android:id="@+id/tvEmptyHistory"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="No history yet"

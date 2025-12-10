@@ -41,7 +41,7 @@ class AddSharedScheduleFragment : Fragment() {
     private lateinit var tvTitle: TextView
 
     private var selectedImageBitmap: Bitmap? = null
-    private var currentUser: String = "" // Store current user globally in class
+    private var currentUser: String = ""
 
     private val imagePickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK && result.data != null) {
@@ -127,34 +127,43 @@ class AddSharedScheduleFragment : Fragment() {
                 imageBytes = stream.toByteArray()
             }
 
-            val success = dbHelper.addSchedule(currentUser, groupId, name, date, loc, desc, "shared", imageBytes)
+            // Disable button
+            btnAdd.isEnabled = false
+            btnAdd.text = "Creating..."
 
-            if (success) {
-                // 1. Notify other group members
-                notifyGroupMembers(name, date)
+            // --- ASYNC ADD SCHEDULE ---
+            dbHelper.addSchedule(currentUser, groupId, name, date, loc, desc, "shared", imageBytes) { success ->
+                btnAdd.isEnabled = true
+                btnAdd.text = "ADD SHARED SCHEDULE"
 
-                // 2. Set Local Notification for yourself
-                scheduleLocalNotification(name, date, loc)
+                if (success) {
+                    // 1. Notify other group members
+                    notifyGroupMembers(name, date)
 
-                Toast.makeText(context, "Shared Schedule Added!", Toast.LENGTH_SHORT).show()
-                clearInputFields()
-                parentFragmentManager.popBackStack()
-            } else {
-                Toast.makeText(context, "Error adding schedule", Toast.LENGTH_SHORT).show()
+                    // 2. Set Local Notification for yourself
+                    scheduleLocalNotification(name, date, loc)
+
+                    Toast.makeText(context, "Shared Schedule Added!", Toast.LENGTH_SHORT).show()
+                    clearInputFields()
+                    parentFragmentManager.popBackStack()
+                } else {
+                    Toast.makeText(context, "Error adding schedule", Toast.LENGTH_SHORT).show()
+                }
             }
         }
         return view
     }
 
     private fun notifyGroupMembers(title: String, date: String) {
-        // Exclude currentUser so you don't get a notification for your own action
-        val members = dbHelper.getGroupMemberUsernames(groupId, currentUser)
         val notifTitle = "New Group Schedule: $title"
         val notifMsg = "Added by $currentUser for $date"
         val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
 
-        for (member in members) {
-            dbHelper.addNotification(member, notifTitle, notifMsg, currentDate)
+        // --- ASYNC Get Members ---
+        dbHelper.getGroupMemberUsernames(groupId, currentUser) { members ->
+            for (member in members) {
+                dbHelper.addNotification(member, notifTitle, notifMsg, currentDate)
+            }
         }
     }
 

@@ -74,6 +74,10 @@ dependencies {
     // TODO: Add the dependencies for Firebase products you want to use
     // When using the BoM, don't specify versions in Firebase dependencies
     implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-firestore") // For Database
+    implementation("com.google.firebase:firebase-storage")   // For Images//
+    // --- GLIDE (For loading images from URLs) ---
+    implementation("com.github.bumptech.glide:glide:4.16.0")
 
     // Add the dependencies for any other desired Firebase products
     // https://firebase.google.com/docs/android/setup#available-libraries

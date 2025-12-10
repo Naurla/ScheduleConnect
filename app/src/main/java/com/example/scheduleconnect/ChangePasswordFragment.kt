@@ -49,32 +49,50 @@ class ChangePasswordFragment : Fragment() {
                 return@setOnClickListener
             }
 
+            if (newPass.length < 8) {
+                Toast.makeText(context, "Password must be at least 8 characters", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
             // Get Current User
             val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
             val username = sharedPref.getString("username", "") ?: ""
 
             if (username.isNotEmpty()) {
-                // 1. Verify Old Password
-                if (dbHelper.checkUser(username, currentPass)) {
-                    // 2. Update Password
-                    // We need the email to use updatePassword, so fetch user details first
-                    val userDetails = dbHelper.getUserDetails(username)
+                // UI Feedback: Disable button to prevent double-click
+                btnUpdate.isEnabled = false
+                btnUpdate.text = "Updating..."
 
-                    if (userDetails != null) {
-                        // Use email to update (since DB helper uses email/phone identifier logic)
-                        val success = dbHelper.updatePassword(userDetails.email, newPass, true)
+                // 1. Verify Old Password (Async)
+                dbHelper.checkUser(username, currentPass) { isValid ->
+                    if (isValid) {
+                        // 2. Get User Details to get Email (Async)
+                        // We need the email because the updatePassword function identifies users by email/phone
+                        dbHelper.getUserDetails(username) { userDetails ->
+                            if (userDetails != null) {
+                                // 3. Update Password (Async)
+                                dbHelper.updatePassword(userDetails.email, newPass, true) { success ->
+                                    btnUpdate.isEnabled = true
+                                    btnUpdate.text = "UPDATE PASSWORD"
 
-                        if (success) {
-                            Toast.makeText(context, "Password Updated Successfully!", Toast.LENGTH_SHORT).show()
-                            parentFragmentManager.popBackStack()
-                        } else {
-                            Toast.makeText(context, "Failed to update password", Toast.LENGTH_SHORT).show()
+                                    if (success) {
+                                        Toast.makeText(context, "Password Updated Successfully!", Toast.LENGTH_SHORT).show()
+                                        parentFragmentManager.popBackStack()
+                                    } else {
+                                        Toast.makeText(context, "Failed to update password", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            } else {
+                                btnUpdate.isEnabled = true
+                                btnUpdate.text = "UPDATE PASSWORD"
+                                Toast.makeText(context, "User details not found", Toast.LENGTH_SHORT).show()
+                            }
                         }
                     } else {
-                        Toast.makeText(context, "User details not found", Toast.LENGTH_SHORT).show()
+                        btnUpdate.isEnabled = true
+                        btnUpdate.text = "UPDATE PASSWORD"
+                        Toast.makeText(context, "Incorrect current password", Toast.LENGTH_SHORT).show()
                     }
-                } else {
-                    Toast.makeText(context, "Incorrect current password", Toast.LENGTH_SHORT).show()
                 }
             } else {
                 Toast.makeText(context, "Session Error. Please relogin.", Toast.LENGTH_SHORT).show()

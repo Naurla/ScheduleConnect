@@ -1,6 +1,5 @@
 package com.example.scheduleconnect
 
-import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
@@ -8,6 +7,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide // Import Glide
 
 // Changed 'val' to 'var' so we can update the list
 class ScheduleAdapter(private var list: ArrayList<Schedule>) : RecyclerView.Adapter<ScheduleAdapter.ViewHolder>() {
@@ -24,7 +24,7 @@ class ScheduleAdapter(private var list: ArrayList<Schedule>) : RecyclerView.Adap
         val date: TextView = v.findViewById(R.id.tvScheduleDate)
         val loc: TextView = v.findViewById(R.id.tvScheduleLocation)
         val creator: TextView = v.findViewById(R.id.tvScheduleCreator)
-        // ADDED: Reference to the ImageView
+        // Reference to the ImageView
         val image: ImageView = v.findViewById(R.id.ivScheduleImage)
     }
 
@@ -39,15 +39,17 @@ class ScheduleAdapter(private var list: ArrayList<Schedule>) : RecyclerView.Adap
         holder.date.text = item.date
         holder.loc.text = item.location
 
-        // --- ADDED: Logic to display image ---
-        if (item.image != null && item.image.isNotEmpty()) {
-            try {
-                val bitmap = BitmapFactory.decodeByteArray(item.image, 0, item.image.size)
-                holder.image.setImageBitmap(bitmap)
-                holder.image.visibility = View.VISIBLE
-            } catch (e: Exception) {
-                holder.image.visibility = View.GONE
-            }
+        // --- UPDATED: Logic to display image using Glide for Firebase URLs ---
+        // We use 'imageUrl' (String) instead of 'image' (ByteArray)
+        if (item.imageUrl.isNotEmpty()) {
+            holder.image.visibility = View.VISIBLE
+
+            Glide.with(holder.itemView.context)
+                .load(item.imageUrl)
+                .placeholder(android.R.drawable.ic_menu_gallery) // Default Android placeholder
+                .centerCrop() // Makes sure the image fills the view nicely
+                .into(holder.image)
+
         } else {
             holder.image.visibility = View.GONE
         }
@@ -69,7 +71,7 @@ class ScheduleAdapter(private var list: ArrayList<Schedule>) : RecyclerView.Adap
 
     override fun getItemCount() = list.size
 
-    // --- NEW: Helper function to update data for search ---
+    // --- Helper function to update data for search ---
     fun updateList(newList: ArrayList<Schedule>) {
         list = newList
         notifyDataSetChanged()
