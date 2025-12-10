@@ -51,14 +51,14 @@ class UserNotificationsFragment : Fragment() {
         adapter = NotificationAdapter(ArrayList(),
             onMarkReadClick = { item ->
                 // When "Mark as Read" is clicked
-                dbHelper.markNotificationRead(item.id) // Method name corrected
+                dbHelper.markNotificationRead(item.id)
                 loadNotifications() // Refresh list
                 (activity as? HomeActivity)?.updateNotificationBadge() // Update Top Badge
             },
             onItemClick = { item ->
                 // When the card is clicked
                 if (!item.isRead) {
-                    dbHelper.markNotificationRead(item.id) // Method name corrected
+                    dbHelper.markNotificationRead(item.id)
                     (activity as? HomeActivity)?.updateNotificationBadge()
                 }
 
@@ -66,7 +66,20 @@ class UserNotificationsFragment : Fragment() {
                 if (item.type == "SCHEDULE" && item.relatedId != -1) {
                     val fragment = ScheduleDetailFragment()
                     val bundle = Bundle()
-                    bundle.putInt("SCH_ID", item.relatedId) // Changed key to match ScheduleDetailFragment
+                    bundle.putInt("SCH_ID", item.relatedId)
+                    fragment.arguments = bundle
+
+                    parentFragmentManager.beginTransaction()
+                        .replace(R.id.fragmentContainer, fragment)
+                        .addToBackStack(null)
+                        .commit()
+                }
+                // --- NEW BLOCK: Redirect to Group Details ---
+                else if (item.type == "GROUP" && item.relatedId != -1) {
+                    val fragment = GroupDetailsFragment()
+                    val bundle = Bundle()
+                    bundle.putInt("GROUP_ID", item.relatedId)
+                    // Note: Name and Code will be fetched inside GroupDetailsFragment
                     fragment.arguments = bundle
 
                     parentFragmentManager.beginTransaction()
@@ -99,3 +112,4 @@ class UserNotificationsFragment : Fragment() {
         }
     }
 }
+

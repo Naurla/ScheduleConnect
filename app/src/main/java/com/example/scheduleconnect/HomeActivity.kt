@@ -1,13 +1,15 @@
 package com.example.scheduleconnect
 
+import android.content.Context
+import android.graphics.BitmapFactory
 import android.os.Bundle
+import android.util.Base64
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import com.bumptech.glide.Glide // Import Glide
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.imageview.ShapeableImageView
 
@@ -16,6 +18,7 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var dbHelper: DatabaseHelper
     private lateinit var ivProfile: ShapeableImageView
     private lateinit var tvBadge: TextView
+    private lateinit var currentUsername: String
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,13 +28,15 @@ class HomeActivity : AppCompatActivity() {
         ivProfile = findViewById(R.id.btnTopProfile)
         tvBadge = findViewById(R.id.tvNotificationBadge)
 
-        // Retrieve username and save to SharedPreferences
-        val username = intent.getStringExtra("CURRENT_USER")
-        if (username != null) {
-            val sharedPref = getSharedPreferences("UserSession", MODE_PRIVATE)
-            val editor = sharedPref.edit()
-            editor.putString("username", username)
-            editor.apply()
+        // Session
+        val sharedPref = getSharedPreferences("UserSession", Context.MODE_PRIVATE)
+        val intentUsername = intent.getStringExtra("CURRENT_USER")
+
+        if (intentUsername != null) {
+            currentUsername = intentUsername
+            sharedPref.edit().putString("USERNAME", currentUsername).apply()
+        } else {
+            currentUsername = sharedPref.getString("USERNAME", "") ?: ""
         }
 
         val bottomNav = findViewById<BottomNavigationView>(R.id.bottomNav)
@@ -40,9 +45,12 @@ class HomeActivity : AppCompatActivity() {
             loadFragment(HomeFragment())
         }
 
-        // Notification Bell Click
+        // Notification Click
         val btnNotif = findViewById<ImageView>(R.id.btnTopNotifications)
         btnNotif.setOnClickListener {
+            bottomNav.menu.setGroupCheckable(0, true, false)
+            for (i in 0 until bottomNav.menu.size()) bottomNav.menu.getItem(i).isChecked = false
+            bottomNav.menu.setGroupCheckable(0, true, true)
             loadFragment(UserNotificationsFragment())
         }
 
@@ -59,61 +67,56 @@ class HomeActivity : AppCompatActivity() {
                 R.id.nav_history -> fragment = HistoryFragment()
                 R.id.nav_settings -> fragment = SettingsFragment()
             }
-            if (fragment != null) {
-                loadFragment(fragment)
-            }
+            if (fragment != null) loadFragment(fragment)
             true
         }
     }
 
     override fun onResume() {
         super.onResume()
-        loadHeaderProfile()
+        updateNavigationHeader()
         updateNotificationBadge()
     }
 
-    // --- UPDATED: Async Badge Count ---
-    fun updateNotificationBadge() {
-        val sharedPref = getSharedPreferences("UserSession", MODE_PRIVATE)
-        val username = sharedPref.getString("username", "") ?: ""
+    // --- UPDATED: Decode Base64 from Firestore ---
+    fun updateNavigationHeader() {
+        if (currentUsername.isNotEmpty()) {
+            dbHelper.getUserDetails(currentUsername) { user ->
+                if (user != null && user.profileImageUrl.isNotEmpty()) {
+                    try {
+                        // Decode Base64 String
+                        val decodedByte = Base64.decode(user.profileImageUrl, Base64.DEFAULT)
+                        val bitmap = BitmapFactory.decodeByteArray(decodedByte, 0, decodedByte.size)
 
-        if (username.isNotEmpty()) {
-            // Use callback
-            dbHelper.getUnreadNotificationCount(username) { count ->
-                if (count > 0) {
-                    tvBadge.text = if (count > 99) "99+" else count.toString()
-                    tvBadge.visibility = View.VISIBLE
+                        ivProfile.setImageBitmap(bitmap)
+                        ivProfile.setPadding(0, 0, 0, 0)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        setDefaultProfileImage()
+                    }
                 } else {
-                    tvBadge.visibility = View.GONE
+                    setDefaultProfileImage()
                 }
             }
         }
     }
 
-    // --- UPDATED: Async Profile Picture with Glide ---
-    private fun loadHeaderProfile() {
-        val sharedPref = getSharedPreferences("UserSession", MODE_PRIVATE)
-        val username = sharedPref.getString("username", "") ?: ""
+    private fun setDefaultProfileImage() {
+        ivProfile.setImageResource(R.drawable.ic_person)
+        val color = ContextCompat.getColor(this, R.color.app_red)
+        ivProfile.setColorFilter(color)
+        ivProfile.setPadding(5, 5, 5, 5)
+        ivProfile.scaleType = ImageView.ScaleType.FIT_CENTER
+    }
 
-        if (username.isNotEmpty()) {
-            dbHelper.getProfilePictureUrl(username) { url ->
-                if (url.isNotEmpty()) {
-                    // Load with Glide
-                    Glide.with(this)
-                        .load(url)
-                        .placeholder(R.drawable.ic_person)
-                        .centerCrop()
-                        .into(ivProfile)
-
-                    ivProfile.setPadding(0, 0, 0, 0)
+     fun updateNotificationBadge() {
+        if (currentUsername.isNotEmpty()) {
+            dbHelper.getUnreadNotificationCount(currentUsername) { count ->
+                if (count > 0) {
+                    tvBadge.text = if (count > 99) "99+" else count.toString()
+                    tvBadge.visibility = View.VISIBLE
                 } else {
-                    // Default State
-                    ivProfile.setImageResource(R.drawable.ic_person)
-                    val color = ContextCompat.getColor(this, R.color.app_red)
-                    ivProfile.imageTintList = null
-                    ivProfile.setColorFilter(color)
-                    ivProfile.setPadding(5, 5, 5, 5)
-                    ivProfile.scaleType = ImageView.ScaleType.FIT_CENTER
+                    tvBadge.visibility = View.GONE
                 }
             }
         }

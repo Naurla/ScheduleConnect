@@ -8,6 +8,7 @@ import com.google.firebase.storage.FirebaseStorage
 // --- Data Classes ---
 
 data class UserDataModel(
+    // NOTE: These properties must be manually mapped from snake_case Firebase keys
     val username: String = "",
     val firstName: String = "",
     val middleName: String = "",
@@ -16,7 +17,7 @@ data class UserDataModel(
     val dob: String = "",
     val email: String = "",
     val phone: String = "",
-    val profileImageUrl: String = ""
+    val profileImageUrl: String = "" // Holds the Base64 string
 )
 
 data class Schedule(
@@ -36,7 +37,7 @@ data class GroupInfo(
     val id: Int = 0,
     val name: String = "",
     val code: String = "",
-    val imageUrl: String = "" // This will now hold the Base64 string
+    val imageUrl: String = ""
 )
 
 data class NotificationItem(
@@ -93,6 +94,7 @@ class DatabaseHelper(context: Context) {
     }
 
     fun addUser(fName: String, mName: String, lName: String, gender: String, dob: String, email: String, phone: String, user: String, pass: String, callback: (Boolean) -> Unit) {
+        // FIX: Use snake_case keys for initial save (matching your Firebase structure)
         val userData = hashMapOf(
             "first_name" to fName, "middle_name" to mName, "last_name" to lName,
             "gender" to gender, "dob" to dob, "email" to email, "phone" to phone,
@@ -112,19 +114,40 @@ class DatabaseHelper(context: Context) {
         }
     }
 
+    // FIX: Manually map fields when retrieving data from Firestore
     fun getUserDetails(username: String, callback: (UserDataModel?) -> Unit) {
         db.collection("users").document(username).get()
             .addOnSuccessListener { doc ->
-                if (doc.exists()) callback(doc.toObject(UserDataModel::class.java))
+                if (doc.exists()) {
+                    val data = doc.data
+                    val user = UserDataModel(
+                        username = doc.id,
+                        firstName = data?.get("first_name") as? String ?: "", // MANUAL MAPPING
+                        middleName = data?.get("middle_name") as? String ?: "", // MANUAL MAPPING
+                        lastName = data?.get("last_name") as? String ?: "", // MANUAL MAPPING
+                        gender = data?.get("gender") as? String ?: "",
+                        dob = data?.get("dob") as? String ?: "",
+                        email = data?.get("email") as? String ?: "",
+                        phone = data?.get("phone") as? String ?: "",
+                        profileImageUrl = data?.get("profile_image_url") as? String ?: "" // MANUAL MAPPING
+                    )
+                    callback(user)
+                }
                 else callback(null)
             }
             .addOnFailureListener { callback(null) }
     }
 
+    // FIX: Corrected keys to match Firebase for saving all fields
     fun updateUserInfo(username: String, fName: String, mName: String, lName: String, gender: String, dob: String, phone: String, email: String, callback: (Boolean) -> Unit) {
         val updates = hashMapOf<String, Any>(
-            "first_name" to fName, "middle_name" to mName, "last_name" to lName,
-            "gender" to gender, "dob" to dob, "phone" to phone, "email" to email
+            "first_name" to fName, // MATCHES FIREBASE STRUCTURE
+            "middle_name" to mName, // MATCHES FIREBASE STRUCTURE
+            "last_name" to lName, // MATCHES FIREBASE STRUCTURE
+            "gender" to gender,
+            "dob" to dob,
+            "phone" to phone,
+            "email" to email
         )
         db.collection("users").document(username).update(updates)
             .addOnSuccessListener { callback(true) }
@@ -176,19 +199,17 @@ class DatabaseHelper(context: Context) {
         }.addOnFailureListener { onComplete("") }
     }
 
-    fun updateProfilePicture(username: String, imageBytes: ByteArray, callback: (Boolean) -> Unit) {
-        uploadImage("profiles/$username.png", imageBytes) { url ->
-            if (url.isNotEmpty()) {
-                db.collection("users").document(username).update("profile_image_url", url)
-                    .addOnSuccessListener { callback(true) }
-                    .addOnFailureListener { callback(false) }
-            } else callback(false)
-        }
+    // FIX: Base64 Update function
+    fun updateProfilePictureBase64(username: String, base64Image: String, callback: (Boolean) -> Unit) {
+        // We save the Base64 string directly into the 'profile_image_url' field (snake_case)
+        db.collection("users").document(username).update("profile_image_url", base64Image)
+            .addOnSuccessListener { callback(true) }
+            .addOnFailureListener { callback(false) }
     }
 
     fun getProfilePictureUrl(username: String, callback: (String) -> Unit) {
         db.collection("users").document(username).get()
-            .addOnSuccessListener { callback(it.getString("profile_image_url") ?: "") }
+            .addOnSuccessListener { callback(it.getString("profile_image_url") ?: "") } // Key corrected
             .addOnFailureListener { callback("") }
     }
 
@@ -233,7 +254,6 @@ class DatabaseHelper(context: Context) {
                 val groupIds = groups.map { it.id }
                 if (groupIds.isEmpty()) { callback(list); return@getUserGroups }
 
-                // Note: Firestore 'whereIn' supports max 10 items.
                 db.collection("schedules")
                     .whereEqualTo("type", "shared")
                     .whereEqualTo("status", "ACTIVE")
@@ -302,7 +322,6 @@ class DatabaseHelper(context: Context) {
     // GROUP METHODS
     // ==========================================
 
-    // Use this method if you set up Firebase Storage properly
     fun createGroup(name: String, code: String, creator: String, imageBytes: ByteArray?, callback: (Int) -> Unit) {
         val id = System.currentTimeMillis().toInt()
 
@@ -315,10 +334,8 @@ class DatabaseHelper(context: Context) {
         }
     }
 
-    // --- NEW METHOD FOR NO-PAY FIX ---
     fun createGroupWithBase64(name: String, code: String, creator: String, base64Image: String, callback: (Int) -> Unit) {
         val id = System.currentTimeMillis().toInt()
-        // Save the image string directly to the database
         saveGroupData(id, name, code, base64Image, creator, callback)
     }
 
@@ -494,7 +511,7 @@ class DatabaseHelper(context: Context) {
     fun getGroupMessages(groupId: Int, callback: (ArrayList<ChatMessage>) -> Unit) {
         db.collection("group_messages")
             .whereEqualTo("group_id", groupId)
-            .orderBy("timestamp", Query.Direction.ASCENDING) // Note: Requires Firestore Index
+            .orderBy("timestamp", Query.Direction.ASCENDING)
             .addSnapshotListener { value, error ->
                 if (error != null || value == null) {
                     callback(ArrayList())

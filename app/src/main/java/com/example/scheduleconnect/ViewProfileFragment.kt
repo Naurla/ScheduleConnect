@@ -1,8 +1,10 @@
 package com.example.scheduleconnect
 
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.os.Bundle
+import android.util.Base64
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -10,7 +12,6 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
-import com.bumptech.glide.Glide // Import Glide
 
 class ViewProfileFragment : Fragment() {
 
@@ -29,7 +30,7 @@ class ViewProfileFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_view_profile, container, false)
         dbHelper = DatabaseHelper(requireContext())
 
-        // Init Views
+        // Init Views (Initialization logic remains correct)
         tvName = view.findViewById(R.id.tvViewName)
         tvUsername = view.findViewById(R.id.tvViewUsername)
         tvEmail = view.findViewById(R.id.tvViewEmail)
@@ -56,16 +57,16 @@ class ViewProfileFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        loadData() // Refresh data when returning from Edit
+        loadData()
     }
 
     private fun loadData() {
         val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
-        val currentUser = sharedPref.getString("username", "default_user") ?: "default_user"
+        val currentUser = sharedPref.getString("USERNAME", "default_user") ?: "default_user"
 
-        // --- ASYNC FETCH ---
         dbHelper.getUserDetails(currentUser) { user ->
             if (user != null) {
+                // Personal Info Display
                 val fullName = "${user.firstName} ${user.middleName} ${user.lastName}".trim()
                 tvName.text = if (fullName.isNotEmpty()) fullName else currentUser
                 tvUsername.text = "@${user.username}"
@@ -74,21 +75,43 @@ class ViewProfileFragment : Fragment() {
                 tvGender.text = user.gender.ifEmpty { "Not Specified" }
                 tvDOB.text = user.dob.ifEmpty { "Not Set" }
 
-                // Load Profile Picture with Glide
-                if (user.profileImageUrl.isNotEmpty()) {
-                    Glide.with(this)
-                        .load(user.profileImageUrl)
-                        .placeholder(R.drawable.ic_person)
-                        .circleCrop() // Makes image round
-                        .into(ivProfile)
-
-                    ivProfile.imageTintList = null
-                } else {
-                    // Default State
-                    ivProfile.setImageResource(R.drawable.ic_person)
-                    ivProfile.setColorFilter(Color.parseColor("#999999"))
-                }
+                // Image Loading
+                loadProfileImage(user.profileImageUrl)
             }
         }
+    }
+
+    private fun loadProfileImage(base64Image: String) {
+        if (base64Image.isNotEmpty()) {
+            try {
+                val decodedByte = Base64.decode(base64Image, Base64.DEFAULT)
+                val bitmap = BitmapFactory.decodeByteArray(decodedByte, 0, decodedByte.size)
+
+                // CRITICAL FIX: Use post to ensure the image is set after the view hierarchy is stable.
+                // This prevents the flash-to-black/GC issue.
+                ivProfile.post {
+                    ivProfile.scaleType = ImageView.ScaleType.CENTER_CROP
+                    ivProfile.setImageBitmap(bitmap)
+                    ivProfile.imageTintList = null
+                    ivProfile.setPadding(0, 0, 0, 0)
+                }
+
+            } catch (e: Exception) {
+                setDefaultProfileImage()
+            }
+        } else {
+            setDefaultProfileImage()
+        }
+    }
+
+    private fun setDefaultProfileImage() {
+        // Default State
+        ivProfile.setImageResource(R.drawable.ic_person)
+        ivProfile.setColorFilter(Color.parseColor("#999999"))
+        ivProfile.scaleType = ImageView.ScaleType.FIT_CENTER
+        // Set back to default padding for the icon to fit inside the circular boundary
+        val density = requireContext().resources.displayMetrics.density
+        val paddingPixel = (20 * density).toInt()
+        ivProfile.setPadding(paddingPixel, paddingPixel, paddingPixel, paddingPixel)
     }
 }

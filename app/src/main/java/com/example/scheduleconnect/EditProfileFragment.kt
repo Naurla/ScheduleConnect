@@ -4,11 +4,13 @@ import android.app.Activity
 import android.app.DatePickerDialog
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
+import android.util.Base64
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -17,178 +19,227 @@ import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
-import com.bumptech.glide.Glide // Import Glide
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.util.Calendar
+import kotlin.math.max
 
 class EditProfileFragment : Fragment() {
 
-    private lateinit var dbHelper: DatabaseHelper
+    // Views
+    private lateinit var btnBack: ImageView
+    private lateinit var ivProfilePicture: ImageView
+    private lateinit var btnChangePhoto: TextView
     private lateinit var etUsername: EditText
-    private lateinit var etFirst: EditText
-    private lateinit var etMiddle: EditText
-    private lateinit var etLast: EditText
+    private lateinit var etFirstName: EditText
+    private lateinit var etMiddleName: EditText
+    private lateinit var etLastName: EditText
     private lateinit var etEmail: EditText
     private lateinit var etPhone: EditText
     private lateinit var etGender: EditText
     private lateinit var etDOB: EditText
-
-    private lateinit var ivProfile: ImageView
-    private lateinit var btnChangePhoto: TextView
     private lateinit var btnSave: Button
-    private lateinit var btnBack: ImageView
 
-    private var selectedBitmap: Bitmap? = null
-    private lateinit var currentUser: String
+    private lateinit var dbHelper: DatabaseHelper
+    private lateinit var sharedPreferences: SharedPreferences
 
-    private val imagePickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
-            val imageUri: Uri? = result.data?.data
-            if (imageUri != null) {
-                try {
-                    selectedBitmap = getResizedBitmap(imageUri)
-                    ivProfile.setImageBitmap(selectedBitmap)
-                    ivProfile.imageTintList = null
-                    ivProfile.setPadding(0, 0, 0, 0)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
-        }
-    }
+    private var currentUsername: String = ""
+    private var selectedImageUri: Uri? = null
+    private val PICK_IMAGE_REQUEST = 1
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
         val view = inflater.inflate(R.layout.fragment_edit_profile, container, false)
-        dbHelper = DatabaseHelper(requireContext())
 
-        val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
-        currentUser = sharedPref.getString("username", "default_user") ?: "default_user"
+        // Initialize Views
+        btnBack = view.findViewById(R.id.btnBackEditProfile)
+        ivProfilePicture = view.findViewById(R.id.ivEditProfileImage)
+        btnChangePhoto = view.findViewById(R.id.btnChangePhoto)
 
-        // Init Views
         etUsername = view.findViewById(R.id.etEditUsername)
-        etFirst = view.findViewById(R.id.etEditFirstName)
-        etMiddle = view.findViewById(R.id.etEditMiddleName)
-        etLast = view.findViewById(R.id.etEditLastName)
+        etFirstName = view.findViewById(R.id.etEditFirstName)
+        etMiddleName = view.findViewById(R.id.etEditMiddleName)
+        etLastName = view.findViewById(R.id.etEditLastName)
         etEmail = view.findViewById(R.id.etEditEmail)
         etPhone = view.findViewById(R.id.etEditPhone)
         etGender = view.findViewById(R.id.etEditGender)
         etDOB = view.findViewById(R.id.etEditDOB)
-
-        ivProfile = view.findViewById(R.id.ivEditProfileImage)
-        btnChangePhoto = view.findViewById(R.id.btnChangePhoto)
         btnSave = view.findViewById(R.id.btnSaveChanges)
-        btnBack = view.findViewById(R.id.btnBackEditProfile)
 
-        // Load Data
-        loadCurrentData()
+        dbHelper = DatabaseHelper(requireContext())
+        sharedPreferences = requireContext().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
 
-        btnBack.setOnClickListener { parentFragmentManager.popBackStack() }
+        currentUsername = sharedPreferences.getString("USERNAME", "") ?: ""
+        etUsername.isEnabled = false
 
-        btnChangePhoto.setOnClickListener {
-            val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-            imagePickerLauncher.launch(intent)
+        if (currentUsername.isEmpty()) {
+            Toast.makeText(context, "Error: No user logged in.", Toast.LENGTH_SHORT).show()
+            parentFragmentManager.popBackStack()
+        } else {
+            loadUserProfile()
         }
 
-        etDOB.setOnClickListener {
-            val c = Calendar.getInstance()
-            DatePickerDialog(requireContext(), { _, year, month, day ->
-                val date = String.format("%d-%02d-%02d", year, month + 1, day)
-                etDOB.setText(date)
-            }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show()
-        }
-
-        btnSave.setOnClickListener {
-            saveChanges()
-        }
-
+        setupListeners()
         return view
     }
 
-    private fun loadCurrentData() {
-        // --- ASYNC FETCH ---
-        dbHelper.getUserDetails(currentUser) { user ->
+    override fun onResume() {
+        super.onResume()
+        // Only load from DB if we haven't picked a new image yet
+        if (selectedImageUri == null) {
+            loadUserProfile()
+        }
+    }
+
+    private fun setupListeners() {
+        btnBack.setOnClickListener { parentFragmentManager.popBackStack() }
+        btnChangePhoto.setOnClickListener { openImagePicker() }
+        btnSave.setOnClickListener { saveProfileChanges() }
+        etDOB.setOnClickListener { showDatePickerDialog() }
+    }
+
+    private fun showDatePickerDialog() {
+        val c = Calendar.getInstance()
+        DatePickerDialog(requireContext(), { _, year, month, day ->
+            val date = String.format("%d-%02d-%02d", year, month + 1, day)
+            etDOB.setText(date)
+        }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show()
+    }
+
+    private fun loadUserProfile() {
+        dbHelper.getUserDetails(currentUsername) { user ->
             if (user != null) {
+                // Always populate text fields
                 etUsername.setText(user.username)
-                etFirst.setText(user.firstName)
-                etMiddle.setText(user.middleName)
-                etLast.setText(user.lastName)
+                etFirstName.setText(user.firstName)
+                etMiddleName.setText(user.middleName)
+                etLastName.setText(user.lastName)
                 etEmail.setText(user.email)
                 etPhone.setText(user.phone)
                 etGender.setText(user.gender)
                 etDOB.setText(user.dob)
 
-                // Load Profile Picture using Glide
-                if (user.profileImageUrl.isNotEmpty()) {
-                    Glide.with(this)
-                        .load(user.profileImageUrl)
-                        .placeholder(R.drawable.ic_person)
-                        .circleCrop()
-                        .into(ivProfile)
+                // CRITICAL FIX: Only overwrite image from DB if user HAS NOT picked a new one
+                if (selectedImageUri == null) {
+                    if (user.profileImageUrl.isNotEmpty()) {
+                        try {
+                            val decodedByte = Base64.decode(user.profileImageUrl, Base64.DEFAULT)
+                            val bitmap = BitmapFactory.decodeByteArray(decodedByte, 0, decodedByte.size)
 
-                    ivProfile.setPadding(0, 0, 0, 0)
-                    ivProfile.imageTintList = null
+                            ivProfilePicture.scaleType = ImageView.ScaleType.CENTER_CROP
+                            ivProfilePicture.setImageBitmap(bitmap)
+                            ivProfilePicture.setPadding(0, 0, 0, 0)
+                            ivProfilePicture.imageTintList = null
+                        } catch (e: Exception) {
+                            setDefaultImage()
+                        }
+                    } else {
+                        setDefaultImage()
+                    }
                 }
-            } else {
-                Toast.makeText(context, "Failed to load user details", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
-    private fun saveChanges() {
-        val fName = etFirst.text.toString().trim()
-        val mName = etMiddle.text.toString().trim()
-        val lName = etLast.text.toString().trim()
-        val email = etEmail.text.toString().trim()
+    private fun setDefaultImage() {
+        ivProfilePicture.setImageResource(R.drawable.ic_person)
+        ivProfilePicture.scaleType = ImageView.ScaleType.FIT_CENTER
+    }
+
+    private fun saveProfileChanges() {
+        val fName = etFirstName.text.toString().trim()
+        val mName = etMiddleName.text.toString().trim()
+        val lName = etLastName.text.toString().trim()
         val phone = etPhone.text.toString().trim()
+        val email = etEmail.text.toString().trim()
         val gender = etGender.text.toString().trim()
         val dob = etDOB.text.toString().trim()
 
-        if (fName.isEmpty() || lName.isEmpty() || email.isEmpty()) {
-            Toast.makeText(context, "Name and Email are required", Toast.LENGTH_SHORT).show()
+        if (fName.isEmpty() || lName.isEmpty()) {
+            Toast.makeText(requireContext(), "First and Last Name are required", Toast.LENGTH_SHORT).show()
             return
         }
 
         btnSave.isEnabled = false
         btnSave.text = "Saving..."
 
-        // 1. Update Text Info
-        dbHelper.updateUserInfo(currentUser, fName, mName, lName, gender, dob, phone, email) { success ->
+        dbHelper.updateUserInfo(currentUsername, fName, mName, lName, gender, dob, phone, email) { success ->
             if (success) {
-                // 2. Check if image needs updating
-                if (selectedBitmap != null) {
-                    val stream = ByteArrayOutputStream()
-                    selectedBitmap!!.compress(Bitmap.CompressFormat.PNG, 100, stream)
-                    val bytes = stream.toByteArray()
-
-                    dbHelper.updateProfilePicture(currentUser, bytes) { imgSuccess ->
-                        finishUpdate(imgSuccess)
-                    }
+                if (selectedImageUri != null) {
+                    saveImageBase64(currentUsername, selectedImageUri!!)
                 } else {
-                    finishUpdate(true)
+                    finishUpdate()
                 }
             } else {
-                Toast.makeText(context, "Update failed", Toast.LENGTH_SHORT).show()
                 btnSave.isEnabled = true
                 btnSave.text = "SAVE CHANGES"
+                Toast.makeText(requireContext(), "Failed to update info", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
-    private fun finishUpdate(success: Boolean) {
-        if (success) {
-            Toast.makeText(context, "Profile Updated!", Toast.LENGTH_SHORT).show()
-            parentFragmentManager.popBackStack()
+    private fun saveImageBase64(username: String, uri: Uri) {
+        val base64String = encodeUriToBase64(uri)
+        if (base64String != null) {
+            dbHelper.updateProfilePictureBase64(username, base64String) { success ->
+                if (success) {
+                    finishUpdate()
+                } else {
+                    Toast.makeText(requireContext(), "Info saved, but image failed.", Toast.LENGTH_SHORT).show()
+                    finishUpdate()
+                }
+            }
         } else {
-            Toast.makeText(context, "Failed to update profile picture", Toast.LENGTH_SHORT).show()
             btnSave.isEnabled = true
             btnSave.text = "SAVE CHANGES"
+            Toast.makeText(requireContext(), "Failed to process image.", Toast.LENGTH_LONG).show()
         }
     }
 
-    private fun getResizedBitmap(uri: Uri): Bitmap? {
+    private fun finishUpdate() {
+        btnSave.isEnabled = true
+        btnSave.text = "SAVE CHANGES"
+        Toast.makeText(requireContext(), "Profile Updated!", Toast.LENGTH_SHORT).show()
+
+        if (activity is HomeActivity) {
+            (activity as HomeActivity).updateNavigationHeader()
+        }
+
+        parentFragmentManager.popBackStack()
+    }
+
+    private fun openImagePicker() {
+        val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+        startActivityForResult(intent, PICK_IMAGE_REQUEST)
+    }
+
+    // --- PREVIEW LOGIC ---
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == PICK_IMAGE_REQUEST && resultCode == Activity.RESULT_OK && data != null) {
+            selectedImageUri = data.data
+
+            if (selectedImageUri != null) {
+                // Load a resized bitmap for preview to avoid black screen / memory issues
+                val previewBitmap = getSafeResizedBitmap(selectedImageUri!!, 500)
+
+                if (previewBitmap != null) {
+                    ivProfilePicture.scaleType = ImageView.ScaleType.CENTER_CROP
+                    ivProfilePicture.setImageBitmap(previewBitmap)
+                    ivProfilePicture.setPadding(0, 0, 0, 0)
+                    ivProfilePicture.imageTintList = null
+                } else {
+                    Toast.makeText(requireContext(), "Failed to load preview.", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    // Helper: Safely load resized Bitmap
+    private fun getSafeResizedBitmap(uri: Uri, targetSize: Int): Bitmap? {
         var inputStream: InputStream? = null
         try {
             val options = BitmapFactory.Options()
@@ -197,26 +248,36 @@ class EditProfileFragment : Fragment() {
             BitmapFactory.decodeStream(inputStream, null, options)
             inputStream?.close()
 
-            val REQUIRED_SIZE = 500
-            var width_tmp = options.outWidth
-            var height_tmp = options.outHeight
             var scale = 1
-            while (true) {
-                if (width_tmp / 2 < REQUIRED_SIZE || height_tmp / 2 < REQUIRED_SIZE) break
-                width_tmp /= 2
-                height_tmp /= 2
-                scale *= 2
+            val maxDim = max(options.outWidth, options.outHeight)
+            if (maxDim > targetSize) {
+                scale = maxDim / targetSize
             }
 
             val o2 = BitmapFactory.Options()
             o2.inSampleSize = scale
             inputStream = requireContext().contentResolver.openInputStream(uri)
-            val scaledBitmap = BitmapFactory.decodeStream(inputStream, null, o2)
-            return scaledBitmap
-        } catch (e: Exception) {
-            return null
-        } finally {
+            val resizedBitmap = BitmapFactory.decodeStream(inputStream, null, o2)
             inputStream?.close()
+
+            return resizedBitmap
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return null
+        }
+    }
+
+    // Helper: Compress for Saving
+    private fun encodeUriToBase64(uri: Uri): String? {
+        val bitmap = getSafeResizedBitmap(uri, 400) ?: return null
+        return try {
+            val outputStream = ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
+            val byteArray = outputStream.toByteArray()
+            Base64.encodeToString(byteArray, Base64.DEFAULT)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
         }
     }
 }

@@ -15,12 +15,15 @@ class SplashActivity : AppCompatActivity() {
         Handler(Looper.getMainLooper()).postDelayed({
             // 1. Check for saved session
             val sharedPref = getSharedPreferences("UserSession", Context.MODE_PRIVATE)
-            val username = sharedPref.getString("username", null)
+            // FIX 1: Use the consistent key "USERNAME"
+            val username = sharedPref.getString("USERNAME", null)
 
             // 2. Decide where to go
-            if (username != null && username != "default_user") {
+            // FIX 2: Check if username is not null AND not empty
+            if (username != null && username.isNotEmpty()) {
                 // User is logged in -> Go to Home
                 val intent = Intent(this, HomeActivity::class.java)
+                intent.putExtra("CURRENT_USER", username) // Pass user for session consistency
                 startActivity(intent)
             } else {
                 // No user found -> Go to Login

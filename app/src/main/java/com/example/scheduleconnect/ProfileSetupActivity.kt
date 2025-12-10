@@ -8,6 +8,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
+import android.util.Base64 // Import Base64
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
@@ -57,7 +58,7 @@ class ProfileSetupActivity : AppCompatActivity() {
         // Fallback: Try fetching from SharedPreferences if Intent is empty
         if (currentUser.isEmpty()) {
             val sharedPref = getSharedPreferences("UserSession", Context.MODE_PRIVATE)
-            currentUser = sharedPref.getString("username", "") ?: ""
+            currentUser = sharedPref.getString("USERNAME", "") ?: "" // Changed to match other files ("USERNAME")
         }
 
         ivProfile = findViewById(R.id.ivSetupProfileImage)
@@ -72,25 +73,24 @@ class ProfileSetupActivity : AppCompatActivity() {
 
         btnSave.setOnClickListener {
             if (selectedBitmap != null) {
-                val stream = ByteArrayOutputStream()
-                selectedBitmap!!.compress(Bitmap.CompressFormat.PNG, 100, stream)
-                val imageBytes = stream.toByteArray()
-
                 if (currentUser.isNotEmpty()) {
                     // Disable button
                     btnSave.isEnabled = false
                     btnSave.text = "Uploading..."
 
-                    // --- ASYNC SAVE ---
-                    dbHelper.updateProfilePicture(currentUser, imageBytes) { success ->
+                    // 1. Convert Bitmap to Base64 String
+                    val base64Image = bitmapToBase64(selectedBitmap!!)
+
+                    // 2. Call the Base64 specific method
+                    dbHelper.updateProfilePictureBase64(currentUser, base64Image) { success ->
                         btnSave.isEnabled = true
                         btnSave.text = "SAVE & CONTINUE"
 
                         if (success) {
-                            // Update SharedPreferences IMMEDIATELY here
+                            // Update SharedPreferences
                             val sharedPref = getSharedPreferences("UserSession", Context.MODE_PRIVATE)
                             val editor = sharedPref.edit()
-                            editor.putString("username", currentUser)
+                            editor.putString("USERNAME", currentUser)
                             editor.apply()
 
                             Toast.makeText(this, "Profile Picture Saved!", Toast.LENGTH_SHORT).show()
@@ -120,6 +120,7 @@ class ProfileSetupActivity : AppCompatActivity() {
         finish()
     }
 
+    // Helper: Resize bitmap to prevent App Crash (TransactionTooLargeException)
     private fun getResizedBitmap(uri: Uri): Bitmap? {
         var inputStream: InputStream? = null
         try {
@@ -129,7 +130,7 @@ class ProfileSetupActivity : AppCompatActivity() {
             BitmapFactory.decodeStream(inputStream, null, options)
             inputStream?.close()
 
-            val REQUIRED_SIZE = 500
+            val REQUIRED_SIZE = 400 // Keeping smaller for Base64 efficiency
             var width_tmp = options.outWidth
             var height_tmp = options.outHeight
             var scale = 1
@@ -143,12 +144,27 @@ class ProfileSetupActivity : AppCompatActivity() {
             val o2 = BitmapFactory.Options()
             o2.inSampleSize = scale
             inputStream = contentResolver.openInputStream(uri)
-            val scaledBitmap = BitmapFactory.decodeStream(inputStream, null, o2)
-            return scaledBitmap
+            return BitmapFactory.decodeStream(inputStream, null, o2)
         } catch (e: Exception) {
+            e.printStackTrace() // Log the error
             return null
         } finally {
             inputStream?.close()
+        }
+    }
+
+    // Helper: Convert Bitmap to Base64 String
+    private fun bitmapToBase64(bitmap: Bitmap): String {
+        try {
+            val byteArrayOutputStream = ByteArrayOutputStream()
+            // CRITICAL FIX: Ensure the Bitmap is compressed safely to JPEG for efficiency
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 70, byteArrayOutputStream)
+            val byteArray = byteArrayOutputStream.toByteArray()
+            return Base64.encodeToString(byteArray, Base64.DEFAULT)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            // Return an empty string on failure
+            return ""
         }
     }
 }

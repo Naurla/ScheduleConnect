@@ -3,9 +3,11 @@ package com.example.scheduleconnect
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
+import android.util.Base64
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -15,7 +17,6 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.cardview.widget.CardView
 import androidx.fragment.app.Fragment
-import com.bumptech.glide.Glide // Import Glide
 
 class SettingsFragment : Fragment() {
 
@@ -81,35 +82,54 @@ class SettingsFragment : Fragment() {
         return view
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Reload data just in case EditProfileFragment made changes
+        loadUserData()
+    }
+
     private fun loadUserData() {
         val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
-        val username = sharedPref.getString("username", "User") ?: "User"
+        val username = sharedPref.getString("USERNAME", "User") ?: "User"
 
-        // --- ASYNC FETCH ---
         dbHelper.getUserDetails(username) { user ->
             if (user != null) {
-                // Update Name
-                val fullName = "${user.firstName} ${user.lastName}".trim()
+                val fullName = "${user.firstName} ${user.middleName} ${user.lastName}".trim()
                 tvName.text = if (fullName.isNotEmpty()) fullName else user.username
 
-                // Update Profile Picture using Glide
-                if (user.profileImageUrl.isNotEmpty()) {
-                    Glide.with(this)
-                        .load(user.profileImageUrl)
-                        .placeholder(R.drawable.ic_person)
-                        .circleCrop()
-                        .into(ivProfile)
+                val base64Image = user.profileImageUrl
+                if (base64Image.isNotEmpty()) {
+                    try {
+                        val decodedByte = Base64.decode(base64Image, Base64.DEFAULT)
+                        val bitmap = BitmapFactory.decodeByteArray(decodedByte, 0, decodedByte.size)
 
-                    ivProfile.imageTintList = null
+                        // CRITICAL FIX: Use post for stable image loading
+                        ivProfile.post {
+                            ivProfile.setImageBitmap(bitmap)
+                            ivProfile.scaleType = ImageView.ScaleType.CENTER_CROP
+                            ivProfile.imageTintList = null
+                            ivProfile.setPadding(0, 0, 0, 0)
+                        }
+
+                    } catch (e: Exception) {
+                        setDefaultProfileImage()
+                    }
                 } else {
-                    // Default State
-                    ivProfile.setImageResource(R.drawable.ic_person)
-                    ivProfile.setColorFilter(Color.parseColor("#999999"))
+                    setDefaultProfileImage()
                 }
             } else {
                 tvName.text = username
+                setDefaultProfileImage()
             }
         }
+    }
+
+    private fun setDefaultProfileImage() {
+        // Default State
+        ivProfile.setImageResource(R.drawable.ic_person)
+        ivProfile.setColorFilter(Color.parseColor("#999999"))
+        // Ensure default image fits if no photo is available
+        ivProfile.scaleType = ImageView.ScaleType.FIT_CENTER
     }
 
     private fun showLogoutConfirmation() {

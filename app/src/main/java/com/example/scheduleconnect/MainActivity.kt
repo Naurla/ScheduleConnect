@@ -21,7 +21,8 @@ class MainActivity : AppCompatActivity() {
 
         // 1. Check Session (Skip login if already logged in)
         val sharedPref = getSharedPreferences("UserSession", Context.MODE_PRIVATE)
-        if (sharedPref.contains("username")) {
+        // FIX 1: Use the consistent key "USERNAME"
+        if (sharedPref.contains("USERNAME")) {
             startActivity(Intent(this, HomeActivity::class.java))
             finish()
             return
@@ -30,28 +31,12 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         dbHelper = DatabaseHelper(this)
 
-        // 2. Initialize Views
+        // 2. Initialize Views (omitted for brevity)
         val etUsername = findViewById<EditText>(R.id.etUsername)
         val etPassword = findViewById<EditText>(R.id.etPassword)
         val btnLogin = findViewById<Button>(R.id.btnLogin)
         val tvSignUp = findViewById<TextView>(R.id.tvSignUp)
         val tvForgot = findViewById<TextView>(R.id.tvForgotPassword)
-
-//        // Optional: Password Eye Icon (Ensure ID 'btnEye' exists in activity_main.xml)
-//        val btnEye = findViewById<ImageView>(R.id.btnEye)
-//
-//        // 3. Password Visibility Toggle
-//        btnEye?.setOnClickListener {
-//            isPasswordVisible = !isPasswordVisible
-//            if (isPasswordVisible) {
-//                etPassword.inputType = InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
-//                btnEye.setImageResource(R.drawable.ic_eye_off) // Make sure you have this drawable
-//            } else {
-//                etPassword.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-//                btnEye.setImageResource(R.drawable.ic_eye) // Make sure you have this drawable
-//            }
-//            etPassword.setSelection(etPassword.text.length)
-//        }
 
         // 4. Login Logic
         btnLogin.setOnClickListener {
@@ -77,13 +62,16 @@ class MainActivity : AppCompatActivity() {
 
                             // Save Session
                             val editor = sharedPref.edit()
-                            editor.putString("username", finalUser)
+                            // FIX 2: Use the consistent key "USERNAME"
+                            editor.putString("USERNAME", finalUser)
                             editor.apply()
 
                             Toast.makeText(this, "Login Successful!", Toast.LENGTH_SHORT).show()
 
                             // Navigate to Home
                             val intent = Intent(this, HomeActivity::class.java)
+                            // Pass the username to HomeActivity for immediate use
+                            intent.putExtra("CURRENT_USER", finalUser)
                             startActivity(intent)
                             finish()
                         }
@@ -94,7 +82,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // 5. Navigation Links
+        // 5. Navigation Links (omitted for brevity)
         tvSignUp.setOnClickListener {
             val intent = Intent(this, SignupActivity::class.java)
             startActivity(intent)

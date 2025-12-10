@@ -25,6 +25,9 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.UUID
 
 class CreateGroupFragment : Fragment() {
@@ -123,7 +126,7 @@ class CreateGroupFragment : Fragment() {
 
         btnBack.setOnClickListener { parentFragmentManager.popBackStack() }
 
-        // --- CREATE GROUP LOGIC (UPDATED WITH BASE64) ---
+        // --- CREATE GROUP LOGIC (UPDATED WITH NOTIFICATIONS) ---
         btnCreate.setOnClickListener {
             val groupName = etGroupName.text.toString().trim()
 
@@ -158,9 +161,21 @@ class CreateGroupFragment : Fragment() {
 
                     if (newGroupId != -1) {
                         // Success: Add invited users
+                        val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+
                         for (user in selectedUsers) {
-                            dbHelper.addMemberToGroup(newGroupId, user) {
-                                // Optional: Log success
+                            dbHelper.addMemberToGroup(newGroupId, user) { success ->
+                                if (success) {
+                                    // --- SEND NOTIFICATION TO INVITED USER ---
+                                    dbHelper.addNotification(
+                                        user = user,
+                                        title = "Group Invitation",
+                                        msg = "You have been added to the group: $groupName",
+                                        date = currentDate,
+                                        relatedId = newGroupId,
+                                        type = "GROUP"
+                                    )
+                                }
                             }
                         }
                         Toast.makeText(context, "Group Created! Code: $code", Toast.LENGTH_LONG).show()
@@ -210,3 +225,4 @@ class CreateGroupFragment : Fragment() {
         }
     }
 }
+
