@@ -554,4 +554,9 @@ class DatabaseHelper(context: Context) {
                 callback(list)
             }
     }
+    fun addScheduleWithBase64(user: String, groupId: Int, title: String, date: String, loc: String, desc: String, type: String, base64Image: String, callback: (Boolean) -> Unit) {
+        val id = System.currentTimeMillis().toInt()
+        // We pass the base64 string directly into the 'imageUrl' field
+        saveScheduleData(id, user, groupId, title, date, loc, desc, type, base64Image, callback)
+    }
 }

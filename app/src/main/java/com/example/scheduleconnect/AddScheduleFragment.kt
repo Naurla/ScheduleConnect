@@ -9,6 +9,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
+import android.util.Base64 // Import this for Base64 conversion
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -121,32 +122,34 @@ class AddScheduleFragment : Fragment() {
                 return@setOnClickListener
             }
 
-            // Convert Bitmap to Byte Array (DatabaseHelper will handle upload)
-            var imageBytes: ByteArray? = null
+            // --- FIX IS HERE: Convert Bitmap to Base64 String ---
+            var base64Image = ""
             if (selectedImageBitmap != null) {
                 val stream = ByteArrayOutputStream()
-                selectedImageBitmap!!.compress(Bitmap.CompressFormat.PNG, 100, stream)
-                imageBytes = stream.toByteArray()
+                // Compress to JPEG, Quality 50 to keep the string small for Firestore
+                selectedImageBitmap!!.compress(Bitmap.CompressFormat.JPEG, 50, stream)
+                val byteArrays = stream.toByteArray()
+                base64Image = Base64.encodeToString(byteArrays, Base64.DEFAULT)
             }
 
             // --- FIREBASE ASYNC SAVE ---
             btnAdd.isEnabled = false // Disable button while saving
             btnAdd.text = "Saving..."
 
-            dbHelper.addSchedule(currentUser, -1, title, dateStr, location, desc, "personal", imageBytes) { success ->
+            // Call the NEW helper function we added
+            dbHelper.addScheduleWithBase64(currentUser, -1, title, dateStr, location, desc, "personal", base64Image) { success ->
                 // This block runs ONLY when Firebase finishes
                 btnAdd.isEnabled = true
                 btnAdd.text = "ADD SCHEDULE"
 
                 if (success) {
-                    // Add Notification (Fire and forget)
+                    // Add Notification
                     dbHelper.addNotification(currentUser, "New Schedule Added", "You created schedule: $title", dateStr)
 
                     scheduleNotification(title, dateStr)
                     Toast.makeText(requireContext(), "Personal Schedule Added!", Toast.LENGTH_SHORT).show()
 
                     clearInputFields()
-                    // Optionally navigate back automatically
                     handleBackNavigation()
                 } else {
                     Toast.makeText(requireContext(), "Failed to add schedule. Try again.", Toast.LENGTH_SHORT).show()
@@ -158,13 +161,10 @@ class AddScheduleFragment : Fragment() {
     }
 
     private fun handleBackNavigation() {
-        // Check if we are hosted by HomeActivity to access its BottomNav
         if (requireActivity() is HomeActivity) {
             val bottomNav = requireActivity().findViewById<BottomNavigationView>(R.id.bottomNav)
-            // Navigate back to the Home tab
             bottomNav?.selectedItemId = R.id.nav_home
         } else {
-            // Fallback for other containers
             parentFragmentManager.popBackStack()
         }
     }
