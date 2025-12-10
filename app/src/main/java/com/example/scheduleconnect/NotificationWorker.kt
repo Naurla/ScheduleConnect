@@ -68,7 +68,7 @@ class NotificationWorker(context: Context, workerParams: WorkerParameters) : Cor
     private suspend fun sendDelayedEmail(title: String, message: String) {
         // Retrieve current user username
         val userPref = applicationContext.getSharedPreferences("UserSession", Context.MODE_PRIVATE)
-        val username = userPref.getString("username", "") ?: ""
+        val username = userPref.getString("USERNAME", "") ?: ""
 
         if (username.isNotEmpty()) {
             val dbHelper = DatabaseHelper(applicationContext)

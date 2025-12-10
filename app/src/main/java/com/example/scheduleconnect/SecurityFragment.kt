@@ -53,7 +53,7 @@ class SecurityFragment : Fragment() {
 
     private fun loadUserData() {
         val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
-        val username = sharedPref.getString("username", "") ?: ""
+        val username = sharedPref.getString("USERNAME", "") ?: ""
 
         if (username.isNotEmpty()) {
             // --- ASYNC FETCH ---

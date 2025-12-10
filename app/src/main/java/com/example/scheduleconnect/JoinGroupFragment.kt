@@ -54,7 +54,7 @@ class JoinGroupFragment : Fragment() {
 
             // Get Current User
             val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
-            val currentUser = sharedPref.getString("username", "default_user") ?: "default_user"
+            val currentUser = sharedPref.getString("USERNAME", "default_user") ?: "default_user"
 
             // Disable button to prevent double clicks
             btnJoin.isEnabled = false
