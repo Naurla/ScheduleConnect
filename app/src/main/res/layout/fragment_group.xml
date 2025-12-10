@@ -1,134 +1,158 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="24dp"
-    android:paddingBottom="100dp"
-    android:background="@color/app_background">
+    android:background="@color/app_background"
+    android:fillViewport="true">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="SHARED\nSCHEDULES"
-        android:textColor="@color/app_red"
-        android:textSize="28sp"
-        android:textStyle="bold"
-        android:lineSpacingExtra="-4dp"
-        android:layout_marginBottom="5dp"/>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Manage your groups here."
-        android:textColor="#757575"
-        android:textSize="14sp"
-        android:layout_marginBottom="24dp"/>
-
-    <androidx.cardview.widget.CardView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:cardCornerRadius="16dp"
-        app:cardElevation="4dp"
-        app:cardBackgroundColor="@android:color/white"
-        android:layout_marginBottom="24dp">
+        android:orientation="vertical"
+        android:padding="20dp"
+        android:paddingBottom="100dp">
 
-        <LinearLayout
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="SHARED\nSCHEDULES"
+            android:textColor="@color/app_red"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:lineSpacingExtra="0dp"
+            android:layout_marginBottom="5dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Manage your groups here."
+            android:textColor="#757575"
+            android:textSize="14sp"
+            android:layout_marginBottom="20dp"/>
+
+        <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="6dp"
-                android:background="@color/app_red"/>
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="@android:color/white"
+            android:layout_marginBottom="20dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:padding="20dp"
-                android:gravity="center">
+                android:weightSum="2">
 
                 <Button
-                    android:id="@+id/btnCreateShared"
-                    style="@style/Widget.MaterialComponents.Button"
+                    android:id="@+id/btnCreateGroup"
                     android:layout_width="0dp"
-                    android:layout_height="55dp"
+                    android:layout_height="50dp"
                     android:layout_weight="1"
-                    android:text="CREATE"
-                    android:textColor="@color/white"
-                    android:textStyle="bold"
-                    android:textSize="14sp"
+                    android:text="+ CREATE"
                     android:backgroundTint="@color/app_red"
-                    app:cornerRadius="12dp"
-                    app:icon="@drawable/ic_add"
-                    app:iconGravity="textStart"
-                    app:iconTint="@color/white"
-                    android:layout_marginEnd="8dp"/>
+                    android:textColor="@android:color/white"
+                    android:textStyle="bold"
+                    android:layout_marginEnd="8dp"
+                    app:cornerRadius="12dp"/>
 
                 <Button
-                    android:id="@+id/btnJoinShared"
+                    android:id="@+id/btnJoinGroup"
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="0dp"
-                    android:layout_height="55dp"
+                    android:layout_height="50dp"
                     android:layout_weight="1"
                     android:text="JOIN"
                     android:textColor="@color/app_red"
                     android:textStyle="bold"
-                    android:textSize="14sp"
                     app:strokeColor="@color/app_red"
                     app:strokeWidth="2dp"
-                    app:cornerRadius="12dp"
                     app:icon="@drawable/ic_group"
-                    app:iconGravity="textStart"
                     app:iconTint="@color/app_red"
-                    android:layout_marginStart="8dp"/>
+                    android:layout_marginStart="8dp"
+                    app:cornerRadius="12dp"/>
             </LinearLayout>
-        </LinearLayout>
-    </androidx.cardview.widget.CardView>
+        </androidx.cardview.widget.CardView>
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layout_marginBottom="12dp">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="YOUR GROUPS"
-            android:textColor="#333"
-            android:textStyle="bold"
-            android:textSize="14sp"
-            android:letterSpacing="0.1"/>
-
-        <View
+        <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#DDD"
-            android:layout_marginStart="10dp"/>
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp"
+            app:cardBackgroundColor="@android:color/white"
+            android:layout_marginBottom="15dp">
+
+            <EditText
+                android:id="@+id/etSearchGroups"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:background="@android:color/transparent"
+                android:hint="Search groups..."
+                android:paddingStart="15dp"
+                android:paddingEnd="15dp"
+                android:drawableStart="@android:drawable/ic_menu_search"
+                android:drawableTint="#999"
+                android:drawablePadding="12dp"
+                android:textSize="14sp"
+                android:textColorHint="#999"
+                android:singleLine="true"/>
+        </androidx.cardview.widget.CardView>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="10dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="YOUR GROUPS"
+                android:textStyle="bold"
+                android:textColor="#333"
+                android:textSize="14sp"
+                android:letterSpacing="0.1"/>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#E0E0E0"
+                android:layout_marginStart="10dp"/>
+        </LinearLayout>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerGroups"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:nestedScrollingEnabled="false"/>
+
+        <LinearLayout
+            android:id="@+id/layoutEmptyGroups"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:visibility="gone"
+            android:layout_marginTop="30dp">
+
+            <ImageView
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:src="@drawable/ic_group"
+                app:tint="#CCCCCC"
+                android:layout_marginBottom="10dp"/>
+
+            <TextView
+                android:id="@+id/tvEmptyGroups"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="No groups found"
+                android:textColor="#999"
+                android:textStyle="bold"/>
+        </LinearLayout>
+
     </LinearLayout>
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recyclerGroups"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:clipToPadding="false"
-        android:paddingBottom="20dp"/>
-
-    <TextView
-        android:id="@+id/tvNoGroups"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="You haven't joined any groups yet."
-        android:gravity="center"
-        android:textColor="#999"
-        android:textSize="16sp"
-        android:layout_marginTop="50dp"
-        android:visibility="gone"/>
-
-</LinearLayout>
+</ScrollView>

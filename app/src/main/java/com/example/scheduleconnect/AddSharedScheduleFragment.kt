@@ -10,6 +10,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
+import android.util.Base64 // IMP: Import this
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -64,15 +65,11 @@ class AddSharedScheduleFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_add_schedule, container, false)
         dbHelper = DatabaseHelper(requireContext())
 
-        // Critical: Ensure groupId is passed from previous fragment
         groupId = arguments?.getInt("GROUP_ID") ?: -1
 
-        // Get Current User
         val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
-        // FIX: Ensure this matches MainActivity (USERNAME vs username)
         currentUser = sharedPref.getString("USERNAME", "default_user") ?: "default_user"
 
-        // Init Views
         etName = view.findViewById(R.id.etSchName)
         etDate = view.findViewById(R.id.etSchDate)
         etLoc = view.findViewById(R.id.etSchLocation)
@@ -86,11 +83,9 @@ class AddSharedScheduleFragment : Fragment() {
         ivScheduleImage = view.findViewById(R.id.ivScheduleImage)
         btnSelectImage = view.findViewById(R.id.btnSelectImage)
 
-        // Set Text specific to Shared Schedule
         tvTitle.text = "ADD SHARED SCHEDULE"
         btnAdd.text = "ADD SHARED SCHEDULE"
 
-        // Logic
         btnBack.setOnClickListener { parentFragmentManager.popBackStack() }
 
         btnCancel.setOnClickListener {
@@ -123,27 +118,26 @@ class AddSharedScheduleFragment : Fragment() {
                 return@setOnClickListener
             }
 
-            var imageBytes: ByteArray? = null
+            // --- FIX IS HERE: Convert to Base64 String ---
+            var base64Image = ""
             if (selectedImageBitmap != null) {
                 val stream = ByteArrayOutputStream()
-                selectedImageBitmap!!.compress(Bitmap.CompressFormat.PNG, 100, stream)
-                imageBytes = stream.toByteArray()
+                // Compress to JPEG to save space
+                selectedImageBitmap!!.compress(Bitmap.CompressFormat.JPEG, 50, stream)
+                val byteArrays = stream.toByteArray()
+                base64Image = Base64.encodeToString(byteArrays, Base64.DEFAULT)
             }
 
-            // Disable button
             btnAdd.isEnabled = false
             btnAdd.text = "Creating..."
 
-            // --- ASYNC ADD SCHEDULE ---
-            dbHelper.addSchedule(currentUser, groupId, name, date, loc, desc, "shared", imageBytes) { success ->
+            // --- USE THE NEW BASE64 METHOD ---
+            dbHelper.addScheduleWithBase64(currentUser, groupId, name, date, loc, desc, "shared", base64Image) { success ->
                 btnAdd.isEnabled = true
                 btnAdd.text = "ADD SHARED SCHEDULE"
 
                 if (success) {
-                    // 1. Send Notifications to Group Members (Remote DB)
                     notifyGroupMembers(name, date)
-
-                    // 2. Schedule Local Notification (Phone System - from Friend's Code)
                     scheduleLocalNotification(name, date, loc)
 
                     Toast.makeText(context, "Shared Schedule Added!", Toast.LENGTH_SHORT).show()
@@ -164,18 +158,15 @@ class AddSharedScheduleFragment : Fragment() {
         val notifTitle = "New Group Schedule"
         val notifMsg = "$currentUser added '$scheduleTitle' for $date"
 
-        // Fetch all members of this group
         dbHelper.getGroupMemberUsernames(groupId, "") { members ->
             for (member in members) {
                 if (member != currentUser) {
-                    // Using the detailed notification method to include groupId and type
                     dbHelper.addNotification(member, notifTitle, notifMsg, currentDate, groupId, "SCHEDULE")
                 }
             }
         }
     }
 
-    // --- NEW FEATURE FROM FRIEND: WorkManager for Local Notifications ---
     private fun scheduleLocalNotification(name: String, date: String, loc: String) {
         try {
             val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
