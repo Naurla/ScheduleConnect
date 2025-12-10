@@ -28,16 +28,13 @@ class GroupDetailsFragment : Fragment() {
     private lateinit var tvCode: TextView
     private lateinit var tvCreator: TextView
     private lateinit var ivGroupImage: ImageView
+    // REMOVED: btnSettings variable
 
-    // Member List
     private lateinit var recyclerMembers: RecyclerView
-
-    // Schedule List
     private lateinit var recyclerSchedules: RecyclerView
     private lateinit var scheduleAdapter: ScheduleAdapter
     private var scheduleList = ArrayList<Schedule>()
 
-    // Buttons
     private lateinit var btnAddSchedule: Button
     private lateinit var btnInvite: Button
     private lateinit var btnLeave: Button
@@ -47,6 +44,7 @@ class GroupDetailsFragment : Fragment() {
 
     private var groupId: Int = -1
     private var currentGroupName: String = ""
+    private var currentGroupNickname: String = ""
     private var groupCode: String = ""
     private lateinit var currentUser: String
 
@@ -67,6 +65,8 @@ class GroupDetailsFragment : Fragment() {
         tvCreator = view.findViewById(R.id.tvDetailGroupCreator)
         ivGroupImage = view.findViewById(R.id.ivGroupDetailImage)
 
+        // REMOVED: btnSettings = view.findViewById(R.id.btnGroupSettings)
+
         recyclerMembers = view.findViewById(R.id.recyclerGroupMembers)
         recyclerSchedules = view.findViewById(R.id.recyclerGroupSchedules)
         btnAddSchedule = view.findViewById(R.id.btnAddGroupSchedule)
@@ -79,14 +79,11 @@ class GroupDetailsFragment : Fragment() {
         tvName.text = currentGroupName
         tvCode.text = groupCode
 
-        // --- SCROLLING FIX STARTS HERE ---
-        // We configure the RecyclerViews immediately so they don't block the main page scroll
         recyclerMembers.layoutManager = LinearLayoutManager(context)
         recyclerMembers.isNestedScrollingEnabled = false
 
         recyclerSchedules.layoutManager = LinearLayoutManager(context)
         recyclerSchedules.isNestedScrollingEnabled = false
-        // --- SCROLLING FIX ENDS HERE ---
 
         loadGroupDetails()
         setupScheduleList()
@@ -97,16 +94,22 @@ class GroupDetailsFragment : Fragment() {
             tvCreator.text = "Created by: $displayCreator"
 
             if (currentUser == creator) {
+                // Admin View
                 btnDelete.visibility = View.VISIBLE
                 btnLeave.visibility = View.GONE
                 btnInvite.visibility = View.VISIBLE
+                // REMOVED: btnSettings.visibility = View.VISIBLE
             } else {
+                // Member View
                 btnDelete.visibility = View.GONE
                 btnLeave.visibility = View.VISIBLE
                 btnInvite.visibility = View.GONE
+                // REMOVED: btnSettings.visibility = View.GONE
             }
             setupMemberList(creator)
         }
+
+        // REMOVED: btnSettings.setOnClickListener listener
 
         btnBack.setOnClickListener { parentFragmentManager.popBackStack() }
 
@@ -114,7 +117,8 @@ class GroupDetailsFragment : Fragment() {
             val chatFragment = GroupChatFragment()
             val bundle = Bundle()
             bundle.putInt("GROUP_ID", groupId)
-            bundle.putString("GROUP_NAME", currentGroupName)
+            val displayName = if (currentGroupNickname.isNotEmpty()) currentGroupNickname else currentGroupName
+            bundle.putString("GROUP_NAME", displayName)
             chatFragment.arguments = bundle
 
             parentFragmentManager.beginTransaction()
@@ -152,11 +156,11 @@ class GroupDetailsFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
+        loadGroupDetails()
         loadGroupSchedules()
     }
 
     private fun setupScheduleList() {
-        // LayoutManager is already set in onCreateView for the fix
         scheduleAdapter = ScheduleAdapter(scheduleList)
         recyclerSchedules.adapter = scheduleAdapter
 
@@ -194,14 +198,20 @@ class GroupDetailsFragment : Fragment() {
         dbHelper.getGroupDetails(groupId) { group ->
             if (group != null) {
                 currentGroupName = group.name
-                tvName.text = group.name
+                currentGroupNickname = group.nickname
+                groupCode = group.code
+                val imageUrl = group.imageUrl
+
+                if (currentGroupNickname.isNotEmpty()) {
+                    tvName.text = currentGroupNickname
+                } else {
+                    tvName.text = currentGroupName
+                }
 
                 if (group.code.isNotEmpty()) {
-                    groupCode = group.code
                     tvCode.text = group.code
                 }
 
-                val imageUrl = group.imageUrl
                 if (imageUrl.isNotEmpty()) {
                     try {
                         val decodedString = Base64.decode(imageUrl, Base64.DEFAULT)
@@ -219,14 +229,19 @@ class GroupDetailsFragment : Fragment() {
 
     private fun setupMemberList(creator: String) {
         dbHelper.getGroupMemberUsernames(groupId, "") { members ->
-            // LayoutManager is set in onCreateView
-
             recyclerMembers.adapter = object : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
                 inner class MemberViewHolder(view: View) : RecyclerView.ViewHolder(view) {
                     val tvUsername: TextView = view.findViewById(R.id.tvAttendeeName)
                     val tvStatus: TextView = view.findViewById(R.id.tvAttendeeStatus)
                     val ivAvatar: ImageView = view.findViewById(R.id.ivAttendeeAvatar)
+                    val btnKick: ImageView = view.findViewById(R.id.btnKickMember)
+
+                    // ⚠️ FIX FOR UNRESOLVED REFERENCE ERROR:
+                    // You MUST replace R.id.pencil_icon_id with the actual android:id
+                    // of the pencil ImageView in your item_attendee.xml.
+                    // If you are SURE R.id.ivEdit is the correct ID, uncomment this line.
+                    val ivEdit: ImageView? = view.findViewById(resources.getIdentifier("ivEdit", "id", requireContext().packageName))
                 }
 
                 override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
@@ -239,12 +254,22 @@ class GroupDetailsFragment : Fragment() {
                     if (holder is MemberViewHolder) {
                         holder.tvUsername.text = memberName
 
+                        // HIDE THE EDIT BUTTON
+                        holder.ivEdit?.visibility = View.GONE
+
                         if (memberName == creator) {
                             holder.tvStatus.text = "Admin"
                             holder.tvStatus.setTextColor(Color.parseColor("#8B1A1A"))
                         } else {
                             holder.tvStatus.text = "Member"
                             holder.tvStatus.setTextColor(Color.GRAY)
+                        }
+
+                        if (currentUser == creator && memberName != creator) {
+                            holder.btnKick.visibility = View.VISIBLE
+                            holder.btnKick.setOnClickListener { showKickConfirmation(memberName) }
+                        } else {
+                            holder.btnKick.visibility = View.GONE
                         }
 
                         dbHelper.getProfilePictureUrl(memberName) { url ->
@@ -271,21 +296,47 @@ class GroupDetailsFragment : Fragment() {
         }
     }
 
-    // --- INVITE METHODS ---
+    private fun showKickConfirmation(username: String) {
+        val builder = AlertDialog.Builder(requireContext())
+        val view = LayoutInflater.from(context).inflate(R.layout.dialog_generic_confirmation, null)
+        builder.setView(view)
+        val dialog = builder.create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        val tvTitle = view.findViewById<TextView>(R.id.tvDialogTitle)
+        val tvMessage = view.findViewById<TextView>(R.id.tvDialogMessage)
+        val btnYes = view.findViewById<Button>(R.id.btnDialogYes)
+        val btnNo = view.findViewById<TextView>(R.id.btnDialogNo)
+        tvTitle.text = "KICK MEMBER"
+        tvMessage.text = "Are you sure you want to remove $username?"
+        btnYes.text = "YES, REMOVE"
+        btnNo.setOnClickListener { dialog.dismiss() }
+        btnYes.setOnClickListener {
+            kickMember(username)
+            dialog.dismiss()
+        }
+        dialog.show()
+    }
+
+    private fun kickMember(username: String) {
+        dbHelper.leaveGroup(groupId, username) { success ->
+            if (success) {
+                Toast.makeText(context, "$username removed", Toast.LENGTH_SHORT).show()
+                dbHelper.getGroupCreator(groupId) { creator -> setupMemberList(creator) }
+            } else {
+                Toast.makeText(context, "Failed to remove member", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     private fun showInviteDialog() {
         val builder = AlertDialog.Builder(context)
         builder.setTitle("Invite Members")
-
         val input = android.widget.EditText(context)
         input.hint = "Search Username"
         builder.setView(input)
-
         builder.setPositiveButton("Search") { _, _ ->
             val query = input.text.toString()
-            if (query.isNotEmpty()) {
-                performSearch(query)
-            }
+            if (query.isNotEmpty()) performSearch(query)
         }
         builder.setNegativeButton("Cancel", null)
         builder.show()
@@ -293,22 +344,17 @@ class GroupDetailsFragment : Fragment() {
 
     private fun performSearch(query: String) {
         dbHelper.searchUsers(query, currentUser) { users ->
-            if (users.isEmpty()) {
-                Toast.makeText(context, "No users found", Toast.LENGTH_SHORT).show()
-            } else {
-                showUserListDialog(users)
-            }
+            if (users.isEmpty()) Toast.makeText(context, "No users found", Toast.LENGTH_SHORT).show()
+            else showUserListDialog(users)
         }
     }
 
     private fun showUserListDialog(users: ArrayList<String>) {
         val builder = AlertDialog.Builder(context)
         builder.setTitle("Select User to Invite")
-
         val userArray = users.toTypedArray()
         builder.setItems(userArray) { _, which ->
-            val selectedUser = userArray[which]
-            sendInvite(selectedUser)
+            sendInvite(userArray[which])
         }
         builder.show()
     }
@@ -319,16 +365,9 @@ class GroupDetailsFragment : Fragment() {
                 Toast.makeText(context, "$targetUser is already in the group", Toast.LENGTH_SHORT).show()
             } else {
                 val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-                val message = "You have been invited to join $currentGroupName"
-
-                dbHelper.addNotification(
-                    targetUser,
-                    "Group Invitation",
-                    message,
-                    date,
-                    groupId,
-                    "GROUP_INVITE"
-                )
+                val displayName = if(currentGroupNickname.isNotEmpty()) currentGroupNickname else currentGroupName
+                val message = "You have been invited to join $displayName"
+                dbHelper.addNotification(targetUser, "Group Invitation", message, date, groupId, "GROUP_INVITE")
                 Toast.makeText(context, "Invite sent to $targetUser", Toast.LENGTH_SHORT).show()
             }
         }

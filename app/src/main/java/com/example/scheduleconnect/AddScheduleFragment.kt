@@ -9,7 +9,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
-import android.util.Base64 // Import this for Base64 conversion
+import android.util.Base64
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -122,31 +122,30 @@ class AddScheduleFragment : Fragment() {
                 return@setOnClickListener
             }
 
-            // --- FIX IS HERE: Convert Bitmap to Base64 String ---
+            // --- Convert Bitmap to Base64 String ---
             var base64Image = ""
             if (selectedImageBitmap != null) {
                 val stream = ByteArrayOutputStream()
-                // Compress to JPEG, Quality 50 to keep the string small for Firestore
                 selectedImageBitmap!!.compress(Bitmap.CompressFormat.JPEG, 50, stream)
                 val byteArrays = stream.toByteArray()
                 base64Image = Base64.encodeToString(byteArrays, Base64.DEFAULT)
             }
 
             // --- FIREBASE ASYNC SAVE ---
-            btnAdd.isEnabled = false // Disable button while saving
+            btnAdd.isEnabled = false
             btnAdd.text = "Saving..."
 
-            // Call the NEW helper function we added
             dbHelper.addScheduleWithBase64(currentUser, -1, title, dateStr, location, desc, "personal", base64Image) { success ->
-                // This block runs ONLY when Firebase finishes
                 btnAdd.isEnabled = true
                 btnAdd.text = "ADD SCHEDULE"
 
                 if (success) {
-                    // Add Notification
+                    // Add Notification to Firestore
                     dbHelper.addNotification(currentUser, "New Schedule Added", "You created schedule: $title", dateStr)
 
+                    // Schedule WorkManager Alerts
                     scheduleNotification(title, dateStr)
+
                     Toast.makeText(requireContext(), "Personal Schedule Added!", Toast.LENGTH_SHORT).show()
 
                     clearInputFields()
@@ -216,19 +215,42 @@ class AddScheduleFragment : Fragment() {
         ivScheduleImage.imageTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#AAAAAA"))
     }
 
+    // --- UPDATED: Schedule Notification Logic ---
     private fun scheduleNotification(title: String, dateStr: String) {
         try {
             val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
             val scheduleTime = sdf.parse(dateStr)
             val currentTime = Date()
+
             if (scheduleTime != null) {
                 val diff = scheduleTime.time - currentTime.time
+
+                // 1. STANDARD ALERT (At exact time of event)
                 if (diff > 0) {
                     val workRequest = OneTimeWorkRequestBuilder<NotificationWorker>()
                         .setInitialDelay(diff, TimeUnit.MILLISECONDS)
-                        .setInputData(workDataOf("title" to title, "message" to "You have a schedule now!"))
+                        .setInputData(workDataOf(
+                            "title" to title,
+                            "message" to "Happening Now: $title"
+                        ))
                         .build()
                     WorkManager.getInstance(requireContext()).enqueue(workRequest)
+                }
+
+                // 2. ONE DAY BEFORE ALERT (Email + Notification)
+                val oneDayMillis = TimeUnit.DAYS.toMillis(1)
+                val diffOneDay = diff - oneDayMillis
+
+                if (diffOneDay > 0) {
+                    val reminderRequest = OneTimeWorkRequestBuilder<NotificationWorker>()
+                        .setInitialDelay(diffOneDay, TimeUnit.MILLISECONDS)
+                        .setInputData(workDataOf(
+                            "title" to "Upcoming: $title",
+                            "message" to "This event is scheduled for tomorrow at ${dateStr.substringAfter(" ")}",
+                            "FORCE_EMAIL" to true // <--- Triggers Email + Notif
+                        ))
+                        .build()
+                    WorkManager.getInstance(requireContext()).enqueue(reminderRequest)
                 }
             }
         } catch (e: Exception) {

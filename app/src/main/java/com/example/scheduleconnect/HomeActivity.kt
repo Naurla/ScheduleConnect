@@ -1,6 +1,7 @@
 package com.example.scheduleconnect
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.util.Base64
@@ -25,9 +26,11 @@ class HomeActivity : AppCompatActivity() {
         setContentView(R.layout.activity_home)
 
         dbHelper = DatabaseHelper(this)
+
         ivProfile = findViewById(R.id.btnTopProfile)
         tvBadge = findViewById(R.id.tvNotificationBadge)
 
+        // Session Logic
         val sharedPref = getSharedPreferences("UserSession", Context.MODE_PRIVATE)
         val intentUsername = intent.getStringExtra("CURRENT_USER")
 
@@ -38,16 +41,20 @@ class HomeActivity : AppCompatActivity() {
             currentUsername = sharedPref.getString("USERNAME", "") ?: ""
         }
 
+        if (currentUsername.isEmpty()) {
+            startActivity(Intent(this, MainActivity::class.java))
+            finish()
+            return
+        }
+
         val bottomNav = findViewById<BottomNavigationView>(R.id.bottomNav)
 
+        // Handle Fragments & Navigation
         if (savedInstanceState == null) {
-            // --- NEW: Check for Redirection Intent Extras ---
             val navigateTo = intent.getStringExtra("NAVIGATE_TO")
-
             if (navigateTo == "CHAT") {
                 val groupId = intent.getIntExtra("GROUP_ID", -1)
                 val groupName = intent.getStringExtra("GROUP_NAME") ?: "Group Chat"
-
                 if (groupId != -1) {
                     val fragment = GroupChatFragment()
                     val bundle = Bundle()
@@ -56,15 +63,14 @@ class HomeActivity : AppCompatActivity() {
                     fragment.arguments = bundle
                     loadFragment(fragment)
                 } else {
-                    // Fallback if ID is missing
                     loadFragment(HomeFragment())
                 }
             } else {
-                // Default: Load Home
                 loadFragment(HomeFragment())
             }
         }
 
+        // Top Bar Click Listeners
         val btnNotif = findViewById<ImageView>(R.id.btnTopNotifications)
         btnNotif.setOnClickListener {
             bottomNav.menu.setGroupCheckable(0, true, false)
@@ -104,8 +110,16 @@ class HomeActivity : AppCompatActivity() {
                     try {
                         val decodedByte = Base64.decode(user.profileImageUrl, Base64.DEFAULT)
                         val bitmap = BitmapFactory.decodeByteArray(decodedByte, 0, decodedByte.size)
-                        ivProfile.setImageBitmap(bitmap)
-                        ivProfile.setPadding(0, 0, 0, 0)
+
+                        ivProfile.post {
+                            ivProfile.setImageBitmap(bitmap)
+                            ivProfile.setPadding(0, 0, 0, 0)
+                            ivProfile.scaleType = ImageView.ScaleType.CENTER_CROP
+
+                            // --- FIX: CLEAR THE RED TINT ---
+                            ivProfile.clearColorFilter()
+                            ivProfile.imageTintList = null
+                        }
                     } catch (e: Exception) {
                         e.printStackTrace()
                         setDefaultProfileImage()
@@ -118,11 +132,13 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun setDefaultProfileImage() {
-        ivProfile.setImageResource(R.drawable.ic_person)
-        val color = ContextCompat.getColor(this, R.color.app_red)
-        ivProfile.setColorFilter(color)
-        ivProfile.setPadding(5, 5, 5, 5)
-        ivProfile.scaleType = ImageView.ScaleType.FIT_CENTER
+        ivProfile.post {
+            ivProfile.setImageResource(R.drawable.ic_person)
+            val color = ContextCompat.getColor(this, R.color.app_red)
+            ivProfile.setColorFilter(color) // This applies the Red Tint
+            ivProfile.setPadding(5, 5, 5, 5)
+            ivProfile.scaleType = ImageView.ScaleType.FIT_CENTER
+        }
     }
 
     fun updateNotificationBadge() {

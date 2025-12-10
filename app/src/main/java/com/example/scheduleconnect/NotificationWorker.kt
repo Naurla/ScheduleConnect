@@ -18,7 +18,9 @@ class NotificationWorker(context: Context, workerParams: WorkerParameters) : Cor
         val title = inputData.getString("title") ?: "Schedule Reminder"
         val message = inputData.getString("message") ?: "You have an upcoming schedule!"
 
-        // --- NEW: Retrieve Group Details ---
+        // --- NEW: Flag to force email (for 1-day reminders) ---
+        val forceEmail = inputData.getBoolean("FORCE_EMAIL", false)
+
         val groupId = inputData.getInt("group_id", -1)
         val groupName = inputData.getString("group_name") ?: "Group Chat"
 
@@ -27,18 +29,26 @@ class NotificationWorker(context: Context, workerParams: WorkerParameters) : Cor
         val remindersEnabled = sharedPref.getBoolean("SCHEDULE_REMINDERS_ENABLED", true)
         val dndEnabled = sharedPref.getBoolean("DND_ENABLED", false)
 
-        // If Reminders are completely disabled, do nothing.
+        // If global reminders are off, stop.
         if (!remindersEnabled) {
             return Result.success()
         }
 
-        // 2. Handle DND Logic
+        // 2. FORCE EMAIL LOGIC (For 1-Day Reminder)
+        // If this is the 1-day reminder, we send email AND show notification (unless DND blocks notification)
+        if (forceEmail) {
+            sendEmailNotification(title, message, isReminder = true)
+        }
+
+        // 3. Standard Notification Logic
         if (dndEnabled) {
-            // DND is ON: Send delayed email instead of App Notification
-            sendDelayedEmail(title, message)
+            // DND is ON: Send "Missed Notification" email only if we haven't just sent a forced reminder
+            // (Standard alerts that hit during DND become emails)
+            if (!forceEmail) {
+                sendEmailNotification(title, message, isReminder = false)
+            }
         } else {
             // Normal Mode: Show App Notification
-            // Pass group details to the notification helper
             showNotification(title, message, groupId, groupName)
         }
 
@@ -60,7 +70,6 @@ class NotificationWorker(context: Context, workerParams: WorkerParameters) : Cor
             notificationManager.createNotificationChannel(channel)
         }
 
-        // --- NEW: Create Intent for Redirection ---
         val intent = Intent(applicationContext, HomeActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             putExtra("NAVIGATE_TO", "CHAT")
@@ -76,26 +85,26 @@ class NotificationWorker(context: Context, workerParams: WorkerParameters) : Cor
         )
 
         val notification = NotificationCompat.Builder(applicationContext, channelId)
-            .setSmallIcon(R.drawable.ic_launcher_foreground) // Ensure you have this icon or change to R.drawable.ic_home
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(title)
             .setContentText(message)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
-            .setContentIntent(pendingIntent) // Attach the pending intent
+            .setContentIntent(pendingIntent)
             .build()
 
         notificationManager.notify(notificationId, notification)
     }
 
-    private suspend fun sendDelayedEmail(title: String, message: String) {
-        // Retrieve current user username
+    // --- REFACTORED: Generic Email Sender ---
+    private suspend fun sendEmailNotification(title: String, message: String, isReminder: Boolean) {
         val userPref = applicationContext.getSharedPreferences("UserSession", Context.MODE_PRIVATE)
         val username = userPref.getString("USERNAME", "") ?: ""
 
         if (username.isNotEmpty()) {
             val dbHelper = DatabaseHelper(applicationContext)
 
-            // --- ASYNC WRAPPER ---
+            // Suspend wrapper to get user details
             val userDetails = suspendCoroutine<UserDataModel?> { continuation ->
                 dbHelper.getUserDetails(username) { user ->
                     continuation.resume(user)
@@ -103,10 +112,18 @@ class NotificationWorker(context: Context, workerParams: WorkerParameters) : Cor
             }
 
             if (userDetails != null && userDetails.email.isNotEmpty()) {
-                val emailBody = "Hello ${userDetails.firstName},\n\nYou have missed a notification because 'Do Not Disturb' is on.\n\nNotification: $title\nDetails: $message\n\nRegards,\nScheduleConnect Team"
+                val subject: String
+                val body: String
 
-                // Send Email
-                EmailHelper.sendEmail(listOf(userDetails.email), "Missed Notification: $title", emailBody)
+                if (isReminder) {
+                    subject = "Reminder: $title"
+                    body = "Hello ${userDetails.firstName},\n\nThis is a reminder for your upcoming event tomorrow!\n\nEvent: $title\nDetails: $message\n\nSee you there,\nScheduleConnect Team"
+                } else {
+                    subject = "Missed Notification: $title"
+                    body = "Hello ${userDetails.firstName},\n\nYou have missed a notification because 'Do Not Disturb' is on.\n\nNotification: $title\nDetails: $message\n\nRegards,\nScheduleConnect Team"
+                }
+
+                EmailHelper.sendEmail(listOf(userDetails.email), subject, body)
             }
         }
     }

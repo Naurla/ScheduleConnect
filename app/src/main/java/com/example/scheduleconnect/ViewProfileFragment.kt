@@ -30,7 +30,7 @@ class ViewProfileFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_view_profile, container, false)
         dbHelper = DatabaseHelper(requireContext())
 
-        // Init Views (Initialization logic remains correct)
+        // Init Views
         tvName = view.findViewById(R.id.tvViewName)
         tvUsername = view.findViewById(R.id.tvViewUsername)
         tvEmail = view.findViewById(R.id.tvViewEmail)
@@ -58,25 +58,27 @@ class ViewProfileFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         loadData()
+        // Update Home Activity Header in case we just changed the photo
+        (activity as? HomeActivity)?.updateNavigationHeader()
     }
 
     private fun loadData() {
         val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
-        val currentUser = sharedPref.getString("USERNAME", "default_user") ?: "default_user"
+        val currentUser = sharedPref.getString("USERNAME", "") ?: ""
 
-        dbHelper.getUserDetails(currentUser) { user ->
-            if (user != null) {
-                // Personal Info Display
-                val fullName = "${user.firstName} ${user.middleName} ${user.lastName}".trim()
-                tvName.text = if (fullName.isNotEmpty()) fullName else currentUser
-                tvUsername.text = "@${user.username}"
-                tvEmail.text = user.email.ifEmpty { "No Email" }
-                tvPhone.text = user.phone.ifEmpty { "No Phone" }
-                tvGender.text = user.gender.ifEmpty { "Not Specified" }
-                tvDOB.text = user.dob.ifEmpty { "Not Set" }
+        if (currentUser.isNotEmpty()) {
+            dbHelper.getUserDetails(currentUser) { user ->
+                if (user != null) {
+                    val fullName = "${user.firstName} ${user.middleName} ${user.lastName}".trim()
+                    tvName.text = if (fullName.isNotEmpty()) fullName else currentUser
+                    tvUsername.text = "@${user.username}"
+                    tvEmail.text = user.email.ifEmpty { "No Email" }
+                    tvPhone.text = user.phone.ifEmpty { "No Phone" }
+                    tvGender.text = user.gender.ifEmpty { "Not Specified" }
+                    tvDOB.text = user.dob.ifEmpty { "Not Set" }
 
-                // Image Loading
-                loadProfileImage(user.profileImageUrl)
+                    loadProfileImage(user.profileImageUrl)
+                }
             }
         }
     }
@@ -87,15 +89,15 @@ class ViewProfileFragment : Fragment() {
                 val decodedByte = Base64.decode(base64Image, Base64.DEFAULT)
                 val bitmap = BitmapFactory.decodeByteArray(decodedByte, 0, decodedByte.size)
 
-                // CRITICAL FIX: Use post to ensure the image is set after the view hierarchy is stable.
-                // This prevents the flash-to-black/GC issue.
                 ivProfile.post {
                     ivProfile.scaleType = ImageView.ScaleType.CENTER_CROP
                     ivProfile.setImageBitmap(bitmap)
-                    ivProfile.imageTintList = null
                     ivProfile.setPadding(0, 0, 0, 0)
-                }
 
+                    // --- FIX: CLEAR THE TINT ---
+                    ivProfile.clearColorFilter()
+                    ivProfile.imageTintList = null
+                }
             } catch (e: Exception) {
                 setDefaultProfileImage()
             }
@@ -105,11 +107,9 @@ class ViewProfileFragment : Fragment() {
     }
 
     private fun setDefaultProfileImage() {
-        // Default State
         ivProfile.setImageResource(R.drawable.ic_person)
-        ivProfile.setColorFilter(Color.parseColor("#999999"))
+        ivProfile.setColorFilter(Color.parseColor("#999999")) // Applies Gray Tint
         ivProfile.scaleType = ImageView.ScaleType.FIT_CENTER
-        // Set back to default padding for the icon to fit inside the circular boundary
         val density = requireContext().resources.displayMetrics.density
         val paddingPixel = (20 * density).toInt()
         ivProfile.setPadding(paddingPixel, paddingPixel, paddingPixel, paddingPixel)

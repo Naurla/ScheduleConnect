@@ -40,7 +40,8 @@ data class GroupInfo(
     val name: String = "",
     val code: String = "",
     val imageUrl: String = "",
-    val creator: String = ""
+    val creator: String = "",
+    val nickname: String = ""
 )
 
 // --- SYNCED: Includes groupCode AND groupName ---
@@ -500,6 +501,27 @@ class DatabaseHelper(context: Context) {
         db.collection("groups").document(groupId.toString()).delete().addOnSuccessListener { callback(true) }
     }
 
+    fun updateGroupDetails(groupId: Int, nickname: String, base64Image: String, callback: (Boolean) -> Unit) {
+        val updates = hashMapOf<String, Any>(
+            "nickname" to nickname
+        )
+
+        // Only update the image if the user actually picked a new one
+        if (base64Image.isNotEmpty()) {
+            updates["imageUrl"] = base64Image
+        }
+
+        db.collection("groups").document(groupId.toString())
+            .update(updates)
+            .addOnSuccessListener {
+                callback(true)
+            }
+            .addOnFailureListener { e ->
+                e.printStackTrace()
+                callback(false)
+            }
+    }
+
     // ==========================================
     // NOTIFICATIONS & RSVP (SYNCED)
     // ==========================================
@@ -684,6 +706,40 @@ class DatabaseHelper(context: Context) {
                 }
                 callback(list)
             }
+    }
+
+    // --- NEW: Get full details of all group members ---
+    fun getGroupMembersDetails(groupId: Int, callback: (ArrayList<UserDataModel>) -> Unit) {
+        // 1. Get the list of usernames in the group
+        getGroupMemberUsernames(groupId, "") { usernames ->
+            if (usernames.isEmpty()) {
+                callback(ArrayList())
+                return@getGroupMemberUsernames
+            }
+
+            val userList = ArrayList<UserDataModel>()
+            var loadedCount = 0
+
+            // 2. Fetch details for each username
+            for (username in usernames) {
+                getUserDetails(username) { user ->
+                    if (user != null) {
+                        // Found full profile, add it
+                        userList.add(user)
+                    } else {
+                        // --- FIX IS HERE ---
+                        // Profile not found? Create a temporary one so they still show up!
+                        userList.add(UserDataModel(username = username))
+                    }
+
+                    loadedCount++
+                    // When all are processed, return the list
+                    if (loadedCount == usernames.size) {
+                        callback(userList)
+                    }
+                }
+            }
+        }
     }
 }
 

@@ -90,13 +90,11 @@ class UserNotificationsFragment : Fragment() {
                         .addToBackStack(null)
                         .commit()
 
-                }
-                // --- NEW: Handle Chat Redirect ---
-                else if (item.type == "CHAT" && item.relatedId != -1) {
+                } else if (item.type == "CHAT" && item.relatedId != -1) {
                     val fragment = GroupChatFragment()
                     val bundle = Bundle()
-                    bundle.putInt("GROUP_ID", item.relatedId) // relatedId is the groupId
-                    bundle.putString("GROUP_NAME", item.groupName) // synced groupName
+                    bundle.putInt("GROUP_ID", item.relatedId)
+                    bundle.putString("GROUP_NAME", item.groupName)
                     fragment.arguments = bundle
 
                     parentFragmentManager.beginTransaction()
@@ -112,7 +110,26 @@ class UserNotificationsFragment : Fragment() {
     private fun loadNotifications() {
         if (currentUser.isNotEmpty()) {
             dbHelper.getUserNotifications(currentUser) { list ->
-                if (list.isEmpty()) {
+
+                // 1. GET SETTINGS
+                val settingsPref = requireActivity().getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
+                val allowGroupNotifs = settingsPref.getBoolean("GROUP_NOTIFICATIONS_ENABLED", true)
+
+                // 2. FILTER LIST based on settings
+                val filteredList = list.filter { item ->
+                    if (!allowGroupNotifs) {
+                        // If Group Notifs are OFF, hide Invite and Group types
+                        item.type != "GROUP" && item.type != "GROUP_INVITE" && item.type != "INVITE"
+                    } else {
+                        // Otherwise show everything
+                        true
+                    }
+                }
+
+                // 3. Convert back to ArrayList for the adapter
+                val finalList = ArrayList(filteredList)
+
+                if (finalList.isEmpty()) {
                     recyclerView.visibility = View.GONE
                     layoutEmpty.visibility = View.VISIBLE
                 } else {
@@ -120,9 +137,9 @@ class UserNotificationsFragment : Fragment() {
                     layoutEmpty.visibility = View.GONE
 
                     // Sort: Newest first
-                    list.sortByDescending { it.id }
+                    finalList.sortByDescending { it.id }
 
-                    adapter.updateList(list)
+                    adapter.updateList(finalList)
                 }
             }
         }

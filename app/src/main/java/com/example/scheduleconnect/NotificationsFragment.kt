@@ -29,12 +29,19 @@ class NotificationsFragment : Fragment() {
         btnSave = view.findViewById(R.id.btnSaveNotifSettings)
         btnBack = view.findViewById(R.id.btnBackNotifSettings)
 
-        // Load Saved Preferences
-        val sharedPref = requireActivity().getSharedPreferences("Settings", Context.MODE_PRIVATE)
+        // 1. USE "AppSettings" TO MATCH WORKER
+        val sharedPref = requireActivity().getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
 
-        switchPush.isChecked = sharedPref.getBoolean("notif_push", true)
-        switchEmail.isChecked = sharedPref.getBoolean("notif_email", false)
-        switchGroup.isChecked = sharedPref.getBoolean("notif_group", true)
+        // 2. LOAD CORRECT KEYS
+        // 'switchPush' controls whether reminders are enabled at all
+        switchPush.isChecked = sharedPref.getBoolean("SCHEDULE_REMINDERS_ENABLED", true)
+
+        // 'switchEmail' can control DND (since your worker sends emails when DND is on)
+        // OR a separate email setting. For now, let's map it to a new key for clarity.
+        switchEmail.isChecked = sharedPref.getBoolean("EMAIL_NOTIFICATIONS_ENABLED", false)
+
+        // 'switchGroup' maps to group notifications
+        switchGroup.isChecked = sharedPref.getBoolean("GROUP_NOTIFICATIONS_ENABLED", true)
 
         btnBack.setOnClickListener {
             parentFragmentManager.popBackStack()
@@ -42,12 +49,19 @@ class NotificationsFragment : Fragment() {
 
         btnSave.setOnClickListener {
             val editor = sharedPref.edit()
-            editor.putBoolean("notif_push", switchPush.isChecked)
-            editor.putBoolean("notif_email", switchEmail.isChecked)
-            editor.putBoolean("notif_group", switchGroup.isChecked)
+
+            // 3. SAVE WITH CORRECT KEYS
+            editor.putBoolean("SCHEDULE_REMINDERS_ENABLED", switchPush.isChecked)
+            editor.putBoolean("EMAIL_NOTIFICATIONS_ENABLED", switchEmail.isChecked)
+            editor.putBoolean("GROUP_NOTIFICATIONS_ENABLED", switchGroup.isChecked)
+
             editor.apply()
 
             Toast.makeText(context, "Preferences Saved", Toast.LENGTH_SHORT).show()
+
+            // Optional: If 'switchPush' is OFF, you might want to cancel existing work
+            // but usually the worker checks the flag before running, which is safer.
+
             parentFragmentManager.popBackStack()
         }
 

@@ -5,17 +5,14 @@
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:gravity="center_vertical"
-    android:paddingVertical="12dp"
-    android:paddingHorizontal="8dp"
-    android:background="?attr/selectableItemBackground">
+    android:padding="12dp">
 
     <androidx.cardview.widget.CardView
-        android:layout_width="50dp"
-        android:layout_height="50dp"
-        app:cardCornerRadius="25dp"
-        app:cardBackgroundColor="#F0F0F0"
-        app:cardElevation="0dp">
-
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        app:cardCornerRadius="20dp"
+        app:cardElevation="0dp"
+        app:cardBackgroundColor="#F5F5F5">
         <ImageView
             android:id="@+id/ivAttendeeAvatar"
             android:layout_width="match_parent"
@@ -37,17 +34,41 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Username"
-            android:textSize="16sp"
+            android:textColor="#333"
             android:textStyle="bold"
-            android:textColor="#333333"/>
+            android:textSize="16sp"/>
 
         <TextView
             android:id="@+id/tvAttendeeStatus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Member"
-            android:textSize="13sp"
-            android:textColor="#757575"/>
+            android:textColor="#757575"
+            android:textSize="12sp"/>
     </LinearLayout>
+
+    <ImageView
+        android:id="@+id/btnEditNickname"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:src="@android:drawable/ic_menu_edit"
+        app:tint="#757575"
+        android:padding="6dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:clickable="true"
+        android:focusable="true"
+        android:layout_marginEnd="8dp"/>
+
+    <ImageView
+        android:id="@+id/btnKickMember"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:src="@drawable/ic_door_open"
+        app:tint="#D32F2F"
+        android:padding="6dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:visibility="gone"
+        android:clickable="true"
+        android:focusable="true"/>
 
 </LinearLayout>

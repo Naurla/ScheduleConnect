@@ -10,7 +10,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
-import android.util.Base64 // IMP: Import this
+import android.util.Base64
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -118,11 +118,10 @@ class AddSharedScheduleFragment : Fragment() {
                 return@setOnClickListener
             }
 
-            // --- FIX IS HERE: Convert to Base64 String ---
+            // --- Convert to Base64 String ---
             var base64Image = ""
             if (selectedImageBitmap != null) {
                 val stream = ByteArrayOutputStream()
-                // Compress to JPEG to save space
                 selectedImageBitmap!!.compress(Bitmap.CompressFormat.JPEG, 50, stream)
                 val byteArrays = stream.toByteArray()
                 base64Image = Base64.encodeToString(byteArrays, Base64.DEFAULT)
@@ -131,13 +130,14 @@ class AddSharedScheduleFragment : Fragment() {
             btnAdd.isEnabled = false
             btnAdd.text = "Creating..."
 
-            // --- USE THE NEW BASE64 METHOD ---
             dbHelper.addScheduleWithBase64(currentUser, groupId, name, date, loc, desc, "shared", base64Image) { success ->
                 btnAdd.isEnabled = true
                 btnAdd.text = "ADD SHARED SCHEDULE"
 
                 if (success) {
                     notifyGroupMembers(name, date)
+
+                    // Schedule local reminders (Exact time + 1 Day before)
                     scheduleLocalNotification(name, date, loc)
 
                     Toast.makeText(context, "Shared Schedule Added!", Toast.LENGTH_SHORT).show()
@@ -167,6 +167,7 @@ class AddSharedScheduleFragment : Fragment() {
         }
     }
 
+    // --- UPDATED: Schedule Notification Logic ---
     private fun scheduleLocalNotification(name: String, date: String, loc: String) {
         try {
             val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
@@ -175,12 +176,33 @@ class AddSharedScheduleFragment : Fragment() {
 
             if (scheduleTime != null) {
                 val diff = scheduleTime.time - currentTime.time
+
+                // 1. STANDARD ALERT
                 if (diff > 0) {
                     val workRequest = OneTimeWorkRequestBuilder<NotificationWorker>()
                         .setInitialDelay(diff, TimeUnit.MILLISECONDS)
-                        .setInputData(workDataOf("title" to "Shared Schedule: $name", "message" to "Upcoming shared event at $loc"))
+                        .setInputData(workDataOf(
+                            "title" to "Shared Schedule: $name",
+                            "message" to "Upcoming shared event at $loc"
+                        ))
                         .build()
                     WorkManager.getInstance(requireContext()).enqueue(workRequest)
+                }
+
+                // 2. ONE DAY BEFORE ALERT
+                val oneDayMillis = TimeUnit.DAYS.toMillis(1)
+                val diffOneDay = diff - oneDayMillis
+
+                if (diffOneDay > 0) {
+                    val reminderRequest = OneTimeWorkRequestBuilder<NotificationWorker>()
+                        .setInitialDelay(diffOneDay, TimeUnit.MILLISECONDS)
+                        .setInputData(workDataOf(
+                            "title" to "Reminder: $name",
+                            "message" to "Your shared event at $loc is tomorrow!",
+                            "FORCE_EMAIL" to true
+                        ))
+                        .build()
+                    WorkManager.getInstance(requireContext()).enqueue(reminderRequest)
                 }
             }
         } catch (e: Exception) {
