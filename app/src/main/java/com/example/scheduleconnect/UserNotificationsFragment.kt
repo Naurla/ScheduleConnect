@@ -30,7 +30,7 @@ class UserNotificationsFragment : Fragment() {
 
         // --- FIX: Use "username" (lowercase) to match HomeActivity ---
         val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
-        currentUser = sharedPref.getString("username", "") ?: ""
+        currentUser = sharedPref.getString("USERNAME", "") ?: ""
 
         setupRecyclerView()
 

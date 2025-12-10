@@ -61,7 +61,7 @@ class GroupDetailsFragment : Fragment() {
         groupCode = arguments?.getString("GROUP_CODE") ?: "N/A"
 
         val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
-        currentUser = sharedPref.getString("username", "default_user") ?: "default_user"
+        currentUser = sharedPref.getString("USERNAME", "default_user") ?: "default_user"
 
         // Initialize Views
         tvName = view.findViewById(R.id.tvDetailGroupName)

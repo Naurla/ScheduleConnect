@@ -37,7 +37,7 @@ class GroupChatFragment : Fragment() {
 
         dbHelper = DatabaseHelper(requireContext())
         val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
-        currentUser = sharedPref.getString("username", "default_user") ?: "default_user"
+        currentUser = sharedPref.getString("USERNAME", "default_user") ?: "default_user"
 
         groupId = arguments?.getInt("GROUP_ID") ?: -1
         groupName = arguments?.getString("GROUP_NAME") ?: "Group Chat"
