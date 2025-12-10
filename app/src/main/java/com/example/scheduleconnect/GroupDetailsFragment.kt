@@ -17,7 +17,6 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
 
 class GroupDetailsFragment : Fragment() {
 
@@ -30,7 +29,7 @@ class GroupDetailsFragment : Fragment() {
     // Member List
     private lateinit var recyclerMembers: RecyclerView
 
-    // --- NEW: Schedule List ---
+    // Schedule List
     private lateinit var recyclerSchedules: RecyclerView
     private lateinit var scheduleAdapter: ScheduleAdapter
     private var scheduleList = ArrayList<Schedule>()
@@ -66,8 +65,7 @@ class GroupDetailsFragment : Fragment() {
 
         recyclerMembers = view.findViewById(R.id.recyclerGroupMembers)
 
-        // --- NEW: Initialize Schedule RecyclerView ---
-        recyclerSchedules = view.findViewById(R.id.recyclerGroupSchedules) // Must match XML ID
+        recyclerSchedules = view.findViewById(R.id.recyclerGroupSchedules)
         btnAddSchedule = view.findViewById(R.id.btnAddGroupSchedule)
         btnLeave = view.findViewById(R.id.btnLeaveGroup)
         btnDelete = view.findViewById(R.id.btnDeleteGroup)
@@ -77,15 +75,15 @@ class GroupDetailsFragment : Fragment() {
         tvName.text = groupName
         tvCode.text = groupCode
 
-        // Load Group Image (Base64)
         loadGroupDetails()
-
-        // --- NEW: Setup Schedule Adapter ---
         setupScheduleList()
 
         // Get Creator Info
         dbHelper.getGroupCreator(groupId) { creator ->
-            tvCreator.text = "Created by: $creator"
+            // Handle "Unknown" case gracefully
+            val displayCreator = if (creator == "Unknown" || creator.isEmpty()) "Admin" else creator
+            tvCreator.text = "Created by: $displayCreator"
+
             if (currentUser == creator) {
                 btnDelete.visibility = View.VISIBLE
                 btnLeave.visibility = View.GONE
@@ -136,7 +134,6 @@ class GroupDetailsFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        // Reload schedules when coming back from "AddSharedScheduleFragment"
         loadGroupSchedules()
     }
 
@@ -145,12 +142,17 @@ class GroupDetailsFragment : Fragment() {
         scheduleAdapter = ScheduleAdapter(scheduleList)
         recyclerSchedules.adapter = scheduleAdapter
 
-        // Handle click on a schedule
         scheduleAdapter.setOnItemClickListener { schedule ->
-            // Navigate to Schedule Details (Reuse your existing fragment)
             val detailFragment = ScheduleDetailFragment()
             val bundle = Bundle()
-            bundle.putInt("SCHEDULE_ID", schedule.id)
+            bundle.putInt("SCH_ID", schedule.id) // Use SCH_ID to match other fragments
+            bundle.putString("SCH_TITLE", schedule.title)
+            bundle.putString("SCH_DATE", schedule.date)
+            bundle.putString("SCH_LOC", schedule.location)
+            bundle.putString("SCH_DESC", schedule.description)
+            bundle.putString("SCH_CREATOR", schedule.creator)
+            bundle.putString("SCH_TYPE", schedule.type)
+            bundle.putString("SCH_IMAGE", schedule.imageUrl)
             detailFragment.arguments = bundle
 
             parentFragmentManager.beginTransaction()
@@ -158,15 +160,11 @@ class GroupDetailsFragment : Fragment() {
                 .addToBackStack(null)
                 .commit()
         }
-
-        // Initial Load
         loadGroupSchedules()
     }
 
     private fun loadGroupSchedules() {
         if (groupId == -1) return
-
-        // Calls the new function in DatabaseHelper
         dbHelper.getGroupSchedules(groupId) { schedules ->
             scheduleList.clear()
             scheduleList.addAll(schedules)
@@ -187,7 +185,7 @@ class GroupDetailsFragment : Fragment() {
                         ivGroupImage.setPadding(0, 0, 0, 0)
                         ivGroupImage.imageTintList = null
                     } catch (e: Exception) {
-                        ivGroupImage.setImageResource(R.drawable.ic_group)
+                        ivGroupImage.setImageResource(R.drawable.ic_group) // Ensure you have this icon
                     }
                 }
             }
@@ -223,29 +221,29 @@ class GroupDetailsFragment : Fragment() {
                             holder.tvStatus.setTextColor(Color.GRAY)
                         }
 
-                        // --- FIX STARTS HERE ---
+                        // --- FIX IS HERE ---
                         dbHelper.getProfilePictureUrl(memberName) { url ->
-                            if (url.isNotEmpty() && !url.startsWith("http")) {
+                            if (url.isNotEmpty()) {
                                 try {
                                     val decodedString = Base64.decode(url, Base64.DEFAULT)
                                     val decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
                                     holder.ivAvatar.setImageBitmap(decodedByte)
 
-                                    // CRITICAL FIX: Remove the gray tint!
+                                    // CRITICAL: Remove the default gray tint so the color photo shows
                                     holder.ivAvatar.imageTintList = null
                                     holder.ivAvatar.colorFilter = null
 
                                 } catch (e: Exception) {
-                                    holder.ivAvatar.setImageResource(R.drawable.ic_person)
+                                    // Fallback if decode fails
+                                    holder.ivAvatar.setImageResource(R.drawable.ic_person) // Use generic icon
                                     holder.ivAvatar.setColorFilter(Color.GRAY)
                                 }
                             } else {
-                                // Default state (Gray)
+                                // Fallback if no URL
                                 holder.ivAvatar.setImageResource(R.drawable.ic_person)
                                 holder.ivAvatar.setColorFilter(Color.GRAY)
                             }
                         }
-                        // --- FIX ENDS HERE ---
                     }
                 }
                 override fun getItemCount(): Int = members.size
@@ -255,7 +253,7 @@ class GroupDetailsFragment : Fragment() {
 
     private fun showConfirmationDialog(title: String, message: String, onConfirm: () -> Unit) {
         val builder = AlertDialog.Builder(requireContext())
-        val view = LayoutInflater.from(context).inflate(R.layout.dialog_generic_confirmation, null)
+        val view = LayoutInflater.from(context).inflate(R.layout.dialog_generic_confirmation, null) // Ensure this XML exists
         builder.setView(view)
         val dialog = builder.create()
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
