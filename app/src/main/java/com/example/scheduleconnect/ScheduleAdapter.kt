@@ -1,15 +1,15 @@
 package com.example.scheduleconnect
 
+import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.util.Base64
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide // Import Glide
 
-// Changed 'val' to 'var' so we can update the list
 class ScheduleAdapter(private var list: ArrayList<Schedule>) : RecyclerView.Adapter<ScheduleAdapter.ViewHolder>() {
 
     private var listener: ((Schedule) -> Unit)? = null
@@ -19,12 +19,10 @@ class ScheduleAdapter(private var list: ArrayList<Schedule>) : RecyclerView.Adap
     }
 
     class ViewHolder(v: View) : RecyclerView.ViewHolder(v) {
-        // R.id.tvScheduleTitle is correctly referenced here, provided the R class is valid.
         val title: TextView = v.findViewById(R.id.tvScheduleTitle)
         val date: TextView = v.findViewById(R.id.tvScheduleDate)
         val loc: TextView = v.findViewById(R.id.tvScheduleLocation)
         val creator: TextView = v.findViewById(R.id.tvScheduleCreator)
-        // Reference to the ImageView
         val image: ImageView = v.findViewById(R.id.ivScheduleImage)
     }
 
@@ -39,21 +37,31 @@ class ScheduleAdapter(private var list: ArrayList<Schedule>) : RecyclerView.Adap
         holder.date.text = item.date
         holder.loc.text = item.location
 
-        // --- UPDATED: Logic to display image using Glide for Firebase URLs ---
-        // We use 'imageUrl' (String) instead of 'image' (ByteArray)
+        // --- UPDATED: BASE64 IMAGE DECODING (NO GLIDE) ---
         if (item.imageUrl.isNotEmpty()) {
-            holder.image.visibility = View.VISIBLE
+            try {
+                // 1. Decode the Base64 string to bytes
+                val decodedString = Base64.decode(item.imageUrl, Base64.DEFAULT)
+                // 2. Turn bytes into a Bitmap
+                val decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
 
-            Glide.with(holder.itemView.context)
-                .load(item.imageUrl)
-                .placeholder(android.R.drawable.ic_menu_gallery) // Default Android placeholder
-                .centerCrop() // Makes sure the image fills the view nicely
-                .into(holder.image)
+                // 3. Set Bitmap to ImageView
+                holder.image.setImageBitmap(decodedByte)
+                holder.image.visibility = View.VISIBLE
 
+                // Remove padding/tint if it was a placeholder
+                holder.image.setPadding(0,0,0,0)
+                holder.image.colorFilter = null
+
+            } catch (e: Exception) {
+                // If decoding fails, hide the image or show a placeholder
+                holder.image.visibility = View.GONE
+                e.printStackTrace()
+            }
         } else {
             holder.image.visibility = View.GONE
         }
-        // -------------------------------------
+        // ------------------------------------------------
 
         if (item.type == "shared") {
             holder.creator.text = "By: ${item.creator}"
@@ -71,7 +79,6 @@ class ScheduleAdapter(private var list: ArrayList<Schedule>) : RecyclerView.Adap
 
     override fun getItemCount() = list.size
 
-    // --- Helper function to update data for search ---
     fun updateList(newList: ArrayList<Schedule>) {
         list = newList
         notifyDataSetChanged()

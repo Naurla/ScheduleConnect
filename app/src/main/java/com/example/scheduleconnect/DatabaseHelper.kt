@@ -238,9 +238,10 @@ class DatabaseHelper(context: Context) {
 
     fun getSchedules(user: String, type: String, callback: (ArrayList<Schedule>) -> Unit) {
         val list = ArrayList<Schedule>()
+
         if (type == "personal") {
             db.collection("schedules")
-                .whereEqualTo("username", user)
+                .whereEqualTo("creator", user) // FIX: Changed 'username' to 'creator' (matches data class)
                 .whereEqualTo("type", "personal")
                 .whereEqualTo("status", "ACTIVE")
                 .get()
@@ -250,6 +251,7 @@ class DatabaseHelper(context: Context) {
                 }
                 .addOnFailureListener { callback(list) }
         } else {
+            // SHARED SCHEDULES (For Home Fragment)
             getUserGroups(user) { groups ->
                 val groupIds = groups.map { it.id }
                 if (groupIds.isEmpty()) { callback(list); return@getUserGroups }
@@ -257,7 +259,8 @@ class DatabaseHelper(context: Context) {
                 db.collection("schedules")
                     .whereEqualTo("type", "shared")
                     .whereEqualTo("status", "ACTIVE")
-                    .whereIn("group_id", groupIds)
+                    // FIX: Changed 'group_id' to 'groupId' (matches data class)
+                    .whereIn("groupId", groupIds)
                     .get()
                     .addOnSuccessListener { res ->
                         for (d in res) list.add(d.toObject(Schedule::class.java))
@@ -266,6 +269,19 @@ class DatabaseHelper(context: Context) {
                     .addOnFailureListener { callback(list) }
             }
         }
+    }
+
+    fun getGroupSchedules(groupId: Int, callback: (ArrayList<Schedule>) -> Unit) {
+        val list = ArrayList<Schedule>()
+        db.collection("schedules")
+            .whereEqualTo("groupId", groupId) // specific group only
+            .whereEqualTo("status", "ACTIVE")
+            .get()
+            .addOnSuccessListener { res ->
+                for (d in res) list.add(d.toObject(Schedule::class.java))
+                callback(list)
+            }
+            .addOnFailureListener { callback(list) }
     }
 
     fun getSchedule(id: Int, callback: (Schedule?) -> Unit) {
