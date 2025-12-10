@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.provider.MediaStore
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Base64
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -37,6 +38,7 @@ class CreateGroupFragment : Fragment() {
     private lateinit var ivGroupPreview: ImageView
     private var selectedBitmap: Bitmap? = null
 
+    // Image Picker Launcher
     private val imagePickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK && result.data != null) {
             val imageUri: Uri? = result.data?.data
@@ -121,6 +123,7 @@ class CreateGroupFragment : Fragment() {
 
         btnBack.setOnClickListener { parentFragmentManager.popBackStack() }
 
+        // --- CREATE GROUP LOGIC (UPDATED WITH BASE64) ---
         btnCreate.setOnClickListener {
             val groupName = etGroupName.text.toString().trim()
 
@@ -131,33 +134,41 @@ class CreateGroupFragment : Fragment() {
 
             val code = UUID.randomUUID().toString().substring(0, 6).uppercase()
 
-            var imageBytes: ByteArray? = null
+            // 1. Convert Image to Base64 String
+            var base64Image = ""
             if (selectedBitmap != null) {
                 val stream = ByteArrayOutputStream()
-                selectedBitmap!!.compress(Bitmap.CompressFormat.PNG, 100, stream)
-                imageBytes = stream.toByteArray()
+                // Compress heavily (50) to keep string short for Firestore
+                selectedBitmap!!.compress(Bitmap.CompressFormat.JPEG, 50, stream)
+                val byteArrays = stream.toByteArray()
+                base64Image = Base64.encodeToString(byteArrays, Base64.DEFAULT)
             }
 
-            // Disable button to prevent double-click
+            // 2. Disable button to prevent double clicks
             btnCreate.isEnabled = false
             btnCreate.text = "Creating..."
 
-            // --- ASYNC CREATE GROUP ---
-            dbHelper.createGroup(groupName, code, currentUser, imageBytes) { newGroupId ->
-                // This block runs when group creation is done (or failed)
-                btnCreate.isEnabled = true
+            // 3. Call Database Helper using the NEW method
+            dbHelper.createGroupWithBase64(groupName, code, currentUser, base64Image) { newGroupId ->
 
-                if (newGroupId != -1) {
-                    // Add invited users
-                    for (user in selectedUsers) {
-                        dbHelper.addMemberToGroup(newGroupId, user) {
-                            // Can add notification logic here if desired
+                // Ensure UI updates run on main thread
+                activity?.runOnUiThread {
+                    btnCreate.isEnabled = true
+                    btnCreate.text = "Create Group"
+
+                    if (newGroupId != -1) {
+                        // Success: Add invited users
+                        for (user in selectedUsers) {
+                            dbHelper.addMemberToGroup(newGroupId, user) {
+                                // Optional: Log success
+                            }
                         }
+                        Toast.makeText(context, "Group Created! Code: $code", Toast.LENGTH_LONG).show()
+                        parentFragmentManager.popBackStack()
+                    } else {
+                        // Failure
+                        Toast.makeText(context, "Failed to create group. Check connection.", Toast.LENGTH_SHORT).show()
                     }
-                    Toast.makeText(context, "Group Created! Code: $code", Toast.LENGTH_LONG).show()
-                    parentFragmentManager.popBackStack()
-                } else {
-                    Toast.makeText(context, "Failed to create group", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -174,7 +185,7 @@ class CreateGroupFragment : Fragment() {
             BitmapFactory.decodeStream(inputStream, null, options)
             inputStream?.close()
 
-            val REQUIRED_SIZE = 500
+            val REQUIRED_SIZE = 300 // Reduced size for Firestore
             var width_tmp = options.outWidth
             var height_tmp = options.outHeight
             var scale = 1

@@ -50,7 +50,6 @@ class GroupFragment : Fragment() {
     }
 
     private fun loadGroups() {
-        // --- UPDATED: Async Call with Callback ---
         dbHelper.getUserGroups(currentUser) { groups ->
             if (groups.isEmpty()) {
                 recyclerGroups.visibility = View.GONE
@@ -59,7 +58,9 @@ class GroupFragment : Fragment() {
                 recyclerGroups.visibility = View.VISIBLE
                 tvNoGroups.visibility = View.GONE
 
+                // This will now use the EXTERNAL GroupAdapter.kt file (the one with image logic)
                 recyclerGroups.adapter = GroupAdapter(groups) { selectedGroup ->
+
                     // Navigate to Group Details
                     val fragment = GroupDetailsFragment()
                     val bundle = Bundle()
@@ -77,21 +78,6 @@ class GroupFragment : Fragment() {
         }
     }
 
-    class GroupAdapter(private val groups: ArrayList<GroupInfo>, private val onClick: (GroupInfo) -> Unit) : RecyclerView.Adapter<GroupAdapter.ViewHolder>() {
-        class ViewHolder(v: View) : RecyclerView.ViewHolder(v) {
-            val name: TextView = v.findViewById(R.id.tvGroupName)
-            val code: TextView = v.findViewById(R.id.tvGroupCode)
-        }
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            val v = LayoutInflater.from(parent.context).inflate(R.layout.item_group, parent, false)
-            return ViewHolder(v)
-        }
-        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            val item = groups[position]
-            holder.name.text = item.name
-            holder.code.text = "Code: ${item.code}"
-            holder.itemView.setOnClickListener { onClick(item) }
-        }
-        override fun getItemCount() = groups.size
-    }
+    // --- IMPORTANT: I DELETED THE INNER 'class GroupAdapter' FROM HERE ---
+    // This forces the code to look for the separate 'GroupAdapter.kt' file you created earlier.
 }

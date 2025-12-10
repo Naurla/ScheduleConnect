@@ -41,6 +41,18 @@
                 android:textStyle="bold"
                 android:gravity="center"
                 android:layout_marginEnd="40dp"/>
+
+            <ImageView
+                android:id="@+id/btnGroupChat"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:padding="8dp"
+                android:src="@android:drawable/stat_notify_chat"
+                app:tint="@color/app_red"
+                android:clickable="true"
+                android:focusable="true"
+                android:contentDescription="Chat"/>
+
         </LinearLayout>
 
         <androidx.cardview.widget.CardView

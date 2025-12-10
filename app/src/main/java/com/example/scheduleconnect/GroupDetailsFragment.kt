@@ -2,9 +2,11 @@ package com.example.scheduleconnect
 
 import android.app.AlertDialog
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
+import android.util.Base64
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -15,7 +17,7 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide // Import Glide
+import com.bumptech.glide.Glide
 
 class GroupDetailsFragment : Fragment() {
 
@@ -31,6 +33,7 @@ class GroupDetailsFragment : Fragment() {
     private lateinit var btnLeave: Button
     private lateinit var btnDelete: Button
     private lateinit var btnBack: ImageView
+    private lateinit var btnChat: ImageView
 
     private var groupId: Int = -1
     private var groupName: String = ""
@@ -59,9 +62,13 @@ class GroupDetailsFragment : Fragment() {
         btnLeave = view.findViewById(R.id.btnLeaveGroup)
         btnDelete = view.findViewById(R.id.btnDeleteGroup)
         btnBack = view.findViewById(R.id.btnBackGroupDetail)
+        btnChat = view.findViewById(R.id.btnGroupChat)
 
         tvName.text = groupName
         tvCode.text = groupCode
+
+        // --- NEW: FETCH IMAGE FROM DATABASE ---
+        loadGroupDetails()
 
         // --- ASYNC: Get Creator info to set button visibility ---
         dbHelper.getGroupCreator(groupId) { creator ->
@@ -81,6 +88,20 @@ class GroupDetailsFragment : Fragment() {
         }
 
         btnBack.setOnClickListener { parentFragmentManager.popBackStack() }
+
+        // --- CHAT BUTTON LOGIC ---
+        btnChat.setOnClickListener {
+            val chatFragment = GroupChatFragment()
+            val bundle = Bundle()
+            bundle.putInt("GROUP_ID", groupId)
+            bundle.putString("GROUP_NAME", groupName)
+            chatFragment.arguments = bundle
+
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.fragmentContainer, chatFragment)
+                .addToBackStack(null)
+                .commit()
+        }
 
         // Add Shared Schedule Logic
         btnAddSchedule.setOnClickListener {
@@ -106,8 +127,40 @@ class GroupDetailsFragment : Fragment() {
         return view
     }
 
+    private fun loadGroupDetails() {
+        dbHelper.getGroupDetails(groupId) { group ->
+            if (group != null) {
+                tvName.text = group.name
+
+                // --- IMAGE DECODING LOGIC ---
+                val imageUrl = group.imageUrl
+                if (imageUrl.isNotEmpty()) {
+                    if (imageUrl.startsWith("http")) {
+                        // Legacy: Use Glide if it's a URL
+                        Glide.with(this)
+                            .load(imageUrl)
+                            .placeholder(R.drawable.ic_group)
+                            .centerCrop()
+                            .into(ivGroupImage)
+                    } else {
+                        // New: Decode Base64 string
+                        try {
+                            val decodedString = Base64.decode(imageUrl, Base64.DEFAULT)
+                            val decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
+                            ivGroupImage.setImageBitmap(decodedByte)
+                        } catch (e: Exception) {
+                            ivGroupImage.setImageResource(R.drawable.ic_group)
+                        }
+                    }
+                    // Remove tint and padding for real photo
+                    ivGroupImage.setPadding(0, 0, 0, 0)
+                    ivGroupImage.imageTintList = null
+                }
+            }
+        }
+    }
+
     private fun setupMemberList(creator: String) {
-        // --- ASYNC: Get member list ---
         dbHelper.getGroupMemberUsernames(groupId, "") { members ->
 
             recyclerMembers.layoutManager = LinearLayoutManager(context)
@@ -137,7 +190,6 @@ class GroupDetailsFragment : Fragment() {
                             holder.tvStatus.setTextColor(Color.GRAY)
                         }
 
-                        // --- ASYNC: Load profile picture with Glide ---
                         dbHelper.getProfilePictureUrl(memberName) { url ->
                             if (url.isNotEmpty()) {
                                 Glide.with(holder.itemView.context)
@@ -187,7 +239,6 @@ class GroupDetailsFragment : Fragment() {
     }
 
     private fun leaveGroup() {
-        // --- ASYNC: Leave Group ---
         dbHelper.leaveGroup(groupId, currentUser) { success ->
             if (success) {
                 Toast.makeText(context, "Left group", Toast.LENGTH_SHORT).show()
@@ -199,7 +250,6 @@ class GroupDetailsFragment : Fragment() {
     }
 
     private fun deleteGroup() {
-        // --- ASYNC: Delete Group ---
         dbHelper.deleteGroup(groupId) { success ->
             if (success) {
                 Toast.makeText(context, "Group deleted", Toast.LENGTH_SHORT).show()

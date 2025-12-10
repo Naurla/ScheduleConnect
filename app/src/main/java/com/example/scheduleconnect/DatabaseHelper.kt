@@ -2,6 +2,7 @@ package com.example.scheduleconnect
 
 import android.content.Context
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import com.google.firebase.storage.FirebaseStorage
 
 // --- Data Classes ---
@@ -35,7 +36,7 @@ data class GroupInfo(
     val id: Int = 0,
     val name: String = "",
     val code: String = "",
-    val imageUrl: String = ""
+    val imageUrl: String = "" // This will now hold the Base64 string
 )
 
 data class NotificationItem(
@@ -47,6 +48,11 @@ data class NotificationItem(
     val isRead: Boolean = false,
     val relatedId: Int = -1,
     val type: String = ""
+)
+
+data class ChatMessage(
+    val sender: String = "",
+    val message: String = ""
 )
 
 class DatabaseHelper(context: Context) {
@@ -296,6 +302,7 @@ class DatabaseHelper(context: Context) {
     // GROUP METHODS
     // ==========================================
 
+    // Use this method if you set up Firebase Storage properly
     fun createGroup(name: String, code: String, creator: String, imageBytes: ByteArray?, callback: (Int) -> Unit) {
         val id = System.currentTimeMillis().toInt()
 
@@ -308,6 +315,13 @@ class DatabaseHelper(context: Context) {
         }
     }
 
+    // --- NEW METHOD FOR NO-PAY FIX ---
+    fun createGroupWithBase64(name: String, code: String, creator: String, base64Image: String, callback: (Int) -> Unit) {
+        val id = System.currentTimeMillis().toInt()
+        // Save the image string directly to the database
+        saveGroupData(id, name, code, base64Image, creator, callback)
+    }
+
     private fun saveGroupData(id: Int, name: String, code: String, imageUrl: String, creator: String, callback: (Int) -> Unit) {
         val group = GroupInfo(id, name, code, imageUrl)
         db.collection("groups").document(id.toString()).set(group).addOnSuccessListener {
@@ -315,11 +329,7 @@ class DatabaseHelper(context: Context) {
         }.addOnFailureListener { callback(-1) }
     }
 
-    // Legacy method for compatibility if called elsewhere without callback
-    // Not recommended for Firebase, but included to prevent crash if old code calls it
     fun createGroupGetId(name: String, code: String, creator: String, imageBytes: ByteArray?): Int {
-        // This won't work synchronously with Firebase.
-        // Returning -1 to force user to use the callback version (createGroup above)
         return -1
     }
 
@@ -337,6 +347,12 @@ class DatabaseHelper(context: Context) {
                 callback(group?.id ?: -1)
             } else callback(-1)
         }
+    }
+
+    fun getGroupDetails(groupId: Int, callback: (GroupInfo?) -> Unit) {
+        db.collection("groups").document(groupId.toString()).get()
+            .addOnSuccessListener { callback(it.toObject(GroupInfo::class.java)) }
+            .addOnFailureListener { callback(null) }
     }
 
     fun isUserInGroup(groupId: Int, username: String, callback: (Boolean) -> Unit) {
@@ -371,10 +387,6 @@ class DatabaseHelper(context: Context) {
     }
 
     fun getGroupCreator(groupId: Int, callback: (String) -> Unit) {
-        // In a real app, you'd store "creator" in the 'groups' document.
-        // For now, let's assume the first member added or just return a placeholder.
-        // Or you can query the first member in 'group_members'.
-        // Returning 'Admin' as placeholder for now to prevent crashes.
         callback("Admin")
     }
 
@@ -463,5 +475,39 @@ class DatabaseHelper(context: Context) {
             }
             callback(list)
         }
+    }
+
+    // ==========================================
+    // CHAT METHODS (FIREBASE)
+    // ==========================================
+
+    fun sendGroupMessage(groupId: Int, sender: String, message: String) {
+        val msgData = hashMapOf(
+            "group_id" to groupId,
+            "sender" to sender,
+            "message" to message,
+            "timestamp" to System.currentTimeMillis()
+        )
+        db.collection("group_messages").add(msgData)
+    }
+
+    fun getGroupMessages(groupId: Int, callback: (ArrayList<ChatMessage>) -> Unit) {
+        db.collection("group_messages")
+            .whereEqualTo("group_id", groupId)
+            .orderBy("timestamp", Query.Direction.ASCENDING) // Note: Requires Firestore Index
+            .addSnapshotListener { value, error ->
+                if (error != null || value == null) {
+                    callback(ArrayList())
+                    return@addSnapshotListener
+                }
+
+                val list = ArrayList<ChatMessage>()
+                for (doc in value) {
+                    val sender = doc.getString("sender") ?: ""
+                    val msg = doc.getString("message") ?: ""
+                    list.add(ChatMessage(sender, msg))
+                }
+                callback(list)
+            }
     }
 }
