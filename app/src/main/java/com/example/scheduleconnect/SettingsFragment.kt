@@ -26,7 +26,9 @@ class SettingsFragment : Fragment() {
     private lateinit var cardProfile: CardView
     private lateinit var btnPassword: LinearLayout
     private lateinit var btnNotifications: LinearLayout
-    private lateinit var btnLanguage: LinearLayout
+
+    // RENAMED: Changed from btnLanguage to btnSupport
+    private lateinit var btnSupport: LinearLayout
     private lateinit var btnLogOut: Button
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -40,7 +42,10 @@ class SettingsFragment : Fragment() {
 
         btnPassword = view.findViewById(R.id.btnSettingPassword)
         btnNotifications = view.findViewById(R.id.btnSettingNotif)
-        btnLanguage = view.findViewById(R.id.btnSettingLanguage)
+
+        // REUSING OLD ID: We use the existing ID (btnSettingLanguage) so the XML doesn't error
+        btnSupport = view.findViewById(R.id.btnSettingSupport)
+
         btnLogOut = view.findViewById(R.id.btnLogOut)
 
         // Load Data
@@ -68,9 +73,10 @@ class SettingsFragment : Fragment() {
                 .commit()
         }
 
-        btnLanguage.setOnClickListener {
+        // UPDATED: Now opens SupportFragment
+        btnSupport.setOnClickListener {
             parentFragmentManager.beginTransaction()
-                .replace(R.id.fragmentContainer, LanguageFragment())
+                .replace(R.id.fragmentContainer, SupportFragment())
                 .addToBackStack(null)
                 .commit()
         }
@@ -84,7 +90,6 @@ class SettingsFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        // Reload data just in case EditProfileFragment made changes
         loadUserData()
     }
 
@@ -103,7 +108,6 @@ class SettingsFragment : Fragment() {
                         val decodedByte = Base64.decode(base64Image, Base64.DEFAULT)
                         val bitmap = BitmapFactory.decodeByteArray(decodedByte, 0, decodedByte.size)
 
-                        // CRITICAL FIX: Use post for stable image loading
                         ivProfile.post {
                             ivProfile.setImageBitmap(bitmap)
                             ivProfile.scaleType = ImageView.ScaleType.CENTER_CROP
@@ -125,10 +129,8 @@ class SettingsFragment : Fragment() {
     }
 
     private fun setDefaultProfileImage() {
-        // Default State
         ivProfile.setImageResource(R.drawable.ic_person)
         ivProfile.setColorFilter(Color.parseColor("#999999"))
-        // Ensure default image fits if no photo is available
         ivProfile.scaleType = ImageView.ScaleType.FIT_CENTER
     }
 

@@ -188,7 +188,7 @@
                 <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#F5F5F5" android:layout_marginHorizontal="16dp"/>
 
                 <LinearLayout
-                    android:id="@+id/btnSettingLanguage"
+                    android:id="@+id/btnSettingSupport"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
@@ -201,14 +201,14 @@
                     <ImageView
                         android:layout_width="24dp"
                         android:layout_height="24dp"
-                        android:src="@drawable/ic_settings_language"
+                        android:src="@android:drawable/ic_menu_help"
                         app:tint="@color/app_red"/>
 
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Language"
+                        android:text="Support"
                         android:textSize="16sp"
                         android:textColor="#333"
                         android:layout_marginStart="16dp"/>

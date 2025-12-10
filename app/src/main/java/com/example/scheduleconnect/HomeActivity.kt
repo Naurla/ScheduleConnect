@@ -7,12 +7,13 @@ import android.util.Base64
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
+ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.imageview.ShapeableImageView
 
+// --- FIX 1: Inherit from BaseActivity for Language Support ---
 class HomeActivity : AppCompatActivity() {
 
     private lateinit var dbHelper: DatabaseHelper
@@ -28,32 +29,28 @@ class HomeActivity : AppCompatActivity() {
         ivProfile = findViewById(R.id.btnTopProfile)
         tvBadge = findViewById(R.id.tvNotificationBadge)
 
-        // --- FIX: Use lowercase "username" to match Fragments ---
         val sharedPref = getSharedPreferences("UserSession", Context.MODE_PRIVATE)
         val intentUsername = intent.getStringExtra("CURRENT_USER")
 
+        // --- FIX 2: Use "USERNAME" (Uppercase) to match MainActivity ---
         if (intentUsername != null) {
             currentUsername = intentUsername
-            sharedPref.edit().putString("username", currentUsername).apply() // FIX: lowercase key
+            sharedPref.edit().putString("USERNAME", currentUsername).apply()
         } else {
-            currentUsername = sharedPref.getString("username", "") ?: "" // FIX: lowercase key
+            currentUsername = sharedPref.getString("USERNAME", "") ?: ""
         }
 
         val bottomNav = findViewById<BottomNavigationView>(R.id.bottomNav)
 
-        // Load HomeFragment by default
         if (savedInstanceState == null) {
             loadFragment(HomeFragment())
         }
 
-        // Notification Click
         val btnNotif = findViewById<ImageView>(R.id.btnTopNotifications)
         btnNotif.setOnClickListener {
-            // Logic to highlight the 'Home' tab visually or uncheck others
             bottomNav.menu.setGroupCheckable(0, true, false)
             for (i in 0 until bottomNav.menu.size()) bottomNav.menu.getItem(i).isChecked = false
             bottomNav.menu.setGroupCheckable(0, true, true)
-
             loadFragment(UserNotificationsFragment())
         }
 

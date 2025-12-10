@@ -17,6 +17,10 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class GroupDetailsFragment : Fragment() {
 
@@ -36,13 +40,15 @@ class GroupDetailsFragment : Fragment() {
 
     // Buttons
     private lateinit var btnAddSchedule: Button
+    private lateinit var btnInvite: Button // Matches XML now
     private lateinit var btnLeave: Button
     private lateinit var btnDelete: Button
     private lateinit var btnBack: ImageView
     private lateinit var btnChat: ImageView
 
     private var groupId: Int = -1
-    private var groupName: String = ""
+    // Stores the real name to fix the "Unknown" notification issue
+    private var currentGroupName: String = ""
     private var groupCode: String = ""
     private lateinit var currentUser: String
 
@@ -51,28 +57,31 @@ class GroupDetailsFragment : Fragment() {
         dbHelper = DatabaseHelper(requireContext())
 
         groupId = arguments?.getInt("GROUP_ID") ?: -1
-        groupName = arguments?.getString("GROUP_NAME") ?: "Unknown"
+        currentGroupName = arguments?.getString("GROUP_NAME") ?: "Unknown"
         groupCode = arguments?.getString("GROUP_CODE") ?: "N/A"
 
         val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
-        currentUser = sharedPref.getString("USERNAME", "default_user") ?: "default_user"
+        currentUser = sharedPref.getString("username", "default_user") ?: "default_user"
 
         // Initialize Views
         tvName = view.findViewById(R.id.tvDetailGroupName)
         tvCode = view.findViewById(R.id.tvDetailGroupCode)
         tvCreator = view.findViewById(R.id.tvDetailGroupCreator)
-        ivGroupImage = view.findViewById(R.id.ivGroupDetailImage)
+        ivGroupImage = view.findViewById(R.id.ivGroupDetailImage) // Corrected ID
 
         recyclerMembers = view.findViewById(R.id.recyclerGroupMembers)
-
         recyclerSchedules = view.findViewById(R.id.recyclerGroupSchedules)
         btnAddSchedule = view.findViewById(R.id.btnAddGroupSchedule)
+
+        // This ID exists in the XML provided above
+        btnInvite = view.findViewById(R.id.btnInviteMember)
+
         btnLeave = view.findViewById(R.id.btnLeaveGroup)
         btnDelete = view.findViewById(R.id.btnDeleteGroup)
         btnBack = view.findViewById(R.id.btnBackGroupDetail)
         btnChat = view.findViewById(R.id.btnGroupChat)
 
-        tvName.text = groupName
+        tvName.text = currentGroupName
         tvCode.text = groupCode
 
         loadGroupDetails()
@@ -80,16 +89,17 @@ class GroupDetailsFragment : Fragment() {
 
         // Get Creator Info
         dbHelper.getGroupCreator(groupId) { creator ->
-            // Handle "Unknown" case gracefully
             val displayCreator = if (creator == "Unknown" || creator.isEmpty()) "Admin" else creator
             tvCreator.text = "Created by: $displayCreator"
 
             if (currentUser == creator) {
                 btnDelete.visibility = View.VISIBLE
                 btnLeave.visibility = View.GONE
+                btnInvite.visibility = View.VISIBLE // Only creator invites
             } else {
                 btnDelete.visibility = View.GONE
                 btnLeave.visibility = View.VISIBLE
+                btnInvite.visibility = View.GONE
             }
             setupMemberList(creator)
         }
@@ -100,7 +110,7 @@ class GroupDetailsFragment : Fragment() {
             val chatFragment = GroupChatFragment()
             val bundle = Bundle()
             bundle.putInt("GROUP_ID", groupId)
-            bundle.putString("GROUP_NAME", groupName)
+            bundle.putString("GROUP_NAME", currentGroupName)
             chatFragment.arguments = bundle
 
             parentFragmentManager.beginTransaction()
@@ -119,6 +129,11 @@ class GroupDetailsFragment : Fragment() {
                 .replace(R.id.fragmentContainer, fragment)
                 .addToBackStack(null)
                 .commit()
+        }
+
+        // --- INVITE LOGIC ---
+        btnInvite.setOnClickListener {
+            showInviteDialog()
         }
 
         btnLeave.setOnClickListener {
@@ -145,7 +160,7 @@ class GroupDetailsFragment : Fragment() {
         scheduleAdapter.setOnItemClickListener { schedule ->
             val detailFragment = ScheduleDetailFragment()
             val bundle = Bundle()
-            bundle.putInt("SCH_ID", schedule.id) // Use SCH_ID to match other fragments
+            bundle.putInt("SCH_ID", schedule.id)
             bundle.putString("SCH_TITLE", schedule.title)
             bundle.putString("SCH_DATE", schedule.date)
             bundle.putString("SCH_LOC", schedule.location)
@@ -175,7 +190,15 @@ class GroupDetailsFragment : Fragment() {
     private fun loadGroupDetails() {
         dbHelper.getGroupDetails(groupId) { group ->
             if (group != null) {
+                // --- FIX: Update name from DB ---
+                currentGroupName = group.name
                 tvName.text = group.name
+
+                if (group.code.isNotEmpty()) {
+                    groupCode = group.code
+                    tvCode.text = group.code
+                }
+
                 val imageUrl = group.imageUrl
                 if (imageUrl.isNotEmpty()) {
                     try {
@@ -185,7 +208,7 @@ class GroupDetailsFragment : Fragment() {
                         ivGroupImage.setPadding(0, 0, 0, 0)
                         ivGroupImage.imageTintList = null
                     } catch (e: Exception) {
-                        ivGroupImage.setImageResource(R.drawable.ic_group) // Ensure you have this icon
+                        ivGroupImage.setImageResource(R.drawable.ic_group)
                     }
                 }
             }
@@ -221,25 +244,19 @@ class GroupDetailsFragment : Fragment() {
                             holder.tvStatus.setTextColor(Color.GRAY)
                         }
 
-                        // --- FIX IS HERE ---
                         dbHelper.getProfilePictureUrl(memberName) { url ->
                             if (url.isNotEmpty()) {
                                 try {
                                     val decodedString = Base64.decode(url, Base64.DEFAULT)
                                     val decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
                                     holder.ivAvatar.setImageBitmap(decodedByte)
-
-                                    // CRITICAL: Remove the default gray tint so the color photo shows
                                     holder.ivAvatar.imageTintList = null
                                     holder.ivAvatar.colorFilter = null
-
                                 } catch (e: Exception) {
-                                    // Fallback if decode fails
-                                    holder.ivAvatar.setImageResource(R.drawable.ic_person) // Use generic icon
+                                    holder.ivAvatar.setImageResource(R.drawable.ic_person)
                                     holder.ivAvatar.setColorFilter(Color.GRAY)
                                 }
                             } else {
-                                // Fallback if no URL
                                 holder.ivAvatar.setImageResource(R.drawable.ic_person)
                                 holder.ivAvatar.setColorFilter(Color.GRAY)
                             }
@@ -251,9 +268,74 @@ class GroupDetailsFragment : Fragment() {
         }
     }
 
+    // --- INVITE METHODS ---
+
+    private fun showInviteDialog() {
+        val builder = AlertDialog.Builder(context)
+        builder.setTitle("Invite Members")
+
+        val input = android.widget.EditText(context)
+        input.hint = "Search Username"
+        builder.setView(input)
+
+        builder.setPositiveButton("Search") { _, _ ->
+            val query = input.text.toString()
+            if (query.isNotEmpty()) {
+                performSearch(query)
+            }
+        }
+        builder.setNegativeButton("Cancel", null)
+        builder.show()
+    }
+
+    private fun performSearch(query: String) {
+        dbHelper.searchUsers(query, currentUser) { users ->
+            if (users.isEmpty()) {
+                Toast.makeText(context, "No users found", Toast.LENGTH_SHORT).show()
+            } else {
+                showUserListDialog(users)
+            }
+        }
+    }
+
+    private fun showUserListDialog(users: ArrayList<String>) {
+        val builder = AlertDialog.Builder(context)
+        builder.setTitle("Select User to Invite")
+
+        val userArray = users.toTypedArray()
+        builder.setItems(userArray) { _, which ->
+            val selectedUser = userArray[which]
+            sendInvite(selectedUser)
+        }
+        builder.show()
+    }
+
+    private fun sendInvite(targetUser: String) {
+        dbHelper.isUserInGroup(groupId, targetUser) { exists ->
+            if (exists) {
+                Toast.makeText(context, "$targetUser is already in the group", Toast.LENGTH_SHORT).show()
+            } else {
+                val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+
+                // --- FIX: Use correct group name ---
+                val message = "You have been invited to join $currentGroupName"
+
+                dbHelper.addNotification(
+                    targetUser,
+                    "Group Invitation",
+                    message,
+                    date,
+                    groupId,
+                    "GROUP_INVITE"
+                )
+                Toast.makeText(context, "Invite sent to $targetUser", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     private fun showConfirmationDialog(title: String, message: String, onConfirm: () -> Unit) {
         val builder = AlertDialog.Builder(requireContext())
-        val view = LayoutInflater.from(context).inflate(R.layout.dialog_generic_confirmation, null) // Ensure this XML exists
+        val view = LayoutInflater.from(context).inflate(R.layout.dialog_generic_confirmation, null)
         builder.setView(view)
         val dialog = builder.create()
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))

@@ -70,10 +70,25 @@ class UserNotificationsFragment : Fragment() {
                         .replace(R.id.fragmentContainer, fragment)
                         .addToBackStack(null)
                         .commit()
+
                 } else if (item.type == "GROUP" && item.relatedId != -1) {
+                    // Navigate to details if it's a general group notification
                     val fragment = GroupDetailsFragment()
                     val bundle = Bundle()
                     bundle.putInt("GROUP_ID", item.relatedId)
+                    fragment.arguments = bundle
+
+                    parentFragmentManager.beginTransaction()
+                        .replace(R.id.fragmentContainer, fragment)
+                        .addToBackStack(null)
+                        .commit()
+
+                } else if ((item.type == "GROUP_INVITE" || item.type == "INVITE") && item.relatedId != -1) {
+                    // --- NEW FIX: Handle Invites and pass the Group Code ---
+                    val fragment = JoinGroupFragment()
+                    val bundle = Bundle()
+                    // Pass the code we fetched in DatabaseHelper
+                    bundle.putString("group_code", item.groupCode)
                     fragment.arguments = bundle
 
                     parentFragmentManager.beginTransaction()

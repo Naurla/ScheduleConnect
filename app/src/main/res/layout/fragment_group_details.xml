@@ -202,6 +202,19 @@
         </androidx.cardview.widget.CardView>
 
         <Button
+            android:id="@+id/btnInviteMember"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="INVITE MEMBER"
+            android:backgroundTint="@color/app_red"
+            android:textColor="@color/white"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            app:cornerRadius="12dp"
+            android:layout_marginBottom="16dp"
+            android:visibility="gone"/>
+
+        <Button
             android:id="@+id/btnAddGroupSchedule"
             android:layout_width="match_parent"
             android:layout_height="60dp"

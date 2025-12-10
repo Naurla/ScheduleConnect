@@ -33,6 +33,13 @@ class JoinGroupFragment : Fragment() {
         // Optional: Force uppercase input filter
         etCode.filters = arrayOf(InputFilter.AllCaps())
 
+        // --- NEW FIX: Auto-fill code if passed from arguments ---
+        arguments?.getString("group_code")?.let { code ->
+            if (code != "N/A") {
+                etCode.setText(code)
+            }
+        }
+
         btnBack.setOnClickListener {
             parentFragmentManager.popBackStack()
         }

@@ -32,7 +32,6 @@ data class Schedule(
     val status: String = "ACTIVE"
 )
 
-// --- FIX 1: Retained 'creator' field (Vital for your previous fix) ---
 data class GroupInfo(
     val id: Int = 0,
     val name: String = "",
@@ -41,16 +40,18 @@ data class GroupInfo(
     val creator: String = ""
 )
 
-// --- UPDATED: Changed 'isRead' to 'read' for Firestore compatibility ---
+// --- SYNCED: Includes groupCode AND groupName ---
 data class NotificationItem(
     val id: Int = 0,
     val username: String = "",
     val title: String = "",
     val message: String = "",
     val date: String = "",
-    val read: Boolean = false, // Changed from isRead
+    val read: Boolean = false,
     val relatedId: Int = -1,
-    val type: String = ""
+    val type: String = "",
+    var groupCode: String = "N/A",
+    var groupName: String = "Unknown"
 )
 
 data class ChatMessage(
@@ -226,6 +227,11 @@ class DatabaseHelper(context: Context) {
         }
     }
 
+    fun addScheduleWithBase64(user: String, groupId: Int, title: String, date: String, loc: String, desc: String, type: String, base64Image: String, callback: (Boolean) -> Unit) {
+        val id = System.currentTimeMillis().toInt()
+        saveScheduleData(id, user, groupId, title, date, loc, desc, type, base64Image, callback)
+    }
+
     private fun saveScheduleData(id: Int, user: String, groupId: Int, title: String, date: String, loc: String, desc: String, type: String, imageUrl: String, callback: (Boolean) -> Unit) {
         val sch = Schedule(id, user, groupId, title, date, loc, desc, type, imageUrl, "ACTIVE")
         db.collection("schedules").document(id.toString()).set(sch)
@@ -317,16 +323,45 @@ class DatabaseHelper(context: Context) {
     }
 
     fun getHistorySchedules(user: String, callback: (ArrayList<Schedule>) -> Unit) {
+        val historyList = ArrayList<Schedule>()
+
+        // 1. Get Personal History
         db.collection("schedules")
-            .whereEqualTo("username", user)
+            .whereEqualTo("creator", user)
             .whereIn("status", listOf("FINISHED", "CANCELLED"))
             .get()
-            .addOnSuccessListener { res ->
-                val list = ArrayList<Schedule>()
-                for (d in res) list.add(d.toObject(Schedule::class.java))
-                callback(list)
+            .addOnSuccessListener { personalSnap ->
+                for (d in personalSnap) {
+                    historyList.add(d.toObject(Schedule::class.java))
+                }
+
+                // 2. Get Shared History (Schedules from your groups)
+                getUserGroups(user) { groups ->
+                    val groupIds = groups.map { it.id }
+                    if (groupIds.isEmpty()) {
+                        callback(historyList)
+                    } else {
+                        // Max 10 groups for 'whereIn'. If more, this needs adjustment.
+                        db.collection("schedules")
+                            .whereEqualTo("type", "shared")
+                            .whereIn("status", listOf("FINISHED", "CANCELLED"))
+                            .whereIn("groupId", groupIds)
+                            .get()
+                            .addOnSuccessListener { sharedSnap ->
+                                for (d in sharedSnap) {
+                                    historyList.add(d.toObject(Schedule::class.java))
+                                }
+                                callback(historyList)
+                            }
+                            .addOnFailureListener {
+                                callback(historyList)
+                            }
+                    }
+                }
             }
-            .addOnFailureListener { callback(ArrayList()) }
+            .addOnFailureListener {
+                callback(ArrayList())
+            }
     }
 
     // ==========================================
@@ -350,7 +385,6 @@ class DatabaseHelper(context: Context) {
         saveGroupData(id, name, code, base64Image, creator, callback)
     }
 
-    // --- FIX 2: Explicitly saves 'creator' (Vital) ---
     private fun saveGroupData(id: Int, name: String, code: String, imageUrl: String, creator: String, callback: (Int) -> Unit) {
         val group = GroupInfo(id, name, code, imageUrl, creator)
         db.collection("groups").document(id.toString()).set(group).addOnSuccessListener {
@@ -415,7 +449,6 @@ class DatabaseHelper(context: Context) {
         }.addOnFailureListener { callback(ArrayList()) }
     }
 
-    // --- FIX 3: Fetches real creator from DB ---
     fun getGroupCreator(groupId: Int, callback: (String) -> Unit) {
         db.collection("groups").document(groupId.toString()).get()
             .addOnSuccessListener { document ->
@@ -456,40 +489,89 @@ class DatabaseHelper(context: Context) {
     }
 
     // ==========================================
-    // NOTIFICATIONS & RSVP (UPDATED)
+    // NOTIFICATIONS & RSVP (SYNCED)
     // ==========================================
 
     fun addNotification(user: String, title: String, msg: String, date: String, relatedId: Int = -1, type: String = "GENERAL") {
         val id = System.currentTimeMillis().toInt()
-        // Updated: uses 'read' instead of 'isRead'
         val notif = NotificationItem(id, user, title, msg, date, false, relatedId, type)
         db.collection("notifications").document(id.toString()).set(notif)
     }
 
+    // --- SYNCED: Fetch group code AND name for invites ---
     fun getUserNotifications(user: String, callback: (ArrayList<NotificationItem>) -> Unit) {
         db.collection("notifications")
             .whereEqualTo("username", user)
             .get()
             .addOnSuccessListener { res ->
                 val list = ArrayList<NotificationItem>()
+                val groupIdsToFetch = HashSet<Int>()
+
                 for (d in res) {
-                    // This will now map correctly to 'read' in the data class
-                    list.add(d.toObject(NotificationItem::class.java))
+                    val item = d.toObject(NotificationItem::class.java)
+                    list.add(item)
+                    // If it is an invite, fetch details
+                    if (item.relatedId != -1 && (item.type == "GROUP_INVITE" || item.type == "INVITE" || item.type == "GROUP")) {
+                        groupIdsToFetch.add(item.relatedId)
+                    }
                 }
-                callback(list)
+
+                if (groupIdsToFetch.isEmpty()) {
+                    callback(list)
+                } else {
+                    var completed = 0
+                    val total = groupIdsToFetch.size
+                    val codeMap = HashMap<Int, String>()
+                    val nameMap = HashMap<Int, String>()
+
+                    for (gid in groupIdsToFetch) {
+                        db.collection("groups").document(gid.toString()).get()
+                            .addOnSuccessListener { gDoc ->
+                                if (gDoc.exists()) {
+                                    codeMap[gid] = gDoc.getString("code") ?: "N/A"
+                                    nameMap[gid] = gDoc.getString("name") ?: "Unknown"
+                                }
+                                completed++
+                                checkCompletion(completed, total, list, codeMap, nameMap, callback)
+                            }
+                            .addOnFailureListener {
+                                completed++
+                                checkCompletion(completed, total, list, codeMap, nameMap, callback)
+                            }
+                    }
+                }
             }
             .addOnFailureListener { callback(ArrayList()) }
     }
 
+    private fun checkCompletion(
+        completed: Int,
+        total: Int,
+        list: ArrayList<NotificationItem>,
+        codeMap: HashMap<Int, String>,
+        nameMap: HashMap<Int, String>,
+        callback: (ArrayList<NotificationItem>) -> Unit
+    ) {
+        if (completed == total) {
+            // Fill in the missing data
+            for (item in list) {
+                if (codeMap.containsKey(item.relatedId)) {
+                    item.groupCode = codeMap[item.relatedId] ?: "N/A"
+                    item.groupName = nameMap[item.relatedId] ?: "Unknown"
+                }
+            }
+            callback(list)
+        }
+    }
+
     fun markNotificationRead(id: Int) {
-        // Updated: 'read' instead of 'isRead'
         db.collection("notifications").document(id.toString()).update("read", true)
     }
 
     fun getUnreadNotificationCount(user: String, callback: (Int) -> Unit) {
         db.collection("notifications")
             .whereEqualTo("username", user)
-            .whereEqualTo("read", false) // Updated: 'read' instead of 'isRead'
+            .whereEqualTo("read", false)
             .get()
             .addOnSuccessListener { callback(it.size()) }
             .addOnFailureListener { callback(0) }
@@ -553,10 +635,5 @@ class DatabaseHelper(context: Context) {
                 }
                 callback(list)
             }
-    }
-    fun addScheduleWithBase64(user: String, groupId: Int, title: String, date: String, loc: String, desc: String, type: String, base64Image: String, callback: (Boolean) -> Unit) {
-        val id = System.currentTimeMillis().toInt()
-        // We pass the base64 string directly into the 'imageUrl' field
-        saveScheduleData(id, user, groupId, title, date, loc, desc, type, base64Image, callback)
     }
 }
