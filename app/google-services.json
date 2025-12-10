@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "315059280140",
+    "project_id": "schedule-connect",
+    "storage_bucket": "schedule-connect.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:315059280140:android:9b6ef38e76034dd4b1d129",
+        "android_client_info": {
+          "package_name": "com.example.scheduleconnect"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDoO3w6i9Kp2cSKLsLO3NVyVg4mW2p7t-g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
