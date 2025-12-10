@@ -1,14 +1,15 @@
 package com.example.scheduleconnect
 
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import android.util.Base64 // Import Base64
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide // Import Glide
 
 class HistoryAdapter(private val scheduleList: ArrayList<Schedule>) :
     RecyclerView.Adapter<HistoryAdapter.ViewHolder>() {
@@ -23,7 +24,6 @@ class HistoryAdapter(private val scheduleList: ArrayList<Schedule>) :
         val title: TextView = view.findViewById(R.id.tvHistoryTitle)
         val date: TextView = view.findViewById(R.id.tvHistoryDate)
         val status: TextView = view.findViewById(R.id.tvHistoryStatus)
-        // Reference to the ImageView
         val image: ImageView = view.findViewById(R.id.ivHistoryImage)
     }
 
@@ -39,25 +39,31 @@ class HistoryAdapter(private val scheduleList: ArrayList<Schedule>) :
         holder.date.text = item.date
         holder.status.text = item.status
 
-        // --- UPDATED: Glide for Image URLs ---
-        // We now check 'imageUrl' string instead of 'image' byte array
+        // --- FIX: Decode Base64 String to Bitmap ---
         if (item.imageUrl.isNotEmpty()) {
-            holder.image.visibility = View.VISIBLE
+            try {
+                // 1. Convert Base64 String back to Bytes
+                val decodedString = Base64.decode(item.imageUrl, Base64.DEFAULT)
+                // 2. Convert Bytes to Bitmap (Image)
+                val decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
 
-            Glide.with(holder.itemView.context)
-                .load(item.imageUrl)
-                .placeholder(android.R.drawable.ic_menu_gallery) // Placeholder while loading
-                .centerCrop()
-                .into(holder.image)
+                holder.image.visibility = View.VISIBLE
+                holder.image.setImageBitmap(decodedByte)
+                holder.image.scaleType = ImageView.ScaleType.CENTER_CROP
+
+            } catch (e: Exception) {
+                // If conversion fails, hide image or show placeholder
+                holder.image.setImageResource(android.R.drawable.ic_menu_gallery)
+            }
         } else {
             holder.image.visibility = View.GONE
         }
-        // -------------------------------------
+        // ------------------------------------------
 
         // Dynamic Badge Color
         val bgShape = GradientDrawable()
         bgShape.shape = GradientDrawable.RECTANGLE
-        bgShape.cornerRadius = 20f // Rounded corners for pill shape
+        bgShape.cornerRadius = 20f
 
         if (item.status == "FINISHED") {
             bgShape.setColor(Color.parseColor("#8B1A1A")) // App Red

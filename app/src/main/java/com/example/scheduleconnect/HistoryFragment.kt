@@ -36,9 +36,8 @@ class HistoryFragment : Fragment() {
 
     private fun loadHistory() {
         val sharedPref = requireActivity().getSharedPreferences("UserSession", android.content.Context.MODE_PRIVATE)
-        val currentUser = sharedPref.getString("username", "default_user") ?: "default_user"
+        val currentUser = sharedPref.getString("USERNAME", "default_user") ?: "default_user"
 
-        // This call will now work because 'getHistorySchedules' is in the new DatabaseHelper
         dbHelper.getHistorySchedules(currentUser) { historyList ->
 
             if (historyList.isEmpty()) {
@@ -53,7 +52,34 @@ class HistoryFragment : Fragment() {
 
                 adapter = HistoryAdapter(historyList)
                 recyclerView.adapter = adapter
+
+                // --- FIX IS HERE: Handle the click event ---
+                adapter.setOnItemClickListener { schedule ->
+                    openScheduleDetails(schedule)
+                }
             }
         }
+    }
+
+    private fun openScheduleDetails(schedule: Schedule) {
+        val fragment = ScheduleDetailFragment()
+        val bundle = Bundle()
+
+        // Pass all the data needed for the detail view
+        bundle.putInt("SCH_ID", schedule.id)
+        bundle.putString("SCH_TITLE", schedule.title)
+        bundle.putString("SCH_DATE", schedule.date)
+        bundle.putString("SCH_LOC", schedule.location)
+        bundle.putString("SCH_DESC", schedule.description)
+        bundle.putString("SCH_CREATOR", schedule.creator)
+        bundle.putString("SCH_TYPE", schedule.type)
+        bundle.putString("SCH_IMAGE", schedule.imageUrl) // Pass the image too!
+
+        fragment.arguments = bundle
+
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.fragmentContainer, fragment)
+            .addToBackStack(null)
+            .commit()
     }
 }
