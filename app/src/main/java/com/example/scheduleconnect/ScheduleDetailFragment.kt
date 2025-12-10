@@ -2,11 +2,11 @@ package com.example.scheduleconnect
 
 import android.app.AlertDialog
 import android.content.Context
-import android.graphics.BitmapFactory // Added
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
-import android.util.Base64 // Added
+import android.util.Base64
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -54,8 +54,6 @@ class ScheduleDetailFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_schedule_details, container, false)
         dbHelper = DatabaseHelper(requireContext())
 
-        // --- FIX 1: MATCH THE KEY USED IN GROUP DETAILS ---
-        // We look for "SCHEDULE_ID" first. If not found, check "SCH_ID" (fallback).
         schId = arguments?.getInt("SCHEDULE_ID", -1) ?: -1
         if (schId == -1) {
             schId = arguments?.getInt("SCH_ID", -1) ?: -1
@@ -67,7 +65,7 @@ class ScheduleDetailFragment : Fragment() {
 
         tvTitle = view.findViewById(R.id.tvDetailTitle)
         tvDate = view.findViewById(R.id.tvDetailDate)
-        tvLoc = view.findViewById(R.id.tvDetailLoc) // XML ID Check
+        tvLoc = view.findViewById(R.id.tvDetailLoc)
         tvDesc = view.findViewById(R.id.tvDetailDesc)
         tvCreator = view.findViewById(R.id.tvDetailCreator)
         ivImage = view.findViewById(R.id.ivDetailImage)
@@ -174,7 +172,6 @@ class ScheduleDetailFragment : Fragment() {
                 groupId = schedule.groupId
                 type = schedule.type
 
-                // --- FIX 2: BASE64 IMAGE LOADING (REPLACED GLIDE) ---
                 if (schedule.imageUrl.isNotEmpty()) {
                     try {
                         val decodedString = Base64.decode(schedule.imageUrl, Base64.DEFAULT)
@@ -188,7 +185,6 @@ class ScheduleDetailFragment : Fragment() {
                 } else {
                     ivImage.visibility = View.GONE
                 }
-                // ---------------------------------------------------
 
                 updateButtonsVisibility()
 
@@ -203,6 +199,7 @@ class ScheduleDetailFragment : Fragment() {
     }
 
     private fun updateButtonsVisibility() {
+        // --- 1. HANDLE HISTORY / FINISHED / CANCELLED STATE ---
         if (isFromHistory || currentStatus == "FINISHED" || currentStatus == "CANCELLED") {
             btnFinishSchedule.visibility = View.GONE
             btnCancelPersonal.visibility = View.GONE
@@ -211,7 +208,8 @@ class ScheduleDetailFragment : Fragment() {
             layoutButtons.visibility = View.GONE
             layoutChangeMind.visibility = View.GONE
 
-            if (type == "shared" && currentUser == creator) {
+            // FIX: If it's a shared schedule, allow EVERYONE to view attendees even if finished
+            if (type == "shared") {
                 btnViewAttendees.visibility = View.VISIBLE
             } else {
                 btnViewAttendees.visibility = View.GONE
@@ -219,6 +217,7 @@ class ScheduleDetailFragment : Fragment() {
             return
         }
 
+        // --- 2. HANDLE PERSONAL SCHEDULES ---
         if (type == "personal") {
             layoutButtons.visibility = View.GONE
             layoutChangeMind.visibility = View.GONE
@@ -230,21 +229,27 @@ class ScheduleDetailFragment : Fragment() {
             btnEdit.visibility = View.VISIBLE
 
         } else {
+            // --- 3. HANDLE SHARED SCHEDULES (ACTIVE) ---
+
+            // FIX: Everyone in a shared schedule can view attendees
+            btnViewAttendees.visibility = View.VISIBLE
+
             if (currentUser == creator) {
+                // Creator gets management buttons
                 btnDelete.visibility = View.VISIBLE
                 btnEdit.visibility = View.VISIBLE
                 btnFinishSchedule.visibility = View.VISIBLE
-                btnViewAttendees.visibility = View.VISIBLE
 
+                // Creator usually doesn't RSVP to their own event
                 layoutButtons.visibility = View.GONE
                 layoutChangeMind.visibility = View.GONE
                 btnCancelPersonal.visibility = View.GONE
             } else {
+                // Member gets RSVP buttons, but NO management buttons
                 btnDelete.visibility = View.GONE
                 btnEdit.visibility = View.GONE
                 btnFinishSchedule.visibility = View.GONE
                 btnCancelPersonal.visibility = View.GONE
-                btnViewAttendees.visibility = View.GONE
             }
         }
     }
