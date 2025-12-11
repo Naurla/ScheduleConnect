@@ -52,7 +52,6 @@ class GroupChatFragment : Fragment() {
 
         tvGroupName.text = groupName
 
-        // --- FIX IS HERE: Added 'requireContext()' as the first argument ---
         chatAdapter = ChatAdapter(requireContext(), chatList, currentUser)
 
         recyclerChat.layoutManager = LinearLayoutManager(context)
@@ -60,7 +59,8 @@ class GroupChatFragment : Fragment() {
 
         loadMessages()
 
-        checkAdminStatus()
+        // Setup settings button logic
+        setupSettingsAccess()
 
         btnBack.setOnClickListener { parentFragmentManager.popBackStack() }
 
@@ -73,15 +73,10 @@ class GroupChatFragment : Fragment() {
         return view
     }
 
-    private fun checkAdminStatus() {
-        dbHelper.getGroupCreator(groupId) { creator ->
-            if (currentUser == creator) {
-                btnSettings.visibility = View.VISIBLE
-                fetchGroupDetailsForSettings()
-            } else {
-                btnSettings.visibility = View.GONE
-            }
-        }
+    private fun setupSettingsAccess() {
+        // UPDATED: Always show the settings button for everyone
+        btnSettings.visibility = View.VISIBLE
+        fetchGroupDetailsForSettings()
     }
 
     private fun fetchGroupDetailsForSettings() {

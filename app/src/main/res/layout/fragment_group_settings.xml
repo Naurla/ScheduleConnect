@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/app_background"
+    android:background="#F5F5F5"
     android:fillViewport="true">
 
     <LinearLayout
@@ -11,34 +11,36 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="24dp"
-        android:paddingBottom="50dp">
+        android:paddingBottom="100dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginBottom="30dp">
+            android:layout_marginBottom="24dp">
 
             <ImageView
                 android:id="@+id/btnBackSettings"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:src="@android:drawable/ic_menu_revert"
-                app:tint="@color/app_red"
-                android:background="@drawable/circle_background"
                 android:padding="8dp"
+                app:tint="#B71C1C"
+                android:background="@drawable/circle_background"
                 android:clickable="true"
                 android:focusable="true"/>
 
             <TextView
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="GROUP INFO"
-                android:textColor="@color/app_red"
+                android:layout_weight="1"
+                android:text="GROUP SETTINGS"
+                android:textColor="#B71C1C"
                 android:textSize="20sp"
                 android:textStyle="bold"
-                android:layout_marginStart="20dp"/>
+                android:gravity="center"
+                android:layout_marginEnd="40dp"/>
         </LinearLayout>
 
         <LinearLayout
@@ -46,20 +48,20 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center"
-            android:layout_marginBottom="30dp">
+            android:layout_marginBottom="24dp">
 
             <androidx.cardview.widget.CardView
                 android:layout_width="120dp"
                 android:layout_height="120dp"
                 app:cardCornerRadius="60dp"
-                app:cardBackgroundColor="#F0F0F0"
                 app:cardElevation="4dp">
                 <ImageView
                     android:id="@+id/ivSettingsGroupImage"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:src="@drawable/ic_group"
-                    app:tint="#CCCCCC"
+                    android:padding="20dp"
+                    app:tint="#B71C1C"
                     android:scaleType="centerCrop"/>
             </androidx.cardview.widget.CardView>
 
@@ -68,9 +70,9 @@
                 style="@style/Widget.MaterialComponents.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Change Photo"
-                android:textColor="@color/app_red"
-                android:textStyle="bold"/>
+                android:text="Change Image"
+                android:textColor="#B71C1C"
+                android:layout_marginTop="8dp"/>
         </LinearLayout>
 
         <TextView
@@ -80,31 +82,38 @@
             android:textColor="#757575"
             android:textSize="12sp"
             android:textStyle="bold"
-            android:layout_marginBottom="8dp"
-            android:layout_marginStart="4dp"/>
+            android:layout_marginBottom="8dp"/>
 
-        <EditText
-            android:id="@+id/etGroupNickname"
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="50dp"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
             android:background="@drawable/rounded_edittext"
-            android:hint="Enter group name"
-            android:paddingHorizontal="15dp"
-            android:layout_marginBottom="24dp"
-            android:textColor="#333"
-            android:inputType="textCapWords"/>
+            android:padding="16dp"
+            android:layout_marginBottom="24dp">
 
-        <Button
-            android:id="@+id/btnSaveGroupSettings"
-            android:layout_width="match_parent"
-            android:layout_height="60dp"
-            android:text="SAVE CHANGES"
-            android:backgroundTint="@color/app_red"
-            android:textColor="@color/white"
-            android:textStyle="bold"
-            android:textSize="16sp"
-            app:cornerRadius="12dp"
-            android:layout_marginBottom="30dp"/>
+            <TextView
+                android:id="@+id/tvSettingsGroupName"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Group Name"
+                android:textSize="18sp"
+                android:textColor="#333"
+                android:textStyle="bold"/>
+
+            <ImageView
+                android:id="@+id/btnEditGroupName"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@android:drawable/ic_menu_edit"
+                app:tint="#757575"
+                android:padding="4dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"/>
+        </LinearLayout>
 
         <TextView
             android:layout_width="wrap_content"
@@ -113,13 +122,12 @@
             android:textColor="#757575"
             android:textSize="12sp"
             android:textStyle="bold"
-            android:layout_marginBottom="8dp"
-            android:layout_marginStart="4dp"/>
+            android:layout_marginBottom="8dp"/>
 
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="16dp"
+            app:cardCornerRadius="12dp"
             app:cardElevation="2dp"
             app:cardBackgroundColor="@android:color/white">
 
@@ -128,9 +136,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:nestedScrollingEnabled="false"
-                android:overScrollMode="never"
-                android:padding="10dp"/>
+                android:padding="8dp"/>
         </androidx.cardview.widget.CardView>
 
     </LinearLayout>
-</ScrollView>
+</androidx.core.widget.NestedScrollView>

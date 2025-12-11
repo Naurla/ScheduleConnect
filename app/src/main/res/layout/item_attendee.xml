@@ -57,7 +57,8 @@
         android:background="?attr/selectableItemBackgroundBorderless"
         android:clickable="true"
         android:focusable="true"
-        android:layout_marginEnd="8dp"/>
+        android:layout_marginEnd="8dp"
+        android:visibility="gone"/>
 
     <ImageView
         android:id="@+id/btnKickMember"

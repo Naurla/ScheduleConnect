@@ -741,5 +741,42 @@ class DatabaseHelper(context: Context) {
             }
         }
     }
+    // Add these inside your DatabaseHelper class
+
+    fun updateGroupName(groupId: Int, newName: String, callback: (Boolean) -> Unit) {
+        db.collection("groups").document(groupId.toString())
+            .update("name", newName)
+            .addOnSuccessListener { callback(true) }
+            .addOnFailureListener { callback(false) }
+    }
+
+    fun updateGroupImage(groupId: Int, base64Image: String, callback: (Boolean) -> Unit) {
+        db.collection("groups").document(groupId.toString())
+            .update("imageUrl", base64Image)
+            .addOnSuccessListener { callback(true) }
+            .addOnFailureListener { callback(false) }
+    }
+
+    fun updateMemberNickname(groupId: Int, username: String, nickname: String, callback: (Boolean) -> Unit) {
+        // Note: This assumes you want to change the user's nickname SPECIFICALLY for this group.
+        // If your 'group_members' collection supports a 'nickname' field, use this:
+        db.collection("group_members")
+            .whereEqualTo("group_id", groupId)
+            .whereEqualTo("username", username)
+            .get()
+            .addOnSuccessListener { documents ->
+                if (!documents.isEmpty) {
+                    for (document in documents) {
+                        document.reference.update("nickname", nickname)
+                            .addOnSuccessListener { callback(true) }
+                            .addOnFailureListener { callback(false) }
+                    }
+                } else {
+                    callback(false)
+                }
+            }
+            .addOnFailureListener { callback(false) }
+    }
 }
+
 

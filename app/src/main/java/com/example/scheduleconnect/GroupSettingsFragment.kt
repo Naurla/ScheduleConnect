@@ -1,6 +1,7 @@
 package com.example.scheduleconnect
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -28,25 +29,25 @@ class GroupSettingsFragment : Fragment() {
 
     private lateinit var dbHelper: DatabaseHelper
     private lateinit var ivGroupImage: ImageView
-    private lateinit var etNickname: EditText
-    private lateinit var btnSave: Button
+    private lateinit var tvGroupName: TextView
+    private lateinit var btnEditGroupName: ImageView
     private lateinit var btnChangeImage: Button
     private lateinit var btnBack: ImageView
     private lateinit var recyclerParticipants: RecyclerView
 
     private var groupId: Int = -1
+    private var currentGroupName: String = ""
     private var currentImageBase64: String = ""
-    private var selectedImageBitmap: Bitmap? = null
 
     private val imagePickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK && result.data != null) {
             val imageUri: Uri? = result.data?.data
             if (imageUri != null) {
                 try {
-                    selectedImageBitmap = getResizedBitmap(imageUri)
-                    ivGroupImage.setImageBitmap(selectedImageBitmap)
-                    ivGroupImage.imageTintList = null
-                    ivGroupImage.setPadding(0, 0, 0, 0)
+                    val bitmap = getResizedBitmap(imageUri)
+                    if (bitmap != null) {
+                        saveNewGroupImage(bitmap)
+                    }
                 } catch (e: Exception) {
                     Toast.makeText(requireContext(), "Error loading image", Toast.LENGTH_SHORT).show()
                 }
@@ -59,182 +60,164 @@ class GroupSettingsFragment : Fragment() {
         dbHelper = DatabaseHelper(requireContext())
 
         groupId = arguments?.getInt("GROUP_ID") ?: -1
-        currentImageBase64 = arguments?.getString("CURRENT_IMAGE") ?: ""
-        val currentNickname = arguments?.getString("CURRENT_NICKNAME") ?: ""
 
+        // Initialize Views from your new XML
         ivGroupImage = view.findViewById(R.id.ivSettingsGroupImage)
-        etNickname = view.findViewById(R.id.etGroupNickname)
-        btnSave = view.findViewById(R.id.btnSaveGroupSettings)
+        tvGroupName = view.findViewById(R.id.tvSettingsGroupName)
+        btnEditGroupName = view.findViewById(R.id.btnEditGroupName)
         btnChangeImage = view.findViewById(R.id.btnChangeGroupImage)
         btnBack = view.findViewById(R.id.btnBackSettings)
         recyclerParticipants = view.findViewById(R.id.recyclerSettingsParticipants)
 
-        etNickname.setText(currentNickname)
         recyclerParticipants.layoutManager = LinearLayoutManager(context)
-        recyclerParticipants.isNestedScrollingEnabled = false
-
-        if (currentImageBase64.isNotEmpty()) {
-            try {
-                val decodedString = Base64.decode(currentImageBase64, Base64.DEFAULT)
-                val decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
-                ivGroupImage.setImageBitmap(decodedByte)
-                ivGroupImage.imageTintList = null
-                ivGroupImage.setPadding(0, 0, 0, 0)
-            } catch (e: Exception) { }
-        }
+        recyclerParticipants.isNestedScrollingEnabled = false // Important for NestedScrollView
 
         btnBack.setOnClickListener { parentFragmentManager.popBackStack() }
         btnChangeImage.setOnClickListener { openGallery() }
-        btnSave.setOnClickListener { saveSettings() }
 
-        loadParticipants()
+        // Click listener for Group Name Edit Icon
+        btnEditGroupName.setOnClickListener {
+            showEditGroupNameDialog()
+        }
 
         return view
     }
 
     override fun onResume() {
         super.onResume()
-        // Ensure the participant list is refreshed every time this fragment becomes visible
+        loadGroupData()
         loadParticipants()
+    }
+
+    private fun loadGroupData() {
+        dbHelper.getGroupDetails(groupId) { group ->
+            if (group != null) {
+                currentGroupName = group.name
+                currentImageBase64 = group.imageUrl
+
+                tvGroupName.text = currentGroupName
+
+                if (currentImageBase64.isNotEmpty()) {
+                    try {
+                        val decodedString = Base64.decode(currentImageBase64, Base64.DEFAULT)
+                        val decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
+                        ivGroupImage.setImageBitmap(decodedByte)
+                        ivGroupImage.imageTintList = null
+                        ivGroupImage.setPadding(0, 0, 0, 0)
+                    } catch (e: Exception) {
+                        // Keep default
+                    }
+                }
+            }
+        }
     }
 
     private fun loadParticipants() {
         dbHelper.getGroupMemberUsernames(groupId, "") { usernames ->
             if (usernames.isEmpty()) {
-                Toast.makeText(context, "No members found", Toast.LENGTH_SHORT).show()
+                // Optional: Handle empty state
             }
             recyclerParticipants.adapter = ParticipantsAdapter(usernames) { username ->
-                showEditNicknameDialog(username)
+                showEditMemberNicknameDialog(username)
             }
         }
     }
 
-    inner class ParticipantsAdapter(
-        private val usernames: List<String>,
-        private val onEditClick: (String) -> Unit
-    ) : RecyclerView.Adapter<ParticipantsAdapter.ViewHolder>() {
+    // --- MODAL: Edit Group Name ---
+    private fun showEditGroupNameDialog() {
+        val builder = AlertDialog.Builder(requireContext())
+        builder.setTitle("Edit Group Name")
 
-        inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-            val tvUsername: TextView = view.findViewById(R.id.tvAttendeeName)
-            val tvStatus: TextView = view.findViewById(R.id.tvAttendeeStatus)
-            val ivAvatar: ImageView = view.findViewById(R.id.ivAttendeeAvatar)
-            val btnKick: ImageView = view.findViewById(R.id.btnKickMember)
-            // CONFIRMED ID from XML: btnEditNickname
-            val btnEdit: ImageView? = view.findViewById(R.id.btnEditNickname)
-        }
+        val input = EditText(requireContext())
+        input.setText(currentGroupName)
+        input.setSelection(input.text.length)
 
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            val v = LayoutInflater.from(parent.context).inflate(R.layout.item_attendee, parent, false)
-            return ViewHolder(v)
-        }
+        // Add padding
+        val container = android.widget.FrameLayout(requireContext())
+        val params = android.widget.FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        params.setMargins(50, 20, 50, 20)
+        input.layoutParams = params
+        container.addView(input)
 
-        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            val username = usernames[position]
+        builder.setView(container)
 
-            holder.tvUsername.text = username
-            holder.tvStatus.visibility = View.GONE
-            holder.btnKick.visibility = View.GONE
-
-            // Set Placeholder image and color filter (Ensuring gray placeholder)
-            holder.ivAvatar.setImageResource(R.drawable.ic_person)
-            holder.ivAvatar.setColorFilter(Color.GRAY)
-            holder.ivAvatar.imageTintList = null
-
-            // Set Edit Click Listener (Pencil Icon)
-            holder.btnEdit?.setOnClickListener {
-                onEditClick(username)
-            }
-
-            dbHelper.getUserDetails(username) { user ->
-                if (user != null) {
-                    val realName = user.firstName.trim()
-
-                    // Display real name and username (@...)
-                    if (realName.isNotEmpty()) {
-                        holder.tvUsername.text = realName
-                        holder.tvStatus.text = "@$username"
-                        holder.tvStatus.visibility = View.VISIBLE
+        builder.setPositiveButton("Save") { _, _ ->
+            val newName = input.text.toString().trim()
+            if (newName.isNotEmpty()) {
+                dbHelper.updateGroupName(groupId, newName) { success ->
+                    if (success) {
+                        Toast.makeText(context, "Group name updated", Toast.LENGTH_SHORT).show()
+                        loadGroupData() // Refresh UI
                     } else {
-                        // Fallback to username if real name is empty (like 'Adi')
-                        holder.tvUsername.text = username
-                        holder.tvStatus.visibility = View.GONE
-                    }
-
-                    // Load Image Logic (FIXED for robustness and image display)
-                    if (user.profileImageUrl.isNotEmpty()) {
-                        try {
-                            val decodedString = Base64.decode(user.profileImageUrl, Base64.DEFAULT)
-                            val decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
-
-                            if (decodedByte != null) {
-                                holder.ivAvatar.setImageBitmap(decodedByte)
-                                holder.ivAvatar.colorFilter = null // Remove filter when image loads
-                            }
-                        } catch (e: Exception) {
-                            // Keep placeholder if decode fails
-                        }
+                        Toast.makeText(context, "Failed to update name", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
         }
-
-        override fun getItemCount(): Int = usernames.size
+        builder.setNegativeButton("Cancel", null)
+        builder.show()
     }
 
-    private fun showEditNicknameDialog(username: String) {
-        val builder = android.app.AlertDialog.Builder(requireContext())
+    // --- MODAL: Edit Member Nickname ---
+    private fun showEditMemberNicknameDialog(username: String) {
+        val builder = AlertDialog.Builder(requireContext())
         builder.setTitle("Edit Nickname for $username")
 
         val input = EditText(requireContext())
         input.hint = "Enter new nickname"
-        builder.setView(input)
+
+        val container = android.widget.FrameLayout(requireContext())
+        val params = android.widget.FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        params.setMargins(50, 20, 50, 20)
+        input.layoutParams = params
+        container.addView(input)
+
+        builder.setView(container)
 
         builder.setPositiveButton("Save") { _, _ ->
             val newNickname = input.text.toString().trim()
             if (newNickname.isNotEmpty()) {
-                // NOTE: You need to add this function to your DatabaseHelper!
-                // dbHelper.updateMemberNickname(groupId, username, newNickname)
-
-                Toast.makeText(context, "Nickname updated (Logic needed in DB)", Toast.LENGTH_SHORT).show()
-
-                // Reload list to show changes
-                loadParticipants()
+                dbHelper.updateMemberNickname(groupId, username, newNickname) { success ->
+                    if (success) {
+                        Toast.makeText(context, "Nickname updated", Toast.LENGTH_SHORT).show()
+                        loadParticipants() // Refresh List
+                    } else {
+                        Toast.makeText(context, "Failed to update nickname", Toast.LENGTH_SHORT).show()
+                    }
+                }
             }
         }
-        builder.setNegativeButton("Cancel") { dialog, _ -> dialog.cancel() }
-
+        builder.setNegativeButton("Cancel", null)
         builder.show()
+    }
+
+    private fun saveNewGroupImage(bitmap: Bitmap) {
+        val stream = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 50, stream)
+        val byteArrays = stream.toByteArray()
+        val newBase64Image = Base64.encodeToString(byteArrays, Base64.DEFAULT)
+
+        dbHelper.updateGroupImage(groupId, newBase64Image) { success ->
+            if (success) {
+                Toast.makeText(context, "Image updated", Toast.LENGTH_SHORT).show()
+                ivGroupImage.setImageBitmap(bitmap)
+                ivGroupImage.imageTintList = null
+                ivGroupImage.setPadding(0, 0, 0, 0)
+            } else {
+                Toast.makeText(context, "Failed to update image", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun openGallery() {
         val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
         imagePickerLauncher.launch(intent)
-    }
-
-    private fun saveSettings() {
-        val nickname = etNickname.text.toString().trim()
-        var newBase64Image = ""
-
-        if (selectedImageBitmap != null) {
-            val stream = ByteArrayOutputStream()
-            selectedImageBitmap!!.compress(Bitmap.CompressFormat.JPEG, 50, stream)
-            val byteArrays = stream.toByteArray()
-            newBase64Image = Base64.encodeToString(byteArrays, Base64.DEFAULT)
-        }
-
-        btnSave.isEnabled = false
-        btnSave.text = "Saving..."
-
-        dbHelper.updateGroupDetails(groupId, nickname, newBase64Image) { success ->
-            btnSave.isEnabled = true
-            btnSave.text = "SAVE CHANGES"
-            if (success) {
-                Toast.makeText(context, "Group Info Updated!", Toast.LENGTH_SHORT).show()
-                parentFragmentManager.popBackStack()
-            } else {
-                Toast.makeText(context, "Error updating info", Toast.LENGTH_SHORT).show()
-            }
-        }
     }
 
     private fun getResizedBitmap(uri: Uri): Bitmap? {
@@ -266,5 +249,67 @@ class GroupSettingsFragment : Fragment() {
         } finally {
             inputStream?.close()
         }
+    }
+
+    // --- ADAPTER ---
+    inner class ParticipantsAdapter(
+        private val usernames: List<String>,
+        private val onEditClick: (String) -> Unit
+    ) : RecyclerView.Adapter<ParticipantsAdapter.ViewHolder>() {
+
+        inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+            val tvUsername: TextView = view.findViewById(R.id.tvAttendeeName)
+            val tvStatus: TextView = view.findViewById(R.id.tvAttendeeStatus)
+            val ivAvatar: ImageView = view.findViewById(R.id.ivAttendeeAvatar)
+            val btnKick: ImageView = view.findViewById(R.id.btnKickMember)
+            val btnEdit: ImageView? = view.findViewById(R.id.btnEditNickname)
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+            val v = LayoutInflater.from(parent.context).inflate(R.layout.item_attendee, parent, false)
+            return ViewHolder(v)
+        }
+
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            val username = usernames[position]
+
+            holder.tvUsername.text = username
+            holder.tvStatus.visibility = View.GONE
+            holder.btnKick.visibility = View.GONE
+
+            holder.ivAvatar.setImageResource(R.drawable.ic_person)
+            holder.ivAvatar.setColorFilter(Color.GRAY)
+            holder.ivAvatar.imageTintList = null
+
+            // Show Edit Button for each member
+            holder.btnEdit?.visibility = View.VISIBLE
+            holder.btnEdit?.setOnClickListener {
+                onEditClick(username)
+            }
+
+            // Load real name and image
+            dbHelper.getUserDetails(username) { user ->
+                if (user != null) {
+                    val realName = user.firstName.trim()
+                    if (realName.isNotEmpty()) {
+                        holder.tvUsername.text = realName
+                        holder.tvStatus.text = "@$username"
+                        holder.tvStatus.visibility = View.VISIBLE
+                    }
+
+                    if (user.profileImageUrl.isNotEmpty()) {
+                        try {
+                            val decodedString = Base64.decode(user.profileImageUrl, Base64.DEFAULT)
+                            val decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
+                            if (decodedByte != null) {
+                                holder.ivAvatar.setImageBitmap(decodedByte)
+                                holder.ivAvatar.colorFilter = null
+                            }
+                        } catch (e: Exception) { }
+                    }
+                }
+            }
+        }
+        override fun getItemCount(): Int = usernames.size
     }
 }
