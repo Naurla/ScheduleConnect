@@ -30,6 +30,64 @@
             android:textSize="14sp"/>
     </LinearLayout>
 
+    <EditText
+        android:id="@+id/etSearchHistory"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Search schedule title..."
+        android:drawableStart="@android:drawable/ic_menu_search"  android:drawableTint="#8B1A1A"
+        android:drawablePadding="8dp"
+        android:padding="12dp"
+        android:background="@drawable/rounded_edittext_background"
+        android:elevation="2dp"
+        android:singleLine="true"
+        android:imeOptions="actionDone"
+        android:layout_marginBottom="16dp"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+
+        <Button
+            android:id="@+id/btnStartDate"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="START DATE"
+            android:textColor="#555"
+            android:textSize="12sp"
+            app:strokeColor="#DDDDDD"
+            android:layout_marginEnd="8dp"/>
+
+        <Button
+            android:id="@+id/btnEndDate"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="END DATE"
+            android:textColor="#555"
+            android:textSize="12sp"
+            app:strokeColor="#DDDDDD"/>
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/btnClearFilters"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Clear Filters"
+        android:textColor="#8B1A1A"
+        android:layout_gravity="end"
+        android:visibility="gone"
+        android:paddingTop="0dp"
+        android:minHeight="0dp"
+        android:layout_marginBottom="16dp"/>
+
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
@@ -67,5 +125,4 @@
                 android:textStyle="bold"/>
         </LinearLayout>
     </FrameLayout>
-
 </LinearLayout>

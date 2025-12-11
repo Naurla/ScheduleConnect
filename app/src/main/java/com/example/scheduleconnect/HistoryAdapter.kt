@@ -10,11 +10,18 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-
-class HistoryAdapter(private val scheduleList: ArrayList<Schedule>) :
+// Note: Changed type from ArrayList<Schedule> to List<Schedule> for better compatibility with filtering
+class HistoryAdapter(private var scheduleList: List<Schedule>) :
     RecyclerView.Adapter<HistoryAdapter.ViewHolder>() {
 
     private var onItemClick: ((Schedule) -> Unit)? = null
+
+    // --- NEW: FUNCTION TO UPDATE THE LIST FOR FILTERING ---
+    fun updateList(newScheduleList: List<Schedule>) {
+        scheduleList = newScheduleList
+        notifyDataSetChanged()
+    }
+    // ------------------------------------------------------
 
     fun setOnItemClickListener(listener: (Schedule) -> Unit) {
         onItemClick = listener
