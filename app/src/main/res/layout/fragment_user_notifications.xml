@@ -18,7 +18,7 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginBottom="5dp">
+            android:layout_marginBottom="10dp">
 
             <ImageView
                 android:id="@+id/btnBackUserNotif"
@@ -33,21 +33,50 @@
                 android:layout_marginEnd="15dp"/>
 
             <TextView
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:text="NOTIFICATIONS"
                 android:textColor="@color/app_red"
                 android:textSize="26sp"
                 android:textStyle="bold"/>
         </LinearLayout>
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Stay updated with your schedule."
-            android:textColor="#757575"
-            android:textSize="14sp"
-            android:layout_marginStart="4dp"/>
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:id="@+id/btnMarkAllRead"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Mark all read"
+                android:textSize="14sp"
+                android:textColor="#757575"
+                android:textStyle="bold"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackground"
+                android:padding="8dp"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"/>
+
+            <TextView
+                android:id="@+id/btnClearAllNotifs"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="CLEAR ALL"
+                android:textSize="14sp"
+                android:textColor="@color/app_red"
+                android:textStyle="bold"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackground"
+                android:padding="8dp"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"/>
+        </RelativeLayout>
+
     </LinearLayout>
 
     <FrameLayout

@@ -1,8 +1,9 @@
 package com.example.scheduleconnect
 
-import android.app.AlertDialog
+import android.app.AlertDialog // Retained but not used for the primary dialog builder
 import android.app.DatePickerDialog
 import android.content.Context
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
@@ -19,6 +20,10 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+// --- NEW IMPORTS FOR MATERIAL COMPONENTS ---
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.button.MaterialButton
+// --- END NEW IMPORTS ---
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -32,37 +37,34 @@ class HistoryFragment : Fragment() {
     private lateinit var dbHelper: DatabaseHelper
     private lateinit var adapter: HistoryAdapter
 
-    // --- NEW: FILTERING VIEWS AND DATA ---
+    // --- FILTERING VIEWS AND DATA ---
     private lateinit var etSearchHistory: EditText
-    private lateinit var btnOpenDateFilter: ImageView // Header calendar icon
-    private lateinit var tvDateRangeSummary: TextView // Replaces subtitle for date summary
+    private lateinit var btnOpenDateFilter: ImageView
+    private lateinit var tvDateRangeSummary: TextView
 
     private var allSchedules: List<Schedule> = emptyList()
     private var startDate: Date? = null
     private var endDate: Date? = null
     private val scheduleDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
     private val displayDateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-    // --- END NEW ---
+    // --- END FILTERING VIEWS AND DATA ---
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.fragment_history, container, false)
 
         dbHelper = DatabaseHelper(requireContext())
 
-        recyclerView = view.findViewById(R.id.recyclerHistory) // <-- Line of potential error resolved by ensuring correct file state
+        recyclerView = view.findViewById(R.id.recyclerHistory)
         layoutEmpty = view.findViewById(R.id.layoutEmptyHistory)
         tvEmpty = view.findViewById(R.id.tvEmptyHistory)
 
-        // --- NEW: INITIALIZE FILTERING VIEWS ---
         etSearchHistory = view.findViewById(R.id.etSearchHistory)
         btnOpenDateFilter = view.findViewById(R.id.btnOpenDateFilter)
         tvDateRangeSummary = view.findViewById(R.id.tvDateRangeSummary)
 
-        // --- NEW: SETUP LISTENERS ---
         setupSearchListener()
         setupDateFilterTrigger()
         updateDateSummary()
-        // --- END NEW ---
 
         recyclerView.layoutManager = LinearLayoutManager(context)
 
@@ -87,47 +89,62 @@ class HistoryFragment : Fragment() {
         }
     }
 
-    // --- NEW: MODAL LOGIC ---
+    // --- START FIXED showDateRangeModal FUNCTION ---
     private fun showDateRangeModal() {
-        val builder = AlertDialog.Builder(requireContext())
+        // FIX 1: Use MaterialAlertDialogBuilder to ensure Material 3 theme is applied to the dialog window
+        val builder = MaterialAlertDialogBuilder(requireContext())
+
         val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_date_range_options, null)
 
-        val btnModalStartDate = dialogView.findViewById<Button>(R.id.btnModalStartDate)
-        val btnModalEndDate = dialogView.findViewById<Button>(R.id.btnModalEndDate)
+        // FIX 2: Correctly cast the views to MaterialButton to match the XML
+        val btnModalStartDate = dialogView.findViewById<MaterialButton>(R.id.btnModalStartDate)
+        val btnModalEndDate = dialogView.findViewById<MaterialButton>(R.id.btnModalEndDate)
         val btnModalClearFilter = dialogView.findViewById<Button>(R.id.btnModalClearFilter)
 
-        // Update button text to reflect current selection
-        btnModalStartDate.text = startDate?.let { displayDateFormat.format(it) } ?: "Start Date"
-        btnModalEndDate.text = endDate?.let { displayDateFormat.format(it) } ?: "End Date"
+        // Define color states for thematic highlighting
+        val colorWhite = ColorStateList.valueOf(Color.WHITE)
+        val colorGrayHighlight = ColorStateList.valueOf(Color.parseColor("#E0E0E0"))
+        val colorAppRed = ColorStateList.valueOf(requireContext().getColor(R.color.app_red))
 
-        // Show clear button if any filter is active
-        if (startDate != null || endDate != null) {
-            btnModalClearFilter.visibility = View.VISIBLE
-        } else {
-            btnModalClearFilter.visibility = View.GONE
+        // Function to update the modal buttons visually
+        fun updateModalUI() {
+            btnModalStartDate.text = startDate?.let { displayDateFormat.format(it).uppercase(Locale.ROOT) } ?: "START DATE"
+            btnModalEndDate.text = endDate?.let { displayDateFormat.format(it).uppercase(Locale.ROOT) } ?: "END DATE"
+
+            val isFiltering = startDate != null || endDate != null
+            btnModalClearFilter.visibility = if (isFiltering) View.VISIBLE else View.GONE
+
+            // Reapply date-set highlight logic, using the app's red color as the default tint
+            // The logic below will turn the button gray only if a date is selected.
+            btnModalStartDate.backgroundTintList = if (startDate != null) colorGrayHighlight else colorAppRed
+            btnModalEndDate.backgroundTintList = if (endDate != null) colorGrayHighlight else colorAppRed
+
         }
+
+        // Initial setup of modal UI
+        updateModalUI()
 
         builder.setView(dialogView)
         val dialog = builder.create()
-        // Ensure you have bg_rounded_red.xml and dialog_date_range_options.xml in your resources
+
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
 
         // --- Click Handlers for the Modal Buttons ---
 
         btnModalStartDate.setOnClickListener {
-            dialog.dismiss()
             showDatePicker(it) { date ->
                 startDate = date
                 updateDateSummary()
+                updateModalUI()
                 filterSchedules()
             }
         }
 
         btnModalEndDate.setOnClickListener {
-            dialog.dismiss()
             showDatePicker(it) { date ->
                 endDate = date
                 updateDateSummary()
+                updateModalUI()
                 filterSchedules()
             }
         }
@@ -139,8 +156,9 @@ class HistoryFragment : Fragment() {
 
         dialog.show()
     }
+    // --- END FIXED showDateRangeModal FUNCTION ---
 
-    // --- MODIFIED: Date Picker Dialog (Called from Modal) ---
+    // --- MODIFIED: Date Picker Dialog now accepts a callback ---
     private fun showDatePicker(triggerView: View, onDateSet: (Date) -> Unit) {
         val calendar = Calendar.getInstance()
 
@@ -178,7 +196,7 @@ class HistoryFragment : Fragment() {
     }
 
 
-    // --- Other Fragment functions ---
+    // --- Other Fragment functions (unchanged) ---
     private fun setupSearchListener() {
         etSearchHistory.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}

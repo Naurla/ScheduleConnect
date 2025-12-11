@@ -50,7 +50,6 @@ data class GroupInfo(
 )
 
 
-// --- SYNCED: Includes groupCode AND groupName ---
 data class NotificationItem(
     val id: Int = 0,
     val username: String = "",
@@ -199,31 +198,16 @@ class DatabaseHelper(context: Context) {
     }
 
 
-    // --- SEARCH FUNCTION USED BY THE INVITE DIALOG ---
-    // This supports the "search as you type" feature.
     fun searchUsers(keyword: String, excludeUser: String, callback: (ArrayList<String>) -> Unit) {
-        // Optimization: If keyword is empty, return empty list immediately
-        if (keyword.isEmpty()) {
-            callback(ArrayList())
-            return
-        }
-
-
         db.collection("users").get().addOnSuccessListener { result ->
             val list = ArrayList<String>()
             for (doc in result) {
-                // Determine username from ID or field (safe fallback)
-                val user = doc.getString("username") ?: doc.id
-
-
-                // "contains" with ignoreCase=true handles "Starts With" logic effectively
+                val user = doc.id
                 if (user.contains(keyword, ignoreCase = true) && user != excludeUser) {
                     list.add(user)
                 }
             }
             callback(list)
-        }.addOnFailureListener {
-            callback(ArrayList())
         }
     }
 
@@ -284,8 +268,51 @@ class DatabaseHelper(context: Context) {
     private fun saveScheduleData(id: Int, user: String, groupId: Int, title: String, date: String, loc: String, desc: String, type: String, imageUrl: String, callback: (Boolean) -> Unit) {
         val sch = Schedule(id, user, groupId, title, date, loc, desc, type, imageUrl, "ACTIVE")
         db.collection("schedules").document(id.toString()).set(sch)
-            .addOnSuccessListener { callback(true) }
+            .addOnSuccessListener {
+                // --- NEW FEATURE: Notify Group Members if it's a Shared Schedule ---
+                if (type == "shared" && groupId != -1) {
+                    notifyGroupMembersOfSchedule(groupId, title, user, id)
+                }
+                callback(true)
+            }
             .addOnFailureListener { callback(false) }
+    }
+
+
+    // --- Helper to Notify Group Members ---
+    private fun notifyGroupMembersOfSchedule(groupId: Int, scheduleTitle: String, creator: String, scheduleId: Int) {
+        // 1. Get Group Name
+        getGroupDetails(groupId) { group ->
+            val groupName = group?.name ?: "Group"
+            val displayGroup = if (group?.nickname?.isNotEmpty() == true) group.nickname else groupName
+
+
+            // 2. Get All Members
+            getGroupMemberUsernames(groupId, creator) { members ->
+                val dateStr = SimpleDateFormat("MMM dd, hh:mm a", Locale.getDefault()).format(Date())
+                val batch = db.batch()
+
+
+                // 3. Create Notification for each member
+                members.forEachIndexed { index, member ->
+                    val notifId = System.currentTimeMillis().toInt() + index
+                    val notif = NotificationItem(
+                        id = notifId,
+                        username = member,
+                        title = "New Schedule in $displayGroup",
+                        message = "$creator added '$scheduleTitle' to $displayGroup",
+                        date = dateStr,
+                        read = false,
+                        relatedId = scheduleId, // Links to the schedule if we want to open it
+                        type = "SCHEDULE_NEW",
+                        groupName = displayGroup
+                    )
+                    val ref = db.collection("notifications").document(notifId.toString())
+                    batch.set(ref, notif)
+                }
+                batch.commit()
+            }
+        }
     }
 
 
@@ -387,7 +414,6 @@ class DatabaseHelper(context: Context) {
         val addedIds = HashSet<Int>()
 
 
-        // 1. Get Schedules Created by YOU (Personal OR Shared)
         db.collection("schedules")
             .whereEqualTo("creator", user)
             .whereIn("status", listOf("FINISHED", "CANCELLED"))
@@ -400,7 +426,6 @@ class DatabaseHelper(context: Context) {
                 }
 
 
-                // 2. Get Schedules from Groups you are in (Shared)
                 getUserGroups(user) { groups ->
                     val groupIds = groups.map { it.id }
 
@@ -416,8 +441,6 @@ class DatabaseHelper(context: Context) {
                             .addOnSuccessListener { sharedSnap ->
                                 for (d in sharedSnap) {
                                     val sch = d.toObject(Schedule::class.java)
-
-
                                     if (!addedIds.contains(sch.id)) {
                                         historyList.add(sch)
                                         addedIds.add(sch.id)
@@ -581,14 +604,9 @@ class DatabaseHelper(context: Context) {
         val updates = hashMapOf<String, Any>(
             "nickname" to nickname
         )
-
-
-        // Only update the image if the user actually picked a new one
         if (base64Image.isNotEmpty()) {
             updates["imageUrl"] = base64Image
         }
-
-
         db.collection("groups").document(groupId.toString())
             .update(updates)
             .addOnSuccessListener {
@@ -625,7 +643,6 @@ class DatabaseHelper(context: Context) {
                 for (d in res) {
                     val item = d.toObject(NotificationItem::class.java)
                     list.add(item)
-                    // If it is an invite, fetch details
                     if (item.relatedId != -1 && (item.type == "GROUP_INVITE" || item.type == "INVITE" || item.type == "GROUP")) {
                         groupIdsToFetch.add(item.relatedId)
                     }
@@ -671,7 +688,6 @@ class DatabaseHelper(context: Context) {
         callback: (ArrayList<NotificationItem>) -> Unit
     ) {
         if (completed == total) {
-            // Fill in the missing data
             for (item in list) {
                 if (codeMap.containsKey(item.relatedId)) {
                     item.groupCode = codeMap[item.relatedId] ?: "N/A"
@@ -688,6 +704,25 @@ class DatabaseHelper(context: Context) {
     }
 
 
+    // --- NEW FUNCTION: Mark All As Read ---
+    fun markAllNotificationsRead(user: String, callback: (Boolean) -> Unit) {
+        db.collection("notifications")
+            .whereEqualTo("username", user)
+            .whereEqualTo("read", false)
+            .get()
+            .addOnSuccessListener { documents ->
+                val batch = db.batch()
+                for (doc in documents) {
+                    batch.update(doc.reference, "read", true)
+                }
+                batch.commit()
+                    .addOnSuccessListener { callback(true) }
+                    .addOnFailureListener { callback(false) }
+            }
+            .addOnFailureListener { callback(false) }
+    }
+
+
     fun getUnreadNotificationCount(user: String, callback: (Int) -> Unit) {
         db.collection("notifications")
             .whereEqualTo("username", user)
@@ -695,6 +730,13 @@ class DatabaseHelper(context: Context) {
             .get()
             .addOnSuccessListener { callback(it.size()) }
             .addOnFailureListener { callback(0) }
+    }
+
+
+    fun deleteNotification(notificationId: Int, callback: (Boolean) -> Unit) {
+        db.collection("notifications").document(notificationId.toString()).delete()
+            .addOnSuccessListener { callback(true) }
+            .addOnFailureListener { callback(false) }
     }
 
 
@@ -733,7 +775,6 @@ class DatabaseHelper(context: Context) {
 
 
     fun sendGroupMessage(groupId: Int, groupName: String, sender: String, message: String) {
-        // 1. Save the message to the Chat History
         val msgData = hashMapOf(
             "group_id" to groupId,
             "sender" to sender,
@@ -743,7 +784,6 @@ class DatabaseHelper(context: Context) {
         db.collection("group_messages").add(msgData)
 
 
-        // 2. Notify other group members
         getGroupMemberUsernames(groupId, sender) { members ->
             if (members.isNotEmpty()) {
                 val dateFormat = SimpleDateFormat("MMM dd, hh:mm a", Locale.getDefault())
@@ -767,8 +807,6 @@ class DatabaseHelper(context: Context) {
                         type = "CHAT",
                         groupName = groupName
                     )
-
-
                     db.collection("notifications").document(uniqueId.toString()).set(notif)
                 }
             }
@@ -901,5 +939,22 @@ class DatabaseHelper(context: Context) {
             }
             .addOnFailureListener { callback("") }
     }
+    fun deleteAllNotifications(username: String, callback: (Boolean) -> Unit) {
+        db.collection("notifications")
+            .whereEqualTo("username", username)
+            .get()
+            .addOnSuccessListener { documents ->
+                val batch = db.batch()
+                for (doc in documents) {
+                    batch.delete(doc.reference)
+                }
+                batch.commit()
+                    .addOnSuccessListener { callback(true) }
+                    .addOnFailureListener { callback(false) }
+            }
+            .addOnFailureListener { callback(false) }
+    }
 }
+
+
 

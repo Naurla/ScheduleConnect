@@ -56,7 +56,7 @@
         android:layout_height="wrap_content"
         android:hint="Search schedule title..."
         android:drawableStart="@android:drawable/ic_menu_search"
-        android:drawableTint="#8B1A1A"
+        android:drawableTint="#999"
         android:drawablePadding="8dp"
         android:padding="12dp"
         android:background="@drawable/rounded_input_field"
@@ -69,8 +69,7 @@
         android:layout_marginBottom="16dp"/>
 
     <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_width="match_parent" android:layout_height="match_parent">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recyclerHistory"

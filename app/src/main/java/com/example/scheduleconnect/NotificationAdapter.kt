@@ -1,63 +1,98 @@
 package com.example.scheduleconnect
 
+
 import android.graphics.Color
 import android.graphics.Typeface
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
 
 class NotificationAdapter(
-    private var list: ArrayList<NotificationItem>,
-    private val onMarkReadClick: (NotificationItem) -> Unit,
-    private val onItemClick: (NotificationItem) -> Unit
+    private var notificationList: ArrayList<NotificationItem>,
+    private val onItemClick: (NotificationItem) -> Unit,
+    private val onAcceptClick: (NotificationItem) -> Unit,
+    private val onDeclineClick: (NotificationItem) -> Unit,
+    private val onDeleteClick: (NotificationItem) -> Unit // New Parameter
 ) : RecyclerView.Adapter<NotificationAdapter.ViewHolder>() {
 
-    class ViewHolder(v: View) : RecyclerView.ViewHolder(v) {
-        val root: LinearLayout = v.findViewById(R.id.llNotificationRoot)
-        val title: TextView = v.findViewById(R.id.tvNotifTitle)
-        val msg: TextView = v.findViewById(R.id.tvNotifMessage)
-        val date: TextView = v.findViewById(R.id.tvNotifDate)
-        val markRead: TextView = v.findViewById(R.id.tvMarkAsRead)
-        val unreadDot: View = v.findViewById(R.id.viewUnreadDot)
+
+    class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val title: TextView = itemView.findViewById(R.id.tvNotificationTitle)
+        val message: TextView = itemView.findViewById(R.id.tvNotificationMessage)
+        val date: TextView = itemView.findViewById(R.id.tvNotificationDate)
+        val icon: ImageView = itemView.findViewById(R.id.ivNotificationIcon)
+        val unreadDot: ImageView = itemView.findViewById(R.id.ivUnreadDot)
+
+
+        // Actions
+        val layoutActions: LinearLayout = itemView.findViewById(R.id.layoutInviteActions)
+        val btnAccept: Button = itemView.findViewById(R.id.btnAcceptInvite)
+        val btnDecline: Button = itemView.findViewById(R.id.btnDeclineInvite)
+        val btnDelete: ImageView = itemView.findViewById(R.id.btnDeleteNotification) // New
     }
+
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        val v = LayoutInflater.from(parent.context).inflate(R.layout.item_notification, parent, false)
-        return ViewHolder(v)
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_notification, parent, false)
+        return ViewHolder(view)
     }
+
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val item = list[position]
+        val notif = notificationList[position]
+        holder.title.text = notif.title
+        holder.message.text = notif.message
+        holder.date.text = notif.date
 
-        holder.title.text = item.title
-        holder.msg.text = item.message
-        holder.date.text = item.date
 
-        // --- FIX: Use 'read' instead of 'isRead' ---
-        if (item.read) {
-            holder.root.setBackgroundColor(Color.WHITE)
-            holder.title.setTypeface(null, Typeface.NORMAL)
-            holder.markRead.visibility = View.GONE
+        if (notif.read) {
+            holder.title.typeface = Typeface.DEFAULT
             holder.unreadDot.visibility = View.GONE
+            holder.itemView.setBackgroundColor(Color.WHITE)
         } else {
-            holder.root.setBackgroundColor(Color.parseColor("#FFF5F5")) // Light red tint
-            holder.title.setTypeface(null, Typeface.BOLD)
-            holder.markRead.visibility = View.VISIBLE
+            holder.title.typeface = Typeface.DEFAULT_BOLD
             holder.unreadDot.visibility = View.VISIBLE
+            holder.itemView.setBackgroundColor(Color.parseColor("#FAFAFA"))
         }
 
-        holder.markRead.setOnClickListener { onMarkReadClick(item) }
-        holder.itemView.setOnClickListener { onItemClick(item) }
+
+        // Logic for Invite Buttons
+        if (notif.type == "GROUP_INVITE") {
+            holder.layoutActions.visibility = View.VISIBLE
+            holder.icon.setImageResource(R.drawable.ic_group)
+            holder.btnAccept.setOnClickListener { onAcceptClick(notif) }
+            holder.btnDecline.setOnClickListener { onDeclineClick(notif) }
+        } else {
+            holder.layoutActions.visibility = View.GONE
+            if (notif.title.contains("Security", true)) {
+                holder.icon.setImageResource(R.drawable.ic_settings_security)
+            } else {
+                holder.icon.setImageResource(R.drawable.ic_settings_notifications)
+            }
+        }
+
+
+        // Handle Manual Delete Button
+        holder.btnDelete.setOnClickListener { onDeleteClick(notif) }
+
+
+        // Standard Item Click
+        holder.itemView.setOnClickListener { onItemClick(notif) }
     }
 
-    override fun getItemCount() = list.size
+
+    override fun getItemCount() = notificationList.size
+
 
     fun updateList(newList: ArrayList<NotificationItem>) {
-        list = newList
+        notificationList = newList
         notifyDataSetChanged()
     }
 }
+

@@ -1,147 +1,228 @@
 package com.example.scheduleconnect
 
+
+import android.app.AlertDialog
 import android.content.Context
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.TextView
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import java.util.ArrayList
+
 
 class UserNotificationsFragment : Fragment() {
 
+
     private lateinit var dbHelper: DatabaseHelper
     private lateinit var recyclerView: RecyclerView
-    private lateinit var layoutEmpty: LinearLayout
+    private lateinit var layoutEmptyNotifs: LinearLayout
     private lateinit var btnBack: ImageView
+    private lateinit var btnMarkAllRead: TextView
+    private lateinit var btnClearAll: TextView
     private lateinit var adapter: NotificationAdapter
-    private var currentUser: String = ""
+    private var notificationList = ArrayList<NotificationItem>()
+    private lateinit var currentUser: String
+
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.fragment_user_notifications, container, false)
         dbHelper = DatabaseHelper(requireContext())
 
-        recyclerView = view.findViewById(R.id.recyclerUserNotifications)
-        layoutEmpty = view.findViewById(R.id.layoutEmptyNotifs)
-        btnBack = view.findViewById(R.id.btnBackUserNotif)
 
         val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
-        currentUser = sharedPref.getString("USERNAME", "") ?: ""
+        currentUser = sharedPref.getString("USERNAME", "default_user") ?: "default_user"
 
-        setupRecyclerView()
 
-        btnBack.setOnClickListener {
-            parentFragmentManager.popBackStack()
-        }
+        recyclerView = view.findViewById(R.id.recyclerUserNotifications)
+        layoutEmptyNotifs = view.findViewById(R.id.layoutEmptyNotifs)
+        btnBack = view.findViewById(R.id.btnBackUserNotif)
+        btnMarkAllRead = view.findViewById(R.id.btnMarkAllRead)
+        btnClearAll = view.findViewById(R.id.btnClearAllNotifs)
 
-        loadNotifications()
 
-        return view
-    }
-
-    private fun setupRecyclerView() {
         recyclerView.layoutManager = LinearLayoutManager(context)
-        adapter = NotificationAdapter(ArrayList(),
-            onMarkReadClick = { item ->
-                dbHelper.markNotificationRead(item.id)
-                loadNotifications() // Refresh list
-                (activity as? HomeActivity)?.updateNotificationBadge()
+
+
+        adapter = NotificationAdapter(
+            notificationList,
+            onItemClick = { notif ->
+                dbHelper.markNotificationRead(notif.id)
+                loadNotifications()
+
+
+                if (notif.type == "CHAT" && notif.relatedId != -1) {
+                    val chatFragment = GroupChatFragment()
+                    val bundle = Bundle()
+                    bundle.putInt("GROUP_ID", notif.relatedId)
+                    bundle.putString("GROUP_NAME", notif.groupName)
+                    chatFragment.arguments = bundle
+                    parentFragmentManager.beginTransaction()
+                        .replace(R.id.fragmentContainer, chatFragment)
+                        .addToBackStack(null)
+                        .commit()
+                }
             },
-            onItemClick = { item ->
-                if (!item.read) {
-                    dbHelper.markNotificationRead(item.id)
-                    (activity as? HomeActivity)?.updateNotificationBadge()
-                }
-
-                // Redirect Logic
-                if (item.type == "SCHEDULE" && item.relatedId != -1) {
-                    val fragment = ScheduleDetailFragment()
-                    val bundle = Bundle()
-                    bundle.putInt("SCH_ID", item.relatedId)
-                    fragment.arguments = bundle
-
-                    parentFragmentManager.beginTransaction()
-                        .replace(R.id.fragmentContainer, fragment)
-                        .addToBackStack(null)
-                        .commit()
-
-                } else if (item.type == "GROUP" && item.relatedId != -1) {
-                    val fragment = GroupDetailsFragment()
-                    val bundle = Bundle()
-                    bundle.putInt("GROUP_ID", item.relatedId)
-                    fragment.arguments = bundle
-
-                    parentFragmentManager.beginTransaction()
-                        .replace(R.id.fragmentContainer, fragment)
-                        .addToBackStack(null)
-                        .commit()
-
-                } else if ((item.type == "GROUP_INVITE" || item.type == "INVITE") && item.relatedId != -1) {
-                    val fragment = JoinGroupFragment()
-                    val bundle = Bundle()
-                    bundle.putString("group_code", item.groupCode)
-                    fragment.arguments = bundle
-
-                    parentFragmentManager.beginTransaction()
-                        .replace(R.id.fragmentContainer, fragment)
-                        .addToBackStack(null)
-                        .commit()
-
-                } else if (item.type == "CHAT" && item.relatedId != -1) {
-                    val fragment = GroupChatFragment()
-                    val bundle = Bundle()
-                    bundle.putInt("GROUP_ID", item.relatedId)
-                    bundle.putString("GROUP_NAME", item.groupName)
-                    fragment.arguments = bundle
-
-                    parentFragmentManager.beginTransaction()
-                        .replace(R.id.fragmentContainer, fragment)
-                        .addToBackStack(null)
-                        .commit()
-                }
+            onAcceptClick = { notif -> acceptInvite(notif) },
+            onDeclineClick = { notif ->
+                // Using the same confirmation for Decline as Delete
+                showDeleteConfirmation(notif)
+            },
+            onDeleteClick = { notif ->
+                // Show confirmation modal for single delete
+                showDeleteConfirmation(notif)
             }
         )
         recyclerView.adapter = adapter
-    }
 
-    private fun loadNotifications() {
-        if (currentUser.isNotEmpty()) {
-            dbHelper.getUserNotifications(currentUser) { list ->
 
-                // 1. GET SETTINGS
-                val settingsPref = requireActivity().getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
-                val allowGroupNotifs = settingsPref.getBoolean("GROUP_NOTIFICATIONS_ENABLED", true)
+        btnBack.setOnClickListener { parentFragmentManager.popBackStack() }
 
-                // 2. FILTER LIST based on settings
-                val filteredList = list.filter { item ->
-                    if (!allowGroupNotifs) {
-                        // If Group Notifs are OFF, hide Invite and Group types
-                        item.type != "GROUP" && item.type != "GROUP_INVITE" && item.type != "INVITE"
-                    } else {
-                        // Otherwise show everything
-                        true
+
+        btnMarkAllRead.setOnClickListener {
+            if (notificationList.isNotEmpty()) {
+                dbHelper.markAllNotificationsRead(currentUser) { success ->
+                    if (success) {
+                        Toast.makeText(context, "All marked as read", Toast.LENGTH_SHORT).show()
+                        loadNotifications()
                     }
                 }
+            }
+        }
 
-                // 3. Convert back to ArrayList for the adapter
-                val finalList = ArrayList(filteredList)
 
-                if (finalList.isEmpty()) {
-                    recyclerView.visibility = View.GONE
-                    layoutEmpty.visibility = View.VISIBLE
+        btnClearAll.setOnClickListener {
+            if (notificationList.isNotEmpty()) {
+                showClearAllConfirmation()
+            } else {
+                Toast.makeText(context, "No notifications to clear", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+
+        loadNotifications()
+        return view
+    }
+
+
+    // --- POPUP: Delete Single Notification ---
+    private fun showDeleteConfirmation(notif: NotificationItem) {
+        val builder = AlertDialog.Builder(requireContext())
+        val view = LayoutInflater.from(context).inflate(R.layout.dialog_generic_confirmation, null)
+        builder.setView(view)
+        val dialog = builder.create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+
+        val tvTitle = view.findViewById<TextView>(R.id.tvDialogTitle)
+        val tvMessage = view.findViewById<TextView>(R.id.tvDialogMessage)
+        val btnYes = view.findViewById<Button>(R.id.btnDialogYes)
+        val btnNo = view.findViewById<TextView>(R.id.btnDialogNo)
+
+
+        tvTitle.text = "DELETE NOTIFICATION?"
+        tvMessage.text = "Are you sure you want to remove this notification?"
+
+
+        btnYes.setOnClickListener {
+            dbHelper.deleteNotification(notif.id) {
+                loadNotifications()
+                Toast.makeText(context, "Notification removed", Toast.LENGTH_SHORT).show()
+            }
+            dialog.dismiss()
+        }
+        btnNo.setOnClickListener { dialog.dismiss() }
+
+
+        dialog.show()
+    }
+
+
+    // --- POPUP: Clear All Notifications ---
+    private fun showClearAllConfirmation() {
+        val builder = AlertDialog.Builder(requireContext())
+        val view = LayoutInflater.from(context).inflate(R.layout.dialog_generic_confirmation, null)
+        builder.setView(view)
+        val dialog = builder.create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+
+        val tvTitle = view.findViewById<TextView>(R.id.tvDialogTitle)
+        val tvMessage = view.findViewById<TextView>(R.id.tvDialogMessage)
+        val btnYes = view.findViewById<Button>(R.id.btnDialogYes)
+        val btnNo = view.findViewById<TextView>(R.id.btnDialogNo)
+
+
+        tvTitle.text = "CLEAR ALL?"
+        tvMessage.text = "This will delete all your notifications permanently."
+
+
+        btnYes.setOnClickListener {
+            dbHelper.deleteAllNotifications(currentUser) { success ->
+                if (success) {
+                    Toast.makeText(context, "Notifications cleared", Toast.LENGTH_SHORT).show()
+                    loadNotifications()
+                }
+            }
+            dialog.dismiss()
+        }
+        btnNo.setOnClickListener { dialog.dismiss() }
+
+
+        dialog.show()
+    }
+
+
+    private fun loadNotifications() {
+        dbHelper.getUserNotifications(currentUser) { notifications ->
+            notificationList.clear()
+            notificationList.addAll(notifications.sortedByDescending { it.id })
+            adapter.updateList(notificationList)
+
+
+            if (notificationList.isEmpty()) {
+                layoutEmptyNotifs.visibility = View.VISIBLE
+                recyclerView.visibility = View.GONE
+            } else {
+                layoutEmptyNotifs.visibility = View.GONE
+                recyclerView.visibility = View.VISIBLE
+            }
+        }
+    }
+
+
+    private fun acceptInvite(notif: NotificationItem) {
+        val groupId = notif.relatedId
+        if (groupId != -1) {
+            dbHelper.isUserInGroup(groupId, currentUser) { exists ->
+                if (exists) {
+                    Toast.makeText(context, "Already in group", Toast.LENGTH_SHORT).show()
+                    // Silently delete or show separate confirmation? Usually silent clean up is fine here.
+                    dbHelper.deleteNotification(notif.id) { loadNotifications() }
                 } else {
-                    recyclerView.visibility = View.VISIBLE
-                    layoutEmpty.visibility = View.GONE
-
-                    // Sort: Newest first
-                    finalList.sortByDescending { it.id }
-
-                    adapter.updateList(finalList)
+                    dbHelper.addMemberToGroup(groupId, currentUser) { success ->
+                        if (success) {
+                            Toast.makeText(context, "Joined Group: ${notif.groupName}", Toast.LENGTH_SHORT).show()
+                            // Automatically delete after accept
+                            dbHelper.deleteNotification(notif.id) { loadNotifications() }
+                        } else {
+                            Toast.makeText(context, "Failed to join", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 }
             }
         }
     }
 }
+
+
+

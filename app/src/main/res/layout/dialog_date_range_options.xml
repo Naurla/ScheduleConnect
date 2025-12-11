@@ -5,39 +5,39 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="20dp"
-    android:background="@drawable/bg_rounded_red"> <TextView
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:text="Filter Schedules"
-    android:textSize="20sp"
-    android:textStyle="bold"
-    android:textColor="@android:color/white"
-    android:layout_marginBottom="15dp"/>
+    android:background="@drawable/bg_rounded_white">
 
-    <Button
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Filter Schedules"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="#8B1A1A"
+        android:layout_marginBottom="15dp"/>
+
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btnModalStartDate"
-        style="@style/Widget.MaterialComponents.Button"
         android:layout_width="match_parent"
         android:layout_height="50dp"
-        android:text="Start Date"
-        android:textColor="#8B1A1A"
-        android:backgroundTint="@android:color/white"
+        android:text="START DATE"
+        android:textColor="@android:color/white"
+        app:backgroundTint="@color/color_red_button_state"
         app:cornerRadius="8dp"
         app:icon="@android:drawable/ic_menu_today"
-        app:iconTint="#8B1A1A"
+        app:iconTint="@android:color/white"
         android:layout_marginBottom="10dp"/>
 
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btnModalEndDate"
-        style="@style/Widget.MaterialComponents.Button"
         android:layout_width="match_parent"
         android:layout_height="50dp"
-        android:text="End Date"
-        android:textColor="#8B1A1A"
-        android:backgroundTint="@android:color/white"
+        android:text="END DATE"
+        android:textColor="@android:color/white"
+        app:backgroundTint="@color/color_red_button_state"
         app:cornerRadius="8dp"
         app:icon="@android:drawable/ic_menu_today"
-        app:iconTint="#8B1A1A"
+        app:iconTint="@android:color/white"
         android:layout_marginBottom="15dp"/>
 
     <Button
@@ -46,7 +46,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Clear Date Filter"
-        android:textColor="@android:color/white"
+        android:textColor="#8B1A1A"
         android:layout_gravity="center_horizontal"
         android:visibility="gone"/>
 
