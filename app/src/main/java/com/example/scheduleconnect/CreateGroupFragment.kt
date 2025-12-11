@@ -1,10 +1,13 @@
 package com.example.scheduleconnect
 
-import android.app.Activity
+
+import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
@@ -17,203 +20,358 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.cardview.widget.CardView
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import java.io.ByteArrayOutputStream
-import java.io.InputStream
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import java.util.UUID
+
 
 class CreateGroupFragment : Fragment() {
 
+
+    private lateinit var etGroupName: EditText
+    private lateinit var ivGroupImage: ImageView
+    private lateinit var btnUploadImage: Button
+    private lateinit var btnAddMembers: Button
+    private lateinit var rvSelectedMembers: RecyclerView
+    private lateinit var btnCreate: Button
+    private lateinit var btnBack: ImageView // Added this
     private lateinit var dbHelper: DatabaseHelper
-    private lateinit var recycler: RecyclerView
-    private lateinit var adapter: UserInviteAdapter
-    private lateinit var cardResults: CardView
-    private val selectedUsers = ArrayList<String>()
 
-    private lateinit var ivGroupPreview: ImageView
-    private var selectedBitmap: Bitmap? = null
 
-    // Class property to hold the user
-    private var currentUser: String = ""
+    private var imageBytes: ByteArray? = null
+    private val selectedMembers = ArrayList<String>()
+    private lateinit var selectedMembersAdapter: SelectedMembersAdapter
 
-    // Image Picker Launcher
-    private val imagePickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
-            val imageUri: Uri? = result.data?.data
-            if (imageUri != null) {
-                try {
-                    selectedBitmap = getResizedBitmap(imageUri)
-                    ivGroupPreview.setImageBitmap(selectedBitmap)
-                    ivGroupPreview.setPadding(0, 0, 0, 0)
-                    ivGroupPreview.imageTintList = null
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    Toast.makeText(requireContext(), "Error loading image", Toast.LENGTH_SHORT).show()
-                }
+
+    // Image Picker
+    private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK && result.data != null) {
+            val imageUri: Uri? = result.data!!.data
+            try {
+                val bitmap = MediaStore.Images.Media.getBitmap(requireActivity().contentResolver, imageUri)
+                ivGroupImage.setImageBitmap(bitmap)
+                ivGroupImage.setBackgroundColor(Color.TRANSPARENT)
+                ivGroupImage.setPadding(0, 0, 0, 0)
+                ivGroupImage.imageTintList = null
+
+
+                val stream = ByteArrayOutputStream()
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+                imageBytes = stream.toByteArray()
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }
+
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.fragment_create_group, container, false)
         dbHelper = DatabaseHelper(requireContext())
 
-        // UI References
-        val etGroupName = view.findViewById<EditText>(R.id.etGroupName)
-        val etSearch = view.findViewById<EditText>(R.id.etAddPeople)
-        val btnCreate = view.findViewById<Button>(R.id.btnFinalizeCreate)
-        val btnBack = view.findViewById<ImageView>(R.id.btnBackCreate)
 
-        // Image Selection
-        val btnSelectImg = view.findViewById<Button>(R.id.btnSelectGroupImage)
-        ivGroupPreview = view.findViewById(R.id.ivGroupImagePreview)
+        etGroupName = view.findViewById(R.id.etGroupName)
+        ivGroupImage = view.findViewById(R.id.ivGroupImage)
+        btnUploadImage = view.findViewById(R.id.btnUploadGroupImage)
+        btnAddMembers = view.findViewById(R.id.btnAddGroupMembers)
+        rvSelectedMembers = view.findViewById(R.id.recyclerSelectedMembers)
+        btnCreate = view.findViewById(R.id.btnCreateGroupAction)
+        btnBack = view.findViewById(R.id.btnBackCreate) // Initialize it
 
-        btnSelectImg.setOnClickListener {
-            try {
-                val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-                imagePickerLauncher.launch(intent)
-            } catch (e: Exception) {
-                Toast.makeText(requireContext(), "Cannot open gallery", Toast.LENGTH_SHORT).show()
-            }
+
+        // Setup Selected Members List (Horizontal)
+        rvSelectedMembers.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
+        selectedMembersAdapter = SelectedMembersAdapter(selectedMembers) { userToRemove ->
+            selectedMembers.remove(userToRemove)
+            selectedMembersAdapter.notifyDataSetChanged()
+        }
+        rvSelectedMembers.adapter = selectedMembersAdapter
+
+
+        btnUploadImage.setOnClickListener {
+            val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+            pickImageLauncher.launch(intent)
         }
 
-        recycler = view.findViewById(R.id.recyclerUserResults)
-        cardResults = view.findViewById(R.id.cardSearchResults)
 
-        recycler.layoutManager = LinearLayoutManager(context)
-        adapter = UserInviteAdapter(ArrayList()) { username ->
-            if (!selectedUsers.contains(username)) {
-                selectedUsers.add(username)
-                Toast.makeText(context, "$username added to invite list", Toast.LENGTH_SHORT).show()
-            }
+        btnAddMembers.setOnClickListener {
+            showAddMemberDialog()
         }
-        recycler.adapter = adapter
 
-        // --- FIX IS HERE: Use "USERNAME" to match MainActivity ---
-        val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
-        currentUser = sharedPref.getString("USERNAME", "default_user") ?: "default_user"
-
-        // Search Logic
-        etSearch.addTextChangedListener(object : TextWatcher {
-            override fun afterTextChanged(s: Editable?) {}
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                val query = s.toString().trim()
-                if (query.isNotEmpty()) {
-                    dbHelper.searchUsers(query, currentUser) { results ->
-                        if (results.isNotEmpty()) {
-                            adapter.updateList(results)
-                            cardResults.visibility = View.VISIBLE
-                        } else {
-                            cardResults.visibility = View.GONE
-                        }
-                    }
-                } else {
-                    adapter.updateList(ArrayList())
-                    cardResults.visibility = View.GONE
-                }
-            }
-        })
-
-        btnBack.setOnClickListener { parentFragmentManager.popBackStack() }
 
         btnCreate.setOnClickListener {
-            val groupName = etGroupName.text.toString().trim()
-
-            if (groupName.isEmpty()) {
-                etGroupName.error = "Group Name required"
-                return@setOnClickListener
-            }
-
-            val code = UUID.randomUUID().toString().substring(0, 6).uppercase()
-
-            var base64Image = ""
-            if (selectedBitmap != null) {
-                val stream = ByteArrayOutputStream()
-                selectedBitmap!!.compress(Bitmap.CompressFormat.JPEG, 50, stream)
-                val byteArrays = stream.toByteArray()
-                base64Image = Base64.encodeToString(byteArrays, Base64.DEFAULT)
-            }
-
-            btnCreate.isEnabled = false
-            btnCreate.text = "Creating..."
-
-            // Now 'currentUser' holds the correct username
-            dbHelper.createGroupWithBase64(groupName, code, currentUser, base64Image) { newGroupId ->
-                activity?.runOnUiThread {
-                    btnCreate.isEnabled = true
-                    btnCreate.text = "Create Group"
-
-                    if (newGroupId != -1) {
-                        val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-
-                        for (user in selectedUsers) {
-                            dbHelper.addMemberToGroup(newGroupId, user) { success ->
-                                if (success) {
-                                    // Send notification to invited user
-                                    dbHelper.addNotification(
-                                        user = user,
-                                        title = "Group Invitation",
-                                        msg = "You have been added to the group: $groupName",
-                                        date = currentDate,
-                                        relatedId = newGroupId,
-                                        type = "GROUP"
-                                    )
-                                }
-                            }
-                        }
-                        Toast.makeText(context, "Group Created! Code: $code", Toast.LENGTH_LONG).show()
-                        parentFragmentManager.popBackStack()
-                    } else {
-                        Toast.makeText(context, "Failed to create group. Check connection.", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            }
+            createGroup()
         }
+
+
+        // Fix for Back Button
+        btnBack.setOnClickListener {
+            parentFragmentManager.popBackStack()
+        }
+
 
         return view
     }
 
-    private fun getResizedBitmap(uri: Uri): Bitmap? {
-        var inputStream: InputStream? = null
-        try {
-            val options = BitmapFactory.Options()
-            options.inJustDecodeBounds = true
-            inputStream = requireContext().contentResolver.openInputStream(uri)
-            BitmapFactory.decodeStream(inputStream, null, options)
-            inputStream?.close()
 
-            val REQUIRED_SIZE = 300
-            var width_tmp = options.outWidth
-            var height_tmp = options.outHeight
-            var scale = 1
-            while (true) {
-                if (width_tmp / 2 < REQUIRED_SIZE || height_tmp / 2 < REQUIRED_SIZE) break
-                width_tmp /= 2
-                height_tmp /= 2
-                scale *= 2
+    private fun createGroup() {
+        val groupName = etGroupName.text.toString().trim()
+        if (groupName.isEmpty()) {
+            Toast.makeText(context, "Please enter a group name", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+
+        val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
+        val creator = sharedPref.getString("USERNAME", "default_user") ?: "default_user"
+
+
+        val code = UUID.randomUUID().toString().substring(0, 6).uppercase()
+
+
+        dbHelper.createGroup(groupName, code, creator, imageBytes) { groupId ->
+            if (groupId != -1) {
+                if (selectedMembers.isNotEmpty()) {
+                    addMembersToGroup(groupId, 0)
+                } else {
+                    finishCreation()
+                }
+            } else {
+                Toast.makeText(context, "Failed to create group", Toast.LENGTH_SHORT).show()
             }
-
-            val o2 = BitmapFactory.Options()
-            o2.inSampleSize = scale
-            inputStream = requireContext().contentResolver.openInputStream(uri)
-            val scaledBitmap = BitmapFactory.decodeStream(inputStream, null, o2)
-            return scaledBitmap
-
-        } catch (e: Exception) {
-            e.printStackTrace()
-            return null
-        } finally {
-            inputStream?.close()
         }
     }
+
+
+    private fun addMembersToGroup(groupId: Int, index: Int) {
+        if (index >= selectedMembers.size) {
+            finishCreation()
+            return
+        }
+        val member = selectedMembers[index]
+        dbHelper.addMemberToGroup(groupId, member) {
+            addMembersToGroup(groupId, index + 1)
+        }
+    }
+
+
+    private fun finishCreation() {
+        Toast.makeText(context, "Group Created Successfully!", Toast.LENGTH_SHORT).show()
+        parentFragmentManager.popBackStack()
+    }
+
+
+    // ==========================================
+    //  SEARCH DIALOG
+    // ==========================================
+    private fun showAddMemberDialog() {
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_invite_member, null)
+        val builder = AlertDialog.Builder(requireContext())
+        builder.setView(dialogView)
+        val dialog = builder.create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+
+        val etSearch = dialogView.findViewById<EditText>(R.id.etSearchUser)
+        val btnClose = dialogView.findViewById<Button>(R.id.btnCloseInvite)
+        val recyclerView = dialogView.findViewById<RecyclerView>(R.id.recyclerInviteResults)
+        val tvNoResults = dialogView.findViewById<TextView>(R.id.tvNoResults)
+
+
+        // If you are using the old XML for dialog, hide the button.
+        // If you are using the NEW XML (Step 8), this line is safe to remove or keep in try-catch/null check.
+
+
+
+
+        recyclerView.layoutManager = LinearLayoutManager(context)
+
+
+        val searchAdapter = UserSearchAdapter(ArrayList()) { userToAdd ->
+            if (!selectedMembers.contains(userToAdd)) {
+                selectedMembers.add(userToAdd)
+                selectedMembersAdapter.notifyDataSetChanged()
+                Toast.makeText(context, "Added $userToAdd", Toast.LENGTH_SHORT).show()
+            }
+            dialog.dismiss()
+        }
+        recyclerView.adapter = searchAdapter
+
+
+        val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
+        val currentUser = sharedPref.getString("USERNAME", "") ?: ""
+
+
+        etSearch.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
+
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                val query = s.toString().trim()
+                if (query.isNotEmpty()) {
+                    dbHelper.searchUsers(query, currentUser) { users ->
+                        if (users.isEmpty()) {
+                            tvNoResults.visibility = View.VISIBLE
+                            recyclerView.visibility = View.GONE
+                        } else {
+                            tvNoResults.visibility = View.GONE
+                            recyclerView.visibility = View.VISIBLE
+                            searchAdapter.updateList(users)
+                        }
+                    }
+                } else {
+                    searchAdapter.updateList(ArrayList())
+                    recyclerView.visibility = View.GONE
+                }
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+
+
+        btnClose.setOnClickListener { dialog.dismiss() }
+        dialog.show()
+    }
+
+
+    // ==========================================
+    //  ADAPTER 1: SEARCH RESULTS
+    // ==========================================
+    inner class UserSearchAdapter(
+        private var userList: ArrayList<String>,
+        private val onUserClick: (String) -> Unit
+    ) : RecyclerView.Adapter<UserSearchAdapter.ViewHolder>() {
+
+
+        inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+            val tvName: TextView = view.findViewById(R.id.tvInviteName)
+            val tvUsername: TextView = view.findViewById(R.id.tvInviteUsername)
+            val ivAvatar: ImageView = view.findViewById(R.id.ivInviteAvatar)
+            val btnAction: Button = view.findViewById(R.id.btnSendInvite)
+        }
+
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+            val v = LayoutInflater.from(parent.context).inflate(R.layout.item_invite_user, parent, false)
+            return ViewHolder(v)
+        }
+
+
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            val username = userList[position]
+            holder.tvUsername.text = "@$username"
+            holder.tvName.text = username
+
+
+            holder.ivAvatar.setImageResource(R.drawable.ic_person)
+            holder.ivAvatar.setColorFilter(Color.GRAY)
+            holder.ivAvatar.imageTintList = null
+
+
+            if (selectedMembers.contains(username)) {
+                holder.btnAction.text = "ADDED"
+                holder.btnAction.isEnabled = false
+                holder.btnAction.setBackgroundColor(Color.GRAY)
+            } else {
+                holder.btnAction.text = "ADD"
+                holder.btnAction.isEnabled = true
+                holder.btnAction.setBackgroundColor(Color.parseColor("#8B1A1A"))
+            }
+
+
+            holder.btnAction.setOnClickListener {
+                onUserClick(username)
+                notifyItemChanged(position)
+            }
+
+
+            dbHelper.getUserDetails(username) { user ->
+                if (user != null) {
+                    if (user.firstName.isNotEmpty()) holder.tvName.text = user.firstName
+
+
+                    if (user.profileImageUrl.isNotEmpty()) {
+                        try {
+                            val decodedString = Base64.decode(user.profileImageUrl, Base64.DEFAULT)
+                            val decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
+                            if (decodedByte != null) {
+                                holder.ivAvatar.setImageBitmap(decodedByte)
+                                holder.ivAvatar.colorFilter = null
+                            }
+                        } catch (e: Exception) {}
+                    }
+                }
+            }
+        }
+
+
+        override fun getItemCount(): Int = userList.size
+
+
+        fun updateList(newList: ArrayList<String>) {
+            userList = newList
+            notifyDataSetChanged()
+        }
+    }
+
+
+    // ==========================================
+    //  ADAPTER 2: SELECTED MEMBERS
+    // ==========================================
+    inner class SelectedMembersAdapter(
+        private val members: ArrayList<String>,
+        private val onRemoveClick: (String) -> Unit
+    ) : RecyclerView.Adapter<SelectedMembersAdapter.ViewHolder>() {
+
+
+        inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+            val tvUsername: TextView = view.findViewById(R.id.tvAttendeeName)
+            val btnRemove: ImageView = view.findViewById(R.id.btnKickMember)
+            val ivAvatar: ImageView = view.findViewById(R.id.ivAttendeeAvatar)
+            val tvStatus: TextView = view.findViewById(R.id.tvAttendeeStatus)
+        }
+
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+            val v = LayoutInflater.from(parent.context).inflate(R.layout.item_attendee, parent, false)
+            return ViewHolder(v)
+        }
+
+
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            val username = members[position]
+            holder.tvUsername.text = username
+            holder.tvStatus.visibility = View.GONE
+            holder.btnRemove.visibility = View.VISIBLE
+            holder.btnRemove.setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
+            holder.btnRemove.setOnClickListener { onRemoveClick(username) }
+
+
+            holder.ivAvatar.setImageResource(R.drawable.ic_person)
+            holder.ivAvatar.setColorFilter(Color.GRAY)
+            holder.ivAvatar.imageTintList = null
+
+
+            dbHelper.getProfilePictureUrl(username) { url ->
+                if (url.isNotEmpty()) {
+                    try {
+                        val decodedString = Base64.decode(url, Base64.DEFAULT)
+                        val decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
+                        if (decodedByte != null) {
+                            holder.ivAvatar.setImageBitmap(decodedByte)
+                            holder.ivAvatar.colorFilter = null
+                        }
+                    } catch (e: Exception) {}
+                }
+            }
+        }
+
+
+        override fun getItemCount(): Int = members.size
+    }
 }
+

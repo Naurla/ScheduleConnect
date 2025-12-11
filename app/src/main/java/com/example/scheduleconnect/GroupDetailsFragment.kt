@@ -6,6 +6,8 @@ import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.util.Base64
 import android.view.LayoutInflater
 import android.view.View
@@ -258,6 +260,11 @@ class GroupDetailsFragment : Fragment() {
                             holder.btnKick.visibility = View.GONE
                         }
 
+                        // --- FIX: Reset Image Default State to prevent recycling issues ---
+                        holder.ivAvatar.setImageResource(R.drawable.ic_person)
+                        holder.ivAvatar.setColorFilter(Color.GRAY)
+                        holder.ivAvatar.imageTintList = null
+
                         dbHelper.getProfilePictureUrl(memberName) { url ->
                             if (url.isNotEmpty()) {
                                 try {
@@ -267,12 +274,8 @@ class GroupDetailsFragment : Fragment() {
                                     holder.ivAvatar.imageTintList = null
                                     holder.ivAvatar.colorFilter = null
                                 } catch (e: Exception) {
-                                    holder.ivAvatar.setImageResource(R.drawable.ic_person)
-                                    holder.ivAvatar.setColorFilter(Color.GRAY)
+                                    // already reset
                                 }
-                            } else {
-                                holder.ivAvatar.setImageResource(R.drawable.ic_person)
-                                holder.ivAvatar.setColorFilter(Color.GRAY)
                             }
                         }
                     }
@@ -323,36 +326,53 @@ class GroupDetailsFragment : Fragment() {
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
 
         val etSearch = dialogView.findViewById<EditText>(R.id.etSearchUser)
-        val btnSearch = dialogView.findViewById<ImageView>(R.id.btnSearchTrigger)
+        // --- FIX: Removed btnSearchTrigger reference causing error ---
+
         val btnClose = dialogView.findViewById<Button>(R.id.btnCloseInvite)
         val recyclerView = dialogView.findViewById<RecyclerView>(R.id.recyclerInviteResults)
         val tvNoResults = dialogView.findViewById<TextView>(R.id.tvNoResults)
 
         recyclerView.layoutManager = LinearLayoutManager(context)
 
-        fun performSearch() {
-            val query = etSearch.text.toString().trim()
-            if (query.isNotEmpty()) {
-                dbHelper.searchUsers(query, currentUser) { users ->
+        // Empty list initially
+        val inviteAdapter = InviteAdapter(ArrayList()) { selectedUser ->
+            sendInvite(selectedUser)
+            dialog.dismiss()
+        }
+        recyclerView.adapter = inviteAdapter
+
+        fun performSearch(query: String) {
+            val searchText = query.trim()
+            if (searchText.isNotEmpty()) {
+                dbHelper.searchUsers(searchText, currentUser) { users ->
                     if (users.isEmpty()) {
                         tvNoResults.visibility = View.VISIBLE
                         recyclerView.visibility = View.GONE
                     } else {
                         tvNoResults.visibility = View.GONE
                         recyclerView.visibility = View.VISIBLE
-                        // Load adapter with results
-                        recyclerView.adapter = InviteAdapter(users) { selectedUser ->
-                            sendInvite(selectedUser)
-                            dialog.dismiss()
-                        }
+                        // Update the existing adapter instead of creating a new one
+                        inviteAdapter.updateList(users)
                     }
                 }
+            } else {
+                // Clear list if text is empty
+                inviteAdapter.updateList(ArrayList())
+                recyclerView.visibility = View.GONE
+                tvNoResults.visibility = View.GONE
             }
         }
 
-        btnSearch.setOnClickListener {
-            performSearch()
-        }
+        // --- REAL-TIME SEARCH WATCHER ---
+        etSearch.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                performSearch(s.toString())
+            }
+
+            override fun afterTextChanged(s: Editable?) {}
+        })
 
         btnClose.setOnClickListener {
             dialog.dismiss()
@@ -377,7 +397,7 @@ class GroupDetailsFragment : Fragment() {
 
     // --- INNER ADAPTER FOR INVITE RESULTS ---
     inner class InviteAdapter(
-        private val usernames: ArrayList<String>,
+        private var usernames: ArrayList<String>,
         private val onInviteClick: (String) -> Unit
     ) : RecyclerView.Adapter<InviteAdapter.ViewHolder>() {
 
@@ -396,8 +416,9 @@ class GroupDetailsFragment : Fragment() {
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             val username = usernames[position]
             holder.tvUsername.text = "@$username"
-            holder.tvName.text = username // Default to username until loaded
+            holder.tvName.text = username
 
+            // --- FIX: Reset Image Default State ---
             holder.ivAvatar.setImageResource(R.drawable.ic_person)
             holder.ivAvatar.setColorFilter(Color.GRAY)
             holder.ivAvatar.imageTintList = null
@@ -427,6 +448,11 @@ class GroupDetailsFragment : Fragment() {
         }
 
         override fun getItemCount(): Int = usernames.size
+
+        fun updateList(newList: ArrayList<String>) {
+            usernames = newList
+            notifyDataSetChanged()
+        }
     }
     // --- UPDATED INVITE LOGIC END ---
 

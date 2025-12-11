@@ -1,5 +1,6 @@
 package com.example.scheduleconnect
 
+
 import android.content.Context
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
@@ -8,7 +9,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+
 // --- Data Classes ---
+
 
 data class UserDataModel(
     val username: String = "",
@@ -21,6 +24,7 @@ data class UserDataModel(
     val phone: String = "",
     val profileImageUrl: String = ""
 )
+
 
 data class Schedule(
     val id: Int = 0,
@@ -35,6 +39,7 @@ data class Schedule(
     val status: String = "ACTIVE"
 )
 
+
 data class GroupInfo(
     val id: Int = 0,
     val name: String = "",
@@ -43,6 +48,7 @@ data class GroupInfo(
     val creator: String = "",
     val nickname: String = ""
 )
+
 
 // --- SYNCED: Includes groupCode AND groupName ---
 data class NotificationItem(
@@ -58,19 +64,24 @@ data class NotificationItem(
     var groupName: String = "Unknown"
 )
 
+
 data class ChatMessage(
     val sender: String = "",
     val message: String = ""
 )
 
+
 class DatabaseHelper(context: Context) {
+
 
     private val db = FirebaseFirestore.getInstance()
     private val storage = FirebaseStorage.getInstance()
 
+
     // ==========================================
     // USER METHODS
     // ==========================================
+
 
     fun checkUser(input: String, password: String, callback: (Boolean) -> Unit) {
         db.collection("users")
@@ -84,6 +95,7 @@ class DatabaseHelper(context: Context) {
             .addOnFailureListener { callback(false) }
     }
 
+
     private fun checkEmailUser(email: String, password: String, callback: (Boolean) -> Unit) {
         db.collection("users")
             .whereEqualTo("email", email)
@@ -93,12 +105,14 @@ class DatabaseHelper(context: Context) {
             .addOnFailureListener { callback(false) }
     }
 
+
     fun checkUsernameOrEmail(input: String, callback: (Boolean) -> Unit) {
         db.collection("users").whereEqualTo("username", input).get().addOnSuccessListener {
             if (!it.isEmpty) callback(true)
             else db.collection("users").whereEqualTo("email", input).get().addOnSuccessListener { d -> callback(!d.isEmpty) }
         }
     }
+
 
     fun addUser(fName: String, mName: String, lName: String, gender: String, dob: String, email: String, phone: String, user: String, pass: String, callback: (Boolean) -> Unit) {
         val userData = hashMapOf(
@@ -111,6 +125,7 @@ class DatabaseHelper(context: Context) {
             .addOnFailureListener { callback(false) }
     }
 
+
     fun getUsernameFromInput(input: String, callback: (String?) -> Unit) {
         db.collection("users").document(input).get().addOnSuccessListener {
             if (it.exists()) callback(input)
@@ -119,6 +134,7 @@ class DatabaseHelper(context: Context) {
             }
         }
     }
+
 
     fun getUserDetails(username: String, callback: (UserDataModel?) -> Unit) {
         db.collection("users").document(username).get()
@@ -143,6 +159,7 @@ class DatabaseHelper(context: Context) {
             .addOnFailureListener { callback(null) }
     }
 
+
     fun updateUserInfo(username: String, fName: String, mName: String, lName: String, gender: String, dob: String, phone: String, email: String, callback: (Boolean) -> Unit) {
         val updates = hashMapOf<String, Any>(
             "first_name" to fName,
@@ -158,6 +175,7 @@ class DatabaseHelper(context: Context) {
             .addOnFailureListener { callback(false) }
     }
 
+
     fun updatePassword(identifier: String, newPass: String, isEmail: Boolean, callback: (Boolean) -> Unit) {
         val field = if (isEmail) "email" else "phone"
         db.collection("users").whereEqualTo(field, identifier).get().addOnSuccessListener {
@@ -170,30 +188,50 @@ class DatabaseHelper(context: Context) {
         }
     }
 
+
     fun checkEmail(email: String, callback: (Boolean) -> Unit) {
         db.collection("users").whereEqualTo("email", email).get().addOnSuccessListener { callback(!it.isEmpty) }
     }
+
 
     fun checkPhone(phone: String, callback: (Boolean) -> Unit) {
         db.collection("users").whereEqualTo("phone", phone).get().addOnSuccessListener { callback(!it.isEmpty) }
     }
 
+
+    // --- SEARCH FUNCTION USED BY THE INVITE DIALOG ---
+    // This supports the "search as you type" feature.
     fun searchUsers(keyword: String, excludeUser: String, callback: (ArrayList<String>) -> Unit) {
+        // Optimization: If keyword is empty, return empty list immediately
+        if (keyword.isEmpty()) {
+            callback(ArrayList())
+            return
+        }
+
+
         db.collection("users").get().addOnSuccessListener { result ->
             val list = ArrayList<String>()
             for (doc in result) {
-                val user = doc.id
+                // Determine username from ID or field (safe fallback)
+                val user = doc.getString("username") ?: doc.id
+
+
+                // "contains" with ignoreCase=true handles "Starts With" logic effectively
                 if (user.contains(keyword, ignoreCase = true) && user != excludeUser) {
                     list.add(user)
                 }
             }
             callback(list)
+        }.addOnFailureListener {
+            callback(ArrayList())
         }
     }
+
 
     // ==========================================
     // IMAGE METHODS
     // ==========================================
+
 
     private fun uploadImage(path: String, data: ByteArray, onComplete: (String) -> Unit) {
         val ref = storage.reference.child(path)
@@ -203,11 +241,13 @@ class DatabaseHelper(context: Context) {
         }.addOnFailureListener { onComplete("") }
     }
 
+
     fun updateProfilePictureBase64(username: String, base64Image: String, callback: (Boolean) -> Unit) {
         db.collection("users").document(username).update("profile_image_url", base64Image)
             .addOnSuccessListener { callback(true) }
             .addOnFailureListener { callback(false) }
     }
+
 
     fun getProfilePictureUrl(username: String, callback: (String) -> Unit) {
         db.collection("users").document(username).get()
@@ -215,12 +255,15 @@ class DatabaseHelper(context: Context) {
             .addOnFailureListener { callback("") }
     }
 
+
     // ==========================================
     // SCHEDULE METHODS
     // ==========================================
 
+
     fun addSchedule(user: String, groupId: Int, title: String, date: String, loc: String, desc: String, type: String, imageBytes: ByteArray?, callback: (Boolean) -> Unit) {
         val id = System.currentTimeMillis().toInt()
+
 
         if (imageBytes != null) {
             uploadImage("schedules/$id.png", imageBytes) { url ->
@@ -231,10 +274,12 @@ class DatabaseHelper(context: Context) {
         }
     }
 
+
     fun addScheduleWithBase64(user: String, groupId: Int, title: String, date: String, loc: String, desc: String, type: String, base64Image: String, callback: (Boolean) -> Unit) {
         val id = System.currentTimeMillis().toInt()
         saveScheduleData(id, user, groupId, title, date, loc, desc, type, base64Image, callback)
     }
+
 
     private fun saveScheduleData(id: Int, user: String, groupId: Int, title: String, date: String, loc: String, desc: String, type: String, imageUrl: String, callback: (Boolean) -> Unit) {
         val sch = Schedule(id, user, groupId, title, date, loc, desc, type, imageUrl, "ACTIVE")
@@ -243,8 +288,10 @@ class DatabaseHelper(context: Context) {
             .addOnFailureListener { callback(false) }
     }
 
+
     fun getSchedules(user: String, type: String, callback: (ArrayList<Schedule>) -> Unit) {
         val list = ArrayList<Schedule>()
+
 
         if (type == "personal") {
             db.collection("schedules")
@@ -262,6 +309,7 @@ class DatabaseHelper(context: Context) {
                 val groupIds = groups.map { it.id }
                 if (groupIds.isEmpty()) { callback(list); return@getUserGroups }
 
+
                 db.collection("schedules")
                     .whereEqualTo("type", "shared")
                     .whereEqualTo("status", "ACTIVE")
@@ -276,6 +324,7 @@ class DatabaseHelper(context: Context) {
         }
     }
 
+
     fun getGroupSchedules(groupId: Int, callback: (ArrayList<Schedule>) -> Unit) {
         val list = ArrayList<Schedule>()
         db.collection("schedules")
@@ -289,14 +338,17 @@ class DatabaseHelper(context: Context) {
             .addOnFailureListener { callback(list) }
     }
 
+
     fun getSchedule(id: Int, callback: (Schedule?) -> Unit) {
         db.collection("schedules").document(id.toString()).get()
             .addOnSuccessListener { callback(it.toObject(Schedule::class.java)) }
             .addOnFailureListener { callback(null) }
     }
 
+
     fun updateScheduleDetails(id: Int, title: String, date: String, loc: String, desc: String, imageBytes: ByteArray?, callback: (Boolean) -> Unit) {
         val updates = hashMapOf<String, Any>("title" to title, "date" to date, "location" to loc, "description" to desc)
+
 
         if (imageBytes != null) {
             uploadImage("schedules/$id.png", imageBytes) { url ->
@@ -308,11 +360,13 @@ class DatabaseHelper(context: Context) {
         }
     }
 
+
     private fun performUpdate(id: Int, updates: Map<String, Any>, callback: (Boolean) -> Unit) {
         db.collection("schedules").document(id.toString()).update(updates)
             .addOnSuccessListener { callback(true) }
             .addOnFailureListener { callback(false) }
     }
+
 
     fun updateScheduleStatus(id: Int, status: String, callback: (Boolean) -> Unit) {
         db.collection("schedules").document(id.toString()).update("status", status)
@@ -320,15 +374,18 @@ class DatabaseHelper(context: Context) {
             .addOnFailureListener { callback(false) }
     }
 
+
     fun deleteSchedule(id: Int, callback: (Boolean) -> Unit) {
         db.collection("schedules").document(id.toString()).delete()
             .addOnSuccessListener { callback(true) }
             .addOnFailureListener { callback(false) }
     }
 
+
     fun getHistorySchedules(user: String, callback: (ArrayList<Schedule>) -> Unit) {
         val historyList = ArrayList<Schedule>()
-        val addedIds = HashSet<Int>() // --- FIX: Track IDs to prevent duplicates ---
+        val addedIds = HashSet<Int>()
+
 
         // 1. Get Schedules Created by YOU (Personal OR Shared)
         db.collection("schedules")
@@ -339,12 +396,14 @@ class DatabaseHelper(context: Context) {
                 for (d in personalSnap) {
                     val sch = d.toObject(Schedule::class.java)
                     historyList.add(sch)
-                    addedIds.add(sch.id) // Mark ID as added
+                    addedIds.add(sch.id)
                 }
+
 
                 // 2. Get Schedules from Groups you are in (Shared)
                 getUserGroups(user) { groups ->
                     val groupIds = groups.map { it.id }
+
 
                     if (groupIds.isEmpty()) {
                         callback(historyList)
@@ -358,7 +417,7 @@ class DatabaseHelper(context: Context) {
                                 for (d in sharedSnap) {
                                     val sch = d.toObject(Schedule::class.java)
 
-                                    // --- FIX: Only add if NOT already in the list ---
+
                                     if (!addedIds.contains(sch.id)) {
                                         historyList.add(sch)
                                         addedIds.add(sch.id)
@@ -377,12 +436,15 @@ class DatabaseHelper(context: Context) {
             }
     }
 
+
     // ==========================================
     // GROUP METHODS
     // ==========================================
 
+
     fun createGroup(name: String, code: String, creator: String, imageBytes: ByteArray?, callback: (Int) -> Unit) {
         val id = System.currentTimeMillis().toInt()
+
 
         if (imageBytes != null) {
             uploadImage("groups/$id.png", imageBytes) { url ->
@@ -393,10 +455,12 @@ class DatabaseHelper(context: Context) {
         }
     }
 
+
     fun createGroupWithBase64(name: String, code: String, creator: String, base64Image: String, callback: (Int) -> Unit) {
         val id = System.currentTimeMillis().toInt()
         saveGroupData(id, name, code, base64Image, creator, callback)
     }
+
 
     private fun saveGroupData(id: Int, name: String, code: String, imageUrl: String, creator: String, callback: (Int) -> Unit) {
         val group = GroupInfo(id, name, code, imageUrl, creator)
@@ -405,9 +469,11 @@ class DatabaseHelper(context: Context) {
         }.addOnFailureListener { callback(-1) }
     }
 
+
     fun createGroupGetId(name: String, code: String, creator: String, imageBytes: ByteArray?): Int {
         return -1
     }
+
 
     fun addMemberToGroup(groupId: Int, username: String, callback: (Boolean) -> Unit) {
         val member = hashMapOf("group_id" to groupId, "username" to username)
@@ -415,6 +481,7 @@ class DatabaseHelper(context: Context) {
             .addOnSuccessListener { callback(true) }
             .addOnFailureListener { callback(false) }
     }
+
 
     fun getGroupIdByCode(code: String, callback: (Int) -> Unit) {
         db.collection("groups").whereEqualTo("code", code).get().addOnSuccessListener {
@@ -425,11 +492,13 @@ class DatabaseHelper(context: Context) {
         }
     }
 
+
     fun getGroupDetails(groupId: Int, callback: (GroupInfo?) -> Unit) {
         db.collection("groups").document(groupId.toString()).get()
             .addOnSuccessListener { callback(it.toObject(GroupInfo::class.java)) }
             .addOnFailureListener { callback(null) }
     }
+
 
     fun isUserInGroup(groupId: Int, username: String, callback: (Boolean) -> Unit) {
         db.collection("group_members")
@@ -439,10 +508,12 @@ class DatabaseHelper(context: Context) {
             .addOnSuccessListener { callback(!it.isEmpty) }
     }
 
+
     fun getUserGroups(user: String, callback: (ArrayList<GroupInfo>) -> Unit) {
         db.collection("group_members").whereEqualTo("username", user).get().addOnSuccessListener { members ->
             val ids = members.documents.mapNotNull { it.getLong("group_id")?.toInt() }
             if (ids.isEmpty()) { callback(ArrayList()); return@addOnSuccessListener }
+
 
             val groups = ArrayList<GroupInfo>()
             var count = 0
@@ -462,6 +533,7 @@ class DatabaseHelper(context: Context) {
         }.addOnFailureListener { callback(ArrayList()) }
     }
 
+
     fun getGroupCreator(groupId: Int, callback: (String) -> Unit) {
         db.collection("groups").document(groupId.toString()).get()
             .addOnSuccessListener { document ->
@@ -475,6 +547,7 @@ class DatabaseHelper(context: Context) {
             .addOnFailureListener { callback("Unknown") }
     }
 
+
     fun getGroupMemberUsernames(groupId: Int, exclude: String, callback: (ArrayList<String>) -> Unit) {
         db.collection("group_members").whereEqualTo("group_id", groupId).get().addOnSuccessListener {
             val list = ArrayList<String>()
@@ -485,6 +558,7 @@ class DatabaseHelper(context: Context) {
             callback(list)
         }
     }
+
 
     fun leaveGroup(groupId: Int, username: String, callback: (Boolean) -> Unit) {
         db.collection("group_members")
@@ -497,19 +571,23 @@ class DatabaseHelper(context: Context) {
             }
     }
 
+
     fun deleteGroup(groupId: Int, callback: (Boolean) -> Unit) {
         db.collection("groups").document(groupId.toString()).delete().addOnSuccessListener { callback(true) }
     }
+
 
     fun updateGroupDetails(groupId: Int, nickname: String, base64Image: String, callback: (Boolean) -> Unit) {
         val updates = hashMapOf<String, Any>(
             "nickname" to nickname
         )
 
+
         // Only update the image if the user actually picked a new one
         if (base64Image.isNotEmpty()) {
             updates["imageUrl"] = base64Image
         }
+
 
         db.collection("groups").document(groupId.toString())
             .update(updates)
@@ -522,9 +600,11 @@ class DatabaseHelper(context: Context) {
             }
     }
 
+
     // ==========================================
     // NOTIFICATIONS & RSVP (SYNCED)
     // ==========================================
+
 
     fun addNotification(user: String, title: String, msg: String, date: String, relatedId: Int = -1, type: String = "GENERAL") {
         val id = System.currentTimeMillis().toInt()
@@ -532,7 +612,7 @@ class DatabaseHelper(context: Context) {
         db.collection("notifications").document(id.toString()).set(notif)
     }
 
-    // --- SYNCED: Fetch group code AND name for invites ---
+
     fun getUserNotifications(user: String, callback: (ArrayList<NotificationItem>) -> Unit) {
         db.collection("notifications")
             .whereEqualTo("username", user)
@@ -540,6 +620,7 @@ class DatabaseHelper(context: Context) {
             .addOnSuccessListener { res ->
                 val list = ArrayList<NotificationItem>()
                 val groupIdsToFetch = HashSet<Int>()
+
 
                 for (d in res) {
                     val item = d.toObject(NotificationItem::class.java)
@@ -550,6 +631,7 @@ class DatabaseHelper(context: Context) {
                     }
                 }
 
+
                 if (groupIdsToFetch.isEmpty()) {
                     callback(list)
                 } else {
@@ -557,6 +639,7 @@ class DatabaseHelper(context: Context) {
                     val total = groupIdsToFetch.size
                     val codeMap = HashMap<Int, String>()
                     val nameMap = HashMap<Int, String>()
+
 
                     for (gid in groupIdsToFetch) {
                         db.collection("groups").document(gid.toString()).get()
@@ -578,6 +661,7 @@ class DatabaseHelper(context: Context) {
             .addOnFailureListener { callback(ArrayList()) }
     }
 
+
     private fun checkCompletion(
         completed: Int,
         total: Int,
@@ -598,9 +682,11 @@ class DatabaseHelper(context: Context) {
         }
     }
 
+
     fun markNotificationRead(id: Int) {
         db.collection("notifications").document(id.toString()).update("read", true)
     }
+
 
     fun getUnreadNotificationCount(user: String, callback: (Int) -> Unit) {
         db.collection("notifications")
@@ -611,6 +697,7 @@ class DatabaseHelper(context: Context) {
             .addOnFailureListener { callback(0) }
     }
 
+
     // RSVP methods
     fun updateRSVP(schId: Int, user: String, status: Int) {
         val data = hashMapOf("scheduleId" to schId, "username" to user, "status" to status)
@@ -618,11 +705,13 @@ class DatabaseHelper(context: Context) {
         db.collection("rsvps").document(id).set(data)
     }
 
+
     fun getUserRSVPStatus(schId: Int, user: String, callback: (Int) -> Unit) {
         db.collection("rsvps").document("${schId}_${user}").get().addOnSuccessListener {
             callback(it.getLong("status")?.toInt() ?: 0)
         }
     }
+
 
     fun getScheduleAttendees(schId: Int, callback: (ArrayList<Map<String, String>>) -> Unit) {
         db.collection("rsvps").whereEqualTo("scheduleId", schId).get().addOnSuccessListener { res ->
@@ -637,11 +726,12 @@ class DatabaseHelper(context: Context) {
         }
     }
 
+
     // ==========================================
     // CHAT METHODS (FIREBASE)
     // ==========================================
 
-    // --- UPDATED: sendGroupMessage now handles Notifications ---
+
     fun sendGroupMessage(groupId: Int, groupName: String, sender: String, message: String) {
         // 1. Save the message to the Chat History
         val msgData = hashMapOf(
@@ -652,23 +742,20 @@ class DatabaseHelper(context: Context) {
         )
         db.collection("group_messages").add(msgData)
 
+
         // 2. Notify other group members
-        // We exclude the 'sender' so you don't get a notification for your own message
         getGroupMemberUsernames(groupId, sender) { members ->
             if (members.isNotEmpty()) {
                 val dateFormat = SimpleDateFormat("MMM dd, hh:mm a", Locale.getDefault())
                 val dateStr = dateFormat.format(Date())
 
-                // Base ID to ensure uniqueness in the loop
+
                 val baseId = System.currentTimeMillis().toInt()
 
-                members.forEachIndexed { index, memberUsername ->
-                    // Generate a unique ID for each notification
-                    val uniqueId = baseId + index
 
+                members.forEachIndexed { index, memberUsername ->
+                    val uniqueId = baseId + index
                     val title = "New Message: $groupName"
-                    // Create the notification item
-                    // type = "CHAT" so your UserNotificationsFragment knows to redirect to chat
                     val notif = NotificationItem(
                         id = uniqueId,
                         username = memberUsername,
@@ -678,15 +765,16 @@ class DatabaseHelper(context: Context) {
                         read = false,
                         relatedId = groupId,
                         type = "CHAT",
-                        groupName = groupName // Save name for easier display
+                        groupName = groupName
                     )
 
-                    // Save to Firestore 'notifications' collection
+
                     db.collection("notifications").document(uniqueId.toString()).set(notif)
                 }
             }
         }
     }
+
 
     fun getGroupMessages(groupId: Int, callback: (ArrayList<ChatMessage>) -> Unit) {
         db.collection("group_messages")
@@ -698,6 +786,7 @@ class DatabaseHelper(context: Context) {
                     return@addSnapshotListener
                 }
 
+
                 val list = ArrayList<ChatMessage>()
                 for (doc in value) {
                     val sender = doc.getString("sender") ?: ""
@@ -708,32 +797,29 @@ class DatabaseHelper(context: Context) {
             }
     }
 
-    // --- NEW: Get full details of all group members ---
+
     fun getGroupMembersDetails(groupId: Int, callback: (ArrayList<UserDataModel>) -> Unit) {
-        // 1. Get the list of usernames in the group
         getGroupMemberUsernames(groupId, "") { usernames ->
             if (usernames.isEmpty()) {
                 callback(ArrayList())
                 return@getGroupMemberUsernames
             }
 
+
             val userList = ArrayList<UserDataModel>()
             var loadedCount = 0
 
-            // 2. Fetch details for each username
+
             for (username in usernames) {
                 getUserDetails(username) { user ->
                     if (user != null) {
-                        // Found full profile, add it
                         userList.add(user)
                     } else {
-                        // --- FIX IS HERE ---
-                        // Profile not found? Create a temporary one so they still show up!
                         userList.add(UserDataModel(username = username))
                     }
 
+
                     loadedCount++
-                    // When all are processed, return the list
                     if (loadedCount == usernames.size) {
                         callback(userList)
                     }
@@ -741,7 +827,7 @@ class DatabaseHelper(context: Context) {
             }
         }
     }
-    // Add these inside your DatabaseHelper class
+
 
     fun updateGroupName(groupId: Int, newName: String, callback: (Boolean) -> Unit) {
         db.collection("groups").document(groupId.toString())
@@ -750,6 +836,7 @@ class DatabaseHelper(context: Context) {
             .addOnFailureListener { callback(false) }
     }
 
+
     fun updateGroupImage(groupId: Int, base64Image: String, callback: (Boolean) -> Unit) {
         db.collection("groups").document(groupId.toString())
             .update("imageUrl", base64Image)
@@ -757,9 +844,8 @@ class DatabaseHelper(context: Context) {
             .addOnFailureListener { callback(false) }
     }
 
+
     fun updateMemberNickname(groupId: Int, username: String, nickname: String, callback: (Boolean) -> Unit) {
-        // Note: This assumes you want to change the user's nickname SPECIFICALLY for this group.
-        // If your 'group_members' collection supports a 'nickname' field, use this:
         db.collection("group_members")
             .whereEqualTo("group_id", groupId)
             .whereEqualTo("username", username)
@@ -777,7 +863,7 @@ class DatabaseHelper(context: Context) {
             }
             .addOnFailureListener { callback(false) }
     }
-    // Add this inside your DatabaseHelper class
+
 
     fun getGroupMembersWithNicknames(groupId: Int, callback: (List<Map<String, String>>) -> Unit) {
         db.collection("group_members")
@@ -789,8 +875,8 @@ class DatabaseHelper(context: Context) {
                     val username = doc.getString("username") ?: ""
                     val nickname = doc.getString("nickname") ?: ""
 
+
                     if (username.isNotEmpty()) {
-                        // Store both pieces of data
                         list.add(mapOf("username" to username, "nickname" to nickname))
                     }
                 }
@@ -798,7 +884,7 @@ class DatabaseHelper(context: Context) {
             }
             .addOnFailureListener { callback(emptyList()) }
     }
-    // Add this to your DatabaseHelper class
+
 
     fun getGroupMemberNickname(groupId: Int, username: String, callback: (String) -> Unit) {
         db.collection("group_members")
@@ -808,7 +894,6 @@ class DatabaseHelper(context: Context) {
             .addOnSuccessListener { documents ->
                 if (!documents.isEmpty) {
                     val nickname = documents.documents[0].getString("nickname") ?: ""
-                    // If nickname is empty, return "" so adapter can use username as fallback
                     callback(nickname)
                 } else {
                     callback("")
@@ -817,7 +902,4 @@ class DatabaseHelper(context: Context) {
             .addOnFailureListener { callback("") }
     }
 }
-
-
-
 

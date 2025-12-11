@@ -11,35 +11,37 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="24dp"
-        android:paddingBottom="100dp"> <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layout_marginBottom="20dp">
+        android:paddingBottom="100dp">
 
-        <ImageView
-            android:id="@+id/btnBackCreate"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:padding="8dp"
-            android:src="@android:drawable/ic_menu_revert"
-            app:tint="@color/app_red"
-            android:background="@drawable/circle_background"
-            android:clickable="true"
-            android:focusable="true"/>
-
-        <TextView
-            android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="CREATE GROUP"
-            android:textColor="@color/app_red"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:layout_marginEnd="40dp"/>
-    </LinearLayout>
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="20dp">
+
+            <ImageView
+                android:id="@+id/btnBackCreate"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:padding="8dp"
+                android:src="@android:drawable/ic_menu_revert"
+                app:tint="@color/app_red"
+                android:background="@drawable/circle_background"
+                android:clickable="true"
+                android:focusable="true"/>
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="CREATE GROUP"
+                android:textColor="@color/app_red"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:layout_marginEnd="40dp"/>
+        </LinearLayout>
 
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
@@ -107,14 +109,16 @@
                         android:padding="8dp">
 
                         <Button
-                            android:id="@+id/btnSelectGroupImage"
+                            android:id="@+id/btnUploadGroupImage"
                             style="@style/Widget.MaterialComponents.Button.TextButton"
-                            android:layout_width="wrap_content"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
                             android:layout_height="wrap_content"
                             android:text="Select Image"
                             android:textColor="@color/app_red"
                             android:textStyle="bold"
                             android:textSize="12sp"
+                            android:gravity="start|center_vertical"
                             android:layout_marginEnd="15dp"/>
 
                         <androidx.cardview.widget.CardView
@@ -124,7 +128,7 @@
                             app:cardElevation="0dp"
                             app:cardBackgroundColor="#F5F5F5">
                             <ImageView
-                                android:id="@+id/ivGroupImagePreview"
+                                android:id="@+id/ivGroupImage"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
                                 android:src="@android:drawable/ic_menu_gallery"
@@ -137,50 +141,39 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="ADD MEMBERS"
+                        android:text="GROUP MEMBERS"
                         android:textColor="@color/app_red"
                         android:textStyle="bold"
                         android:textSize="12sp"
                         android:layout_marginBottom="8dp"/>
 
-                    <EditText
-                        android:id="@+id/etAddPeople"
-                        android:layout_width="match_parent"
-                        android:layout_height="50dp"
-                        android:background="@drawable/rounded_edittext"
-                        android:hint="Search Username"
-                        android:paddingStart="15dp"
-                        android:paddingEnd="15dp"
-                        android:drawableStart="@android:drawable/ic_menu_search"
-                        android:drawableTint="@color/app_red"
-                        android:drawablePadding="12dp"
-                        android:textSize="14sp"
-                        android:layout_marginBottom="10dp"/>
-
-                    <androidx.cardview.widget.CardView
-                        android:id="@+id/cardSearchResults"
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/recyclerSelectedMembers"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        app:cardCornerRadius="12dp"
-                        app:cardBackgroundColor="#F5F5F5"
-                        app:cardElevation="0dp"
-                        android:visibility="gone"
-                        android:layout_marginBottom="20dp">
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="10dp"
+                        android:visibility="visible"/>
 
-                        <androidx.recyclerview.widget.RecyclerView
-                            android:id="@+id/recyclerUserResults"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:padding="10dp"
-                            android:clipToPadding="false"/>
-                    </androidx.cardview.widget.CardView>
+                    <Button
+                        android:id="@+id/btnAddGroupMembers"
+                        android:layout_width="match_parent"
+                        android:layout_height="50dp"
+                        android:backgroundTint="#F5F5F5"
+                        android:text="+ ADD MEMBERS"
+                        android:textColor="@color/app_red"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        app:cornerRadius="8dp"
+                        app:elevation="0dp"
+                        android:layout_marginBottom="20dp"/>
 
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="20dp"/>
 
                     <Button
-                        android:id="@+id/btnFinalizeCreate"
+                        android:id="@+id/btnCreateGroupAction"
                         android:layout_width="match_parent"
                         android:layout_height="60dp"
                         android:text="CREATE GROUP"
@@ -193,6 +186,5 @@
                 </LinearLayout>
             </LinearLayout>
         </androidx.cardview.widget.CardView>
-
     </LinearLayout>
 </ScrollView>

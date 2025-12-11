@@ -1,6 +1,10 @@
 package com.example.scheduleconnect
 
+import android.app.AlertDialog
 import android.app.DatePickerDialog
+import android.content.Context
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -9,6 +13,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
@@ -29,11 +34,10 @@ class HistoryFragment : Fragment() {
 
     // --- NEW: FILTERING VIEWS AND DATA ---
     private lateinit var etSearchHistory: EditText
-    private lateinit var btnStartDate: Button
-    private lateinit var btnEndDate: Button
-    private lateinit var btnClearFilters: Button
+    private lateinit var btnOpenDateFilter: ImageView // Header calendar icon
+    private lateinit var tvDateRangeSummary: TextView // Replaces subtitle for date summary
 
-    private var allSchedules: List<Schedule> = emptyList() // Holds the full, unsorted list
+    private var allSchedules: List<Schedule> = emptyList()
     private var startDate: Date? = null
     private var endDate: Date? = null
     private val scheduleDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
@@ -45,20 +49,19 @@ class HistoryFragment : Fragment() {
 
         dbHelper = DatabaseHelper(requireContext())
 
-        recyclerView = view.findViewById(R.id.recyclerHistory)
+        recyclerView = view.findViewById(R.id.recyclerHistory) // <-- Line of potential error resolved by ensuring correct file state
         layoutEmpty = view.findViewById(R.id.layoutEmptyHistory)
         tvEmpty = view.findViewById(R.id.tvEmptyHistory)
 
         // --- NEW: INITIALIZE FILTERING VIEWS ---
         etSearchHistory = view.findViewById(R.id.etSearchHistory)
-        btnStartDate = view.findViewById(R.id.btnStartDate)
-        btnEndDate = view.findViewById(R.id.btnEndDate)
-        btnClearFilters = view.findViewById(R.id.btnClearFilters)
+        btnOpenDateFilter = view.findViewById(R.id.btnOpenDateFilter)
+        tvDateRangeSummary = view.findViewById(R.id.tvDateRangeSummary)
 
         // --- NEW: SETUP LISTENERS ---
         setupSearchListener()
-        setupDateListeners()
-        btnClearFilters.setOnClickListener { clearFilters() }
+        setupDateFilterTrigger()
+        updateDateSummary()
         // --- END NEW ---
 
         recyclerView.layoutManager = LinearLayoutManager(context)
@@ -68,47 +71,90 @@ class HistoryFragment : Fragment() {
         return view
     }
 
-    // --- NEW: SEARCH LISTENER FUNCTION ---
-    private fun setupSearchListener() {
-        etSearchHistory.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-                updateClearButtonVisibility()
-                filterSchedules()
-            }
-            override fun afterTextChanged(s: Editable?) {}
-        })
+    private fun setupDateFilterTrigger() {
+        btnOpenDateFilter.setOnClickListener {
+            showDateRangeModal()
+        }
     }
 
-    // --- NEW: DATE LISTENER FUNCTION ---
-    private fun setupDateListeners() {
-        btnStartDate.setOnClickListener {
+    private fun updateDateSummary() {
+        tvDateRangeSummary.text = if (startDate != null || endDate != null) {
+            val startText = if (startDate != null) displayDateFormat.format(startDate!!) else "Start"
+            val endText = if (endDate != null) displayDateFormat.format(endDate!!) else "End"
+            "Filtering: $startText - $endText"
+        } else {
+            "Your past schedules."
+        }
+    }
+
+    // --- NEW: MODAL LOGIC ---
+    private fun showDateRangeModal() {
+        val builder = AlertDialog.Builder(requireContext())
+        val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_date_range_options, null)
+
+        val btnModalStartDate = dialogView.findViewById<Button>(R.id.btnModalStartDate)
+        val btnModalEndDate = dialogView.findViewById<Button>(R.id.btnModalEndDate)
+        val btnModalClearFilter = dialogView.findViewById<Button>(R.id.btnModalClearFilter)
+
+        // Update button text to reflect current selection
+        btnModalStartDate.text = startDate?.let { displayDateFormat.format(it) } ?: "Start Date"
+        btnModalEndDate.text = endDate?.let { displayDateFormat.format(it) } ?: "End Date"
+
+        // Show clear button if any filter is active
+        if (startDate != null || endDate != null) {
+            btnModalClearFilter.visibility = View.VISIBLE
+        } else {
+            btnModalClearFilter.visibility = View.GONE
+        }
+
+        builder.setView(dialogView)
+        val dialog = builder.create()
+        // Ensure you have bg_rounded_red.xml and dialog_date_range_options.xml in your resources
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+        // --- Click Handlers for the Modal Buttons ---
+
+        btnModalStartDate.setOnClickListener {
+            dialog.dismiss()
             showDatePicker(it) { date ->
                 startDate = date
-                btnStartDate.text = displayDateFormat.format(date)
-                updateClearButtonVisibility()
+                updateDateSummary()
                 filterSchedules()
             }
         }
-        btnEndDate.setOnClickListener {
+
+        btnModalEndDate.setOnClickListener {
+            dialog.dismiss()
             showDatePicker(it) { date ->
                 endDate = date
-                btnEndDate.text = displayDateFormat.format(date)
-                updateClearButtonVisibility()
+                updateDateSummary()
                 filterSchedules()
             }
         }
+
+        btnModalClearFilter.setOnClickListener {
+            clearDateFilters()
+            dialog.dismiss()
+        }
+
+        dialog.show()
     }
 
-    // --- NEW: DATE PICKER DIALOG FUNCTION ---
-    private fun showDatePicker(view: View, onDateSet: (Date) -> Unit) {
+    // --- MODIFIED: Date Picker Dialog (Called from Modal) ---
+    private fun showDatePicker(triggerView: View, onDateSet: (Date) -> Unit) {
         val calendar = Calendar.getInstance()
+
+        val initialDate = when (triggerView.id) {
+            R.id.btnModalStartDate -> startDate
+            R.id.btnModalEndDate -> endDate
+            else -> null
+        }
+        initialDate?.let { calendar.time = it }
 
         val datePickerDialog = DatePickerDialog(requireContext(), { _, year, month, day ->
             calendar.set(year, month, day)
 
-            // Set time to start (00:00:00) or end (23:59:59) of the selected day
-            if (view.id == R.id.btnStartDate) {
+            if (triggerView.id == R.id.btnModalStartDate) {
                 calendar.set(Calendar.HOUR_OF_DAY, 0)
                 calendar.set(Calendar.MINUTE, 0)
                 calendar.set(Calendar.SECOND, 0)
@@ -123,35 +169,48 @@ class HistoryFragment : Fragment() {
         datePickerDialog.show()
     }
 
-    // --- NEW: CORE FILTERING LOGIC FUNCTION ---
+    // --- NEW: CLEAR DATE FILTERS FUNCTION (Used by Modal) ---
+    private fun clearDateFilters() {
+        startDate = null
+        endDate = null
+        updateDateSummary()
+        filterSchedules()
+    }
+
+
+    // --- Other Fragment functions ---
+    private fun setupSearchListener() {
+        etSearchHistory.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
+                filterSchedules()
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+    }
+
     private fun filterSchedules() {
         val query = etSearchHistory.text.toString().trim().lowercase(Locale.getDefault())
 
         val filteredList = allSchedules.filter { schedule ->
-            // 1. Search Filter (Title/Creator)
             val matchesSearch = if (query.isEmpty()) true else
                 schedule.title.lowercase(Locale.getDefault()).contains(query) ||
                         schedule.creator.lowercase(Locale.getDefault()).contains(query)
 
-            // 2. Date Filter
             val matchesDate = try {
                 val scheduleDate = scheduleDateFormat.parse(schedule.date)
 
-                // Check if the schedule date is ON or AFTER the start date
                 val matchesStart = startDate == null || (scheduleDate != null && !scheduleDate.before(startDate))
-                // Check if the schedule date is ON or BEFORE the end date
                 val matchesEnd = endDate == null || (scheduleDate != null && !scheduleDate.after(endDate))
 
                 matchesStart && matchesEnd
             } catch (e: Exception) {
-                // If date parsing fails, exclude the schedule
                 false
             }
 
             matchesSearch && matchesDate
         }
 
-        // Update UI based on filtered results
         if (filteredList.isEmpty()) {
             recyclerView.visibility = View.GONE
             layoutEmpty.visibility = View.VISIBLE
@@ -163,35 +222,15 @@ class HistoryFragment : Fragment() {
         } else {
             recyclerView.visibility = View.VISIBLE
             layoutEmpty.visibility = View.GONE
-            // Use the adapter function to update the list
             adapter.updateList(filteredList.sortedByDescending { it.id })
         }
     }
 
-    // --- NEW: CLEAR FILTERS FUNCTION ---
-    private fun clearFilters() {
-        startDate = null
-        endDate = null
-        etSearchHistory.setText("") // This automatically triggers filterSchedules via the TextWatcher
-        btnStartDate.text = "START DATE"
-        btnEndDate.text = "END DATE"
-        btnClearFilters.visibility = View.GONE
-        filterSchedules() // Although setText() calls it, this is a safeguard
-    }
-
-    // --- NEW: UPDATE CLEAR BUTTON VISIBILITY ---
-    private fun updateClearButtonVisibility() {
-        val isFiltering = etSearchHistory.text.isNotEmpty() || startDate != null || endDate != null
-        btnClearFilters.visibility = if (isFiltering) View.VISIBLE else View.GONE
-    }
-
-    // --- MODIFIED loadHistory() ---
     private fun loadHistory() {
-        val sharedPref = requireActivity().getSharedPreferences("UserSession", android.content.Context.MODE_PRIVATE)
+        val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
         val currentUser = sharedPref.getString("USERNAME", "default_user") ?: "default_user"
 
         dbHelper.getHistorySchedules(currentUser) { historyList ->
-            // --- MODIFICATION: SAVE THE FULL LIST ---
             allSchedules = historyList.toList()
 
             if (historyList.isEmpty()) {
@@ -201,7 +240,6 @@ class HistoryFragment : Fragment() {
                 recyclerView.visibility = View.VISIBLE
                 layoutEmpty.visibility = View.GONE
 
-                // Initial load: sort and display the full list
                 val sortedList = historyList.sortedByDescending { it.id }
 
                 adapter = HistoryAdapter(sortedList)
@@ -237,17 +275,3 @@ class HistoryFragment : Fragment() {
             .commit()
     }
 }
-
-// NOTE: You must ensure your HistoryAdapter has this function:
-/*
-class HistoryAdapter(private var schedules: List<Schedule>) : RecyclerView.Adapter<HistoryAdapter.ViewHolder>() {
-    // ... existing adapter code ...
-
-    fun updateList(newSchedules: List<Schedule>) {
-        schedules = newSchedules
-        notifyDataSetChanged()
-    }
-
-    // ... existing adapter code ...
-}
-*/
