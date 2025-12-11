@@ -1,3 +1,5 @@
+// naurla/scheduleconnect/ScheduleConnect-d933d138b652259abca168f4bc1a767f9b2d92b8/app/src/main/java/com/example/scheduleconnect/ScheduleDetailFragment.kt
+
 package com.example.scheduleconnect
 
 import android.app.AlertDialog
@@ -61,7 +63,7 @@ class ScheduleDetailFragment : Fragment() {
 
         creator = arguments?.getString("SCH_CREATOR") ?: "Unknown"
         type = arguments?.getString("SCH_TYPE") ?: "shared"
-        isFromHistory = arguments?.getBoolean("IS_FROM_HISTORY", false) ?: false
+        isFromHistory = arguments?.getBoolean("IS_FROM_HISTORY", false) ?: false // Reads the initial state
 
         tvTitle = view.findViewById(R.id.tvDetailTitle)
         tvDate = view.findViewById(R.id.tvDetailDate)
@@ -172,6 +174,13 @@ class ScheduleDetailFragment : Fragment() {
                 groupId = schedule.groupId
                 type = schedule.type
 
+                // *** FIX IMPLEMENTED HERE: Check if the current status makes it a "history" item ***
+                // This ensures the flag is always correct when the fragment is resumed/updated.
+                if (currentStatus == "FINISHED" || currentStatus == "CANCELLED") {
+                    isFromHistory = true
+                }
+
+
                 if (schedule.imageUrl.isNotEmpty()) {
                     try {
                         val decodedString = Base64.decode(schedule.imageUrl, Base64.DEFAULT)
@@ -200,11 +209,14 @@ class ScheduleDetailFragment : Fragment() {
 
     private fun updateButtonsVisibility() {
         // --- 1. HANDLE HISTORY / FINISHED / CANCELLED STATE ---
+        // This addresses the first requirement: Shared schedule already in the past, hide RSVP.
         if (isFromHistory || currentStatus == "FINISHED" || currentStatus == "CANCELLED") {
             btnFinishSchedule.visibility = View.GONE
             btnCancelPersonal.visibility = View.GONE
             btnDelete.visibility = View.GONE
             btnEdit.visibility = View.GONE
+
+            // Hides the "WILL YOU ATTEND" prompt and the current status/change mind button
             layoutButtons.visibility = View.GONE
             layoutChangeMind.visibility = View.GONE
 
@@ -217,10 +229,12 @@ class ScheduleDetailFragment : Fragment() {
             return
         }
 
-        // --- 2. HANDLE PERSONAL SCHEDULES ---
+        // --- 2. HANDLE PERSONAL SCHEDULES (ACTIVE) ---
         if (type == "personal") {
             layoutButtons.visibility = View.GONE
             layoutChangeMind.visibility = View.GONE
+
+            // This addresses the second requirement: Personal schedule, hide "View Attendees".
             btnViewAttendees.visibility = View.GONE
 
             btnDelete.visibility = View.VISIBLE

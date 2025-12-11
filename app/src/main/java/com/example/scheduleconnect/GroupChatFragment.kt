@@ -52,7 +52,8 @@ class GroupChatFragment : Fragment() {
 
         tvGroupName.text = groupName
 
-        chatAdapter = ChatAdapter(requireContext(), chatList, currentUser)
+        // --- UPDATED: Passing groupId and dbHelper for Nickname support ---
+        chatAdapter = ChatAdapter(requireContext(), chatList, currentUser, groupId, dbHelper)
 
         recyclerChat.layoutManager = LinearLayoutManager(context)
         recyclerChat.adapter = chatAdapter
@@ -60,7 +61,8 @@ class GroupChatFragment : Fragment() {
         loadMessages()
 
         // Setup settings button logic
-        setupSettingsAccess()
+        btnSettings.visibility = View.VISIBLE
+        fetchGroupDetailsForSettings()
 
         btnBack.setOnClickListener { parentFragmentManager.popBackStack() }
 
@@ -73,11 +75,22 @@ class GroupChatFragment : Fragment() {
         return view
     }
 
-    private fun setupSettingsAccess() {
-        // UPDATED: Always show the settings button for everyone
-        btnSettings.visibility = View.VISIBLE
-        fetchGroupDetailsForSettings()
+    // --- FIX FOR KEYBOARD / NAVIGATION VISIBILITY ---
+    override fun onResume() {
+        super.onResume()
+        // Hide the Bottom Navigation and Main Header when chatting
+        // This prevents the keyboard from pushing the nav bar up
+        activity?.findViewById<View>(R.id.bottomNav)?.visibility = View.GONE
+        activity?.findViewById<View>(R.id.llHeader)?.visibility = View.GONE
     }
+
+    override fun onStop() {
+        super.onStop()
+        // Show them again when leaving the chat screen
+        activity?.findViewById<View>(R.id.bottomNav)?.visibility = View.VISIBLE
+        activity?.findViewById<View>(R.id.llHeader)?.visibility = View.VISIBLE
+    }
+    // -----------------------------------------------
 
     private fun fetchGroupDetailsForSettings() {
         dbHelper.getGroupDetails(groupId) { group ->

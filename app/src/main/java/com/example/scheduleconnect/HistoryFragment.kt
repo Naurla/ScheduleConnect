@@ -53,7 +53,7 @@ class HistoryFragment : Fragment() {
                 adapter = HistoryAdapter(historyList)
                 recyclerView.adapter = adapter
 
-                // --- FIX IS HERE: Handle the click event ---
+                // --- FIX: Handle the click event and pass the history flag ---
                 adapter.setOnItemClickListener { schedule ->
                     openScheduleDetails(schedule)
                 }
@@ -74,6 +74,9 @@ class HistoryFragment : Fragment() {
         bundle.putString("SCH_CREATOR", schedule.creator)
         bundle.putString("SCH_TYPE", schedule.type)
         bundle.putString("SCH_IMAGE", schedule.imageUrl) // Pass the image too!
+
+        // *** FIX IMPLEMENTED HERE: Ensure the detail fragment knows it's a history item ***
+        bundle.putBoolean("IS_FROM_HISTORY", true)
 
         fragment.arguments = bundle
 

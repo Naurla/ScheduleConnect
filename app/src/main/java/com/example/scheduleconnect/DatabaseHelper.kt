@@ -777,6 +777,47 @@ class DatabaseHelper(context: Context) {
             }
             .addOnFailureListener { callback(false) }
     }
+    // Add this inside your DatabaseHelper class
+
+    fun getGroupMembersWithNicknames(groupId: Int, callback: (List<Map<String, String>>) -> Unit) {
+        db.collection("group_members")
+            .whereEqualTo("group_id", groupId)
+            .get()
+            .addOnSuccessListener { documents ->
+                val list = ArrayList<Map<String, String>>()
+                for (doc in documents) {
+                    val username = doc.getString("username") ?: ""
+                    val nickname = doc.getString("nickname") ?: ""
+
+                    if (username.isNotEmpty()) {
+                        // Store both pieces of data
+                        list.add(mapOf("username" to username, "nickname" to nickname))
+                    }
+                }
+                callback(list)
+            }
+            .addOnFailureListener { callback(emptyList()) }
+    }
+    // Add this to your DatabaseHelper class
+
+    fun getGroupMemberNickname(groupId: Int, username: String, callback: (String) -> Unit) {
+        db.collection("group_members")
+            .whereEqualTo("group_id", groupId)
+            .whereEqualTo("username", username)
+            .get()
+            .addOnSuccessListener { documents ->
+                if (!documents.isEmpty) {
+                    val nickname = documents.documents[0].getString("nickname") ?: ""
+                    // If nickname is empty, return "" so adapter can use username as fallback
+                    callback(nickname)
+                } else {
+                    callback("")
+                }
+            }
+            .addOnFailureListener { callback("") }
+    }
 }
+
+
 
 

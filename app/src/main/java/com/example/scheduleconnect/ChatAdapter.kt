@@ -12,13 +12,16 @@ import androidx.cardview.widget.CardView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 
-// REMOVED: data class ChatMessage(...) because it is already in DatabaseHelper.kt
-
 class ChatAdapter(
     private val context: Context,
     private val messages: List<ChatMessage>,
-    private val currentUser: String
+    private val currentUser: String,
+    private val groupId: Int,
+    private val dbHelper: DatabaseHelper
 ) : RecyclerView.Adapter<ChatAdapter.ChatViewHolder>() {
+
+    // Cache to store fetched nicknames so we don't call DB for every message
+    private val nicknameCache = HashMap<String, String>()
 
     inner class ChatViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val layoutContainer: LinearLayout = view.findViewById(R.id.chatLayoutContainer)
@@ -34,9 +37,7 @@ class ChatAdapter(
 
     override fun onBindViewHolder(holder: ChatViewHolder, position: Int) {
         val msg = messages[position]
-
         holder.tvMessage.text = msg.message
-        holder.tvSender.text = msg.sender
 
         if (msg.sender == currentUser) {
             // My Message (Align Right, Red Color)
@@ -50,7 +51,27 @@ class ChatAdapter(
             holder.cardView.setCardBackgroundColor(Color.parseColor("#E0E0E0"))
             holder.tvMessage.setTextColor(Color.BLACK)
             holder.tvSender.visibility = View.VISIBLE
-            holder.tvSender.text = msg.sender
+
+            // --- NICKNAME LOGIC ---
+            // Check if we already have the nickname in cache
+            if (nicknameCache.containsKey(msg.sender)) {
+                val cachedName = nicknameCache[msg.sender]
+                holder.tvSender.text = if (cachedName.isNullOrEmpty()) msg.sender else cachedName
+            } else {
+                // Show username temporarily
+                holder.tvSender.text = msg.sender
+
+                // Fetch nickname from DB
+                dbHelper.getGroupMemberNickname(groupId, msg.sender) { nickname ->
+                    // Store in cache (even if empty, to avoid refetching)
+                    nicknameCache[msg.sender] = nickname
+
+                    // Update UI if nickname found
+                    if (nickname.isNotEmpty()) {
+                        holder.tvSender.text = nickname
+                    }
+                }
+            }
         }
     }
 

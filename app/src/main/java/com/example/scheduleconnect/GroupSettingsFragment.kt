@@ -61,7 +61,6 @@ class GroupSettingsFragment : Fragment() {
 
         groupId = arguments?.getInt("GROUP_ID") ?: -1
 
-        // Initialize Views from your new XML
         ivGroupImage = view.findViewById(R.id.ivSettingsGroupImage)
         tvGroupName = view.findViewById(R.id.tvSettingsGroupName)
         btnEditGroupName = view.findViewById(R.id.btnEditGroupName)
@@ -70,12 +69,11 @@ class GroupSettingsFragment : Fragment() {
         recyclerParticipants = view.findViewById(R.id.recyclerSettingsParticipants)
 
         recyclerParticipants.layoutManager = LinearLayoutManager(context)
-        recyclerParticipants.isNestedScrollingEnabled = false // Important for NestedScrollView
+        recyclerParticipants.isNestedScrollingEnabled = false
 
         btnBack.setOnClickListener { parentFragmentManager.popBackStack() }
         btnChangeImage.setOnClickListener { openGallery() }
 
-        // Click listener for Group Name Edit Icon
         btnEditGroupName.setOnClickListener {
             showEditGroupNameDialog()
         }
@@ -113,17 +111,19 @@ class GroupSettingsFragment : Fragment() {
     }
 
     private fun loadParticipants() {
-        dbHelper.getGroupMemberUsernames(groupId, "") { usernames ->
-            if (usernames.isEmpty()) {
-                // Optional: Handle empty state
+        // UPDATED: Now calls getGroupMembersWithNicknames instead of just usernames
+        dbHelper.getGroupMembersWithNicknames(groupId) { memberList ->
+            if (memberList.isEmpty()) {
+                // Optional handle empty
             }
-            recyclerParticipants.adapter = ParticipantsAdapter(usernames) { username ->
+            recyclerParticipants.adapter = ParticipantsAdapter(memberList) { username ->
                 showEditMemberNicknameDialog(username)
             }
         }
     }
 
-    // --- MODAL: Edit Group Name ---
+    // --- MODALS ---
+
     private fun showEditGroupNameDialog() {
         val builder = AlertDialog.Builder(requireContext())
         builder.setTitle("Edit Group Name")
@@ -132,12 +132,8 @@ class GroupSettingsFragment : Fragment() {
         input.setText(currentGroupName)
         input.setSelection(input.text.length)
 
-        // Add padding
         val container = android.widget.FrameLayout(requireContext())
-        val params = android.widget.FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        )
+        val params = android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         params.setMargins(50, 20, 50, 20)
         input.layoutParams = params
         container.addView(input)
@@ -150,7 +146,7 @@ class GroupSettingsFragment : Fragment() {
                 dbHelper.updateGroupName(groupId, newName) { success ->
                     if (success) {
                         Toast.makeText(context, "Group name updated", Toast.LENGTH_SHORT).show()
-                        loadGroupData() // Refresh UI
+                        loadGroupData()
                     } else {
                         Toast.makeText(context, "Failed to update name", Toast.LENGTH_SHORT).show()
                     }
@@ -161,7 +157,6 @@ class GroupSettingsFragment : Fragment() {
         builder.show()
     }
 
-    // --- MODAL: Edit Member Nickname ---
     private fun showEditMemberNicknameDialog(username: String) {
         val builder = AlertDialog.Builder(requireContext())
         builder.setTitle("Edit Nickname for $username")
@@ -170,10 +165,7 @@ class GroupSettingsFragment : Fragment() {
         input.hint = "Enter new nickname"
 
         val container = android.widget.FrameLayout(requireContext())
-        val params = android.widget.FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        )
+        val params = android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         params.setMargins(50, 20, 50, 20)
         input.layoutParams = params
         container.addView(input)
@@ -182,14 +174,13 @@ class GroupSettingsFragment : Fragment() {
 
         builder.setPositiveButton("Save") { _, _ ->
             val newNickname = input.text.toString().trim()
-            if (newNickname.isNotEmpty()) {
-                dbHelper.updateMemberNickname(groupId, username, newNickname) { success ->
-                    if (success) {
-                        Toast.makeText(context, "Nickname updated", Toast.LENGTH_SHORT).show()
-                        loadParticipants() // Refresh List
-                    } else {
-                        Toast.makeText(context, "Failed to update nickname", Toast.LENGTH_SHORT).show()
-                    }
+            // Allow empty string if they want to remove nickname, or enforce length check
+            dbHelper.updateMemberNickname(groupId, username, newNickname) { success ->
+                if (success) {
+                    Toast.makeText(context, "Nickname updated", Toast.LENGTH_SHORT).show()
+                    loadParticipants() // Refresh List immediately
+                } else {
+                    Toast.makeText(context, "Failed to update nickname", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -251,9 +242,9 @@ class GroupSettingsFragment : Fragment() {
         }
     }
 
-    // --- ADAPTER ---
+    // --- UPDATED ADAPTER ---
     inner class ParticipantsAdapter(
-        private val usernames: List<String>,
+        private val memberList: List<Map<String, String>>, // Contains username AND nickname
         private val onEditClick: (String) -> Unit
     ) : RecyclerView.Adapter<ParticipantsAdapter.ViewHolder>() {
 
@@ -271,32 +262,50 @@ class GroupSettingsFragment : Fragment() {
         }
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            val username = usernames[position]
+            val memberData = memberList[position]
+            val username = memberData["username"] ?: ""
+            val nickname = memberData["nickname"] ?: ""
 
-            holder.tvUsername.text = username
-            holder.tvStatus.visibility = View.GONE
             holder.btnKick.visibility = View.GONE
-
             holder.ivAvatar.setImageResource(R.drawable.ic_person)
             holder.ivAvatar.setColorFilter(Color.GRAY)
             holder.ivAvatar.imageTintList = null
 
-            // Show Edit Button for each member
             holder.btnEdit?.visibility = View.VISIBLE
-            holder.btnEdit?.setOnClickListener {
-                onEditClick(username)
+            holder.btnEdit?.setOnClickListener { onEditClick(username) }
+
+            // 1. Initial set based on what we have (Nickname Priority)
+            if (nickname.isNotEmpty()) {
+                holder.tvUsername.text = nickname
+                holder.tvStatus.text = "@$username"
+                holder.tvStatus.visibility = View.VISIBLE
+            } else {
+                holder.tvUsername.text = username
+                holder.tvStatus.visibility = View.GONE
             }
 
-            // Load real name and image
+            // 2. Fetch full user details to get Image and Real Name
             dbHelper.getUserDetails(username) { user ->
                 if (user != null) {
                     val realName = user.firstName.trim()
-                    if (realName.isNotEmpty()) {
-                        holder.tvUsername.text = realName
-                        holder.tvStatus.text = "@$username"
-                        holder.tvStatus.visibility = View.VISIBLE
+
+                    if (nickname.isNotEmpty()) {
+                        // If Nickname exists, it stays as Main Title.
+                        // Subtitle becomes Real Name if available, otherwise stays @username
+                        if (realName.isNotEmpty()) {
+                            holder.tvStatus.text = realName
+                        }
+                    } else {
+                        // If No Nickname, Main Title becomes Real Name (if available)
+                        // Subtitle becomes @username
+                        if (realName.isNotEmpty()) {
+                            holder.tvUsername.text = realName
+                            holder.tvStatus.text = "@$username"
+                            holder.tvStatus.visibility = View.VISIBLE
+                        }
                     }
 
+                    // Load Profile Image
                     if (user.profileImageUrl.isNotEmpty()) {
                         try {
                             val decodedString = Base64.decode(user.profileImageUrl, Base64.DEFAULT)
@@ -310,6 +319,6 @@ class GroupSettingsFragment : Fragment() {
                 }
             }
         }
-        override fun getItemCount(): Int = usernames.size
+        override fun getItemCount(): Int = memberList.size
     }
 }
