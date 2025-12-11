@@ -1,5 +1,3 @@
-// naurla/scheduleconnect/ScheduleConnect-d933d138b652259abca168f4bc1a767f9b2d92b8/app/src/main/java/com/example/scheduleconnect/ScheduleDetailFragment.kt
-
 package com.example.scheduleconnect
 
 import android.app.AlertDialog
@@ -174,7 +172,21 @@ class ScheduleDetailFragment : Fragment() {
                 groupId = schedule.groupId
                 type = schedule.type
 
-                // *** FIX IMPLEMENTED HERE: Check if the current status makes it a "history" item ***
+                // --- START OF NEW LOGIC: CHECK IF SCHEDULE IS IN THE PAST ---
+                val scheduleDateTimeString = schedule.date
+                val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+                try {
+                    val scheduleDate = dateFormat.parse(scheduleDateTimeString)
+                    // If the schedule date is before the current time, mark it as a history item
+                    if (scheduleDate != null && scheduleDate.before(Date())) {
+                        isFromHistory = true
+                    }
+                } catch (e: Exception) {
+                    // Log or handle the case where the date format might be wrong
+                    e.printStackTrace()
+                }
+                // --- END OF NEW LOGIC ---
+
                 // This ensures the flag is always correct when the fragment is resumed/updated.
                 if (currentStatus == "FINISHED" || currentStatus == "CANCELLED") {
                     isFromHistory = true
@@ -208,8 +220,9 @@ class ScheduleDetailFragment : Fragment() {
     }
 
     private fun updateButtonsVisibility() {
-        // --- 1. HANDLE HISTORY / FINISHED / CANCELLED STATE ---
-        // This addresses the first requirement: Shared schedule already in the past, hide RSVP.
+        // --- 1. HANDLE HISTORY / FINISHED / CANCELLED / PAST STATE ---
+        // If the schedule is finished, cancelled, or is considered "history" (date passed),
+        // hide all action buttons for management and RSVP.
         if (isFromHistory || currentStatus == "FINISHED" || currentStatus == "CANCELLED") {
             btnFinishSchedule.visibility = View.GONE
             btnCancelPersonal.visibility = View.GONE
@@ -220,7 +233,7 @@ class ScheduleDetailFragment : Fragment() {
             layoutButtons.visibility = View.GONE
             layoutChangeMind.visibility = View.GONE
 
-            // FIX: If it's a shared schedule, allow EVERYONE to view attendees even if finished
+            // Allow EVERYONE to view attendees if shared, even if finished
             if (type == "shared") {
                 btnViewAttendees.visibility = View.VISIBLE
             } else {
@@ -234,7 +247,6 @@ class ScheduleDetailFragment : Fragment() {
             layoutButtons.visibility = View.GONE
             layoutChangeMind.visibility = View.GONE
 
-            // This addresses the second requirement: Personal schedule, hide "View Attendees".
             btnViewAttendees.visibility = View.GONE
 
             btnDelete.visibility = View.VISIBLE
@@ -245,7 +257,6 @@ class ScheduleDetailFragment : Fragment() {
         } else {
             // --- 3. HANDLE SHARED SCHEDULES (ACTIVE) ---
 
-            // FIX: Everyone in a shared schedule can view attendees
             btnViewAttendees.visibility = View.VISIBLE
 
             if (currentUser == creator) {
@@ -264,6 +275,8 @@ class ScheduleDetailFragment : Fragment() {
                 btnEdit.visibility = View.GONE
                 btnFinishSchedule.visibility = View.GONE
                 btnCancelPersonal.visibility = View.GONE
+
+                // Member's RSVP visibility is controlled by refreshStatusUI()
             }
         }
     }
@@ -372,12 +385,30 @@ class ScheduleDetailFragment : Fragment() {
         refreshStatusUI()
     }
 
+    /**
+     * Refreshes the visibility of the RSVP buttons for shared schedules.
+     * * FIX: Added a check for the schedule's status (FINISHED/CANCELLED) to ensure
+     * RSVP options are hidden for past events, preventing the logic from updateButtonsVisibility()
+     * from being overridden.
+     */
     private fun refreshStatusUI() {
+        // --- START OF FIX ---
+        // If the schedule is FINISHED or CANCELLED, we must hide the RSVP sections.
+        if (currentStatus == "FINISHED" || currentStatus == "CANCELLED" || isFromHistory) {
+            layoutButtons.visibility = View.GONE
+            layoutChangeMind.visibility = View.GONE
+            return
+        }
+        // --- END OF FIX ---
+
+        // Only proceed with RSVP UI if the schedule is ACTIVE
         dbHelper.getUserRSVPStatus(schId, currentUser) { status ->
             if (status == 0) {
+                // User has not RSVP'd yet
                 layoutButtons.visibility = View.VISIBLE
                 layoutChangeMind.visibility = View.GONE
             } else {
+                // User has already RSVP'd
                 layoutButtons.visibility = View.GONE
                 layoutChangeMind.visibility = View.VISIBLE
                 when (status) {

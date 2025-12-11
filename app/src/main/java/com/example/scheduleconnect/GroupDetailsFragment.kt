@@ -1,6 +1,5 @@
 package com.example.scheduleconnect
 
-
 import android.app.AlertDialog
 import android.content.Context
 import android.graphics.BitmapFactory
@@ -12,6 +11,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
@@ -23,9 +23,7 @@ import java.util.ArrayList
 import java.util.Date
 import java.util.Locale
 
-
 class GroupDetailsFragment : Fragment() {
-
 
     private lateinit var dbHelper: DatabaseHelper
     private lateinit var tvName: TextView
@@ -33,12 +31,10 @@ class GroupDetailsFragment : Fragment() {
     private lateinit var tvCreator: TextView
     private lateinit var ivGroupImage: ImageView
 
-
     private lateinit var recyclerMembers: RecyclerView
     private lateinit var recyclerSchedules: RecyclerView
     private lateinit var scheduleAdapter: ScheduleAdapter
     private var scheduleList = ArrayList<Schedule>()
-
 
     private lateinit var btnAddSchedule: Button
     private lateinit var btnInvite: Button
@@ -47,34 +43,28 @@ class GroupDetailsFragment : Fragment() {
     private lateinit var btnBack: ImageView
     private lateinit var btnChat: ImageView
 
-
     private var groupId: Int = -1
     private var currentGroupName: String = ""
     private var currentGroupNickname: String = ""
     private var groupCode: String = ""
     private lateinit var currentUser: String
 
-
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.fragment_group_details, container, false)
         dbHelper = DatabaseHelper(requireContext())
-
 
         groupId = arguments?.getInt("GROUP_ID") ?: -1
         currentGroupName = arguments?.getString("GROUP_NAME") ?: "Unknown"
         groupCode = arguments?.getString("GROUP_CODE") ?: "N/A"
 
-
         val sharedPref = requireActivity().getSharedPreferences("UserSession", Context.MODE_PRIVATE)
         currentUser = sharedPref.getString("USERNAME", "default_user") ?: "default_user"
-
 
         // Initialize Views
         tvName = view.findViewById(R.id.tvDetailGroupName)
         tvCode = view.findViewById(R.id.tvDetailGroupCode)
         tvCreator = view.findViewById(R.id.tvDetailGroupCreator)
         ivGroupImage = view.findViewById(R.id.ivGroupDetailImage)
-
 
         recyclerMembers = view.findViewById(R.id.recyclerGroupMembers)
         recyclerSchedules = view.findViewById(R.id.recyclerGroupSchedules)
@@ -85,28 +75,22 @@ class GroupDetailsFragment : Fragment() {
         btnBack = view.findViewById(R.id.btnBackGroupDetail)
         btnChat = view.findViewById(R.id.btnGroupChat)
 
-
         tvName.text = currentGroupName
         tvCode.text = groupCode
-
 
         recyclerMembers.layoutManager = LinearLayoutManager(context)
         recyclerMembers.isNestedScrollingEnabled = false
 
-
         recyclerSchedules.layoutManager = LinearLayoutManager(context)
         recyclerSchedules.isNestedScrollingEnabled = false
 
-
         loadGroupDetails()
         setupScheduleList()
-
 
         // Get Creator Info
         dbHelper.getGroupCreator(groupId) { creator ->
             val displayCreator = if (creator == "Unknown" || creator.isEmpty()) "Admin" else creator
             tvCreator.text = "Created by: $displayCreator"
-
 
             if (currentUser == creator) {
                 // Admin View
@@ -122,9 +106,7 @@ class GroupDetailsFragment : Fragment() {
             setupMemberList(creator)
         }
 
-
         btnBack.setOnClickListener { parentFragmentManager.popBackStack() }
-
 
         btnChat.setOnClickListener {
             val chatFragment = GroupChatFragment()
@@ -134,13 +116,11 @@ class GroupDetailsFragment : Fragment() {
             bundle.putString("GROUP_NAME", displayName)
             chatFragment.arguments = bundle
 
-
             parentFragmentManager.beginTransaction()
                 .replace(R.id.fragmentContainer, chatFragment)
                 .addToBackStack(null)
                 .commit()
         }
-
 
         btnAddSchedule.setOnClickListener {
             val fragment = AddSharedScheduleFragment()
@@ -148,32 +128,26 @@ class GroupDetailsFragment : Fragment() {
             bundle.putInt("GROUP_ID", groupId)
             fragment.arguments = bundle
 
-
             parentFragmentManager.beginTransaction()
                 .replace(R.id.fragmentContainer, fragment)
                 .addToBackStack(null)
                 .commit()
         }
 
-
         btnInvite.setOnClickListener {
             showInviteDialog()
         }
-
 
         btnLeave.setOnClickListener {
             showConfirmationDialog("LEAVE GROUP?", "Are you sure you want to leave this group?") { leaveGroup() }
         }
 
-
         btnDelete.setOnClickListener {
             showConfirmationDialog("DELETE GROUP?", "This will remove the group and all its schedules. Are you sure?") { deleteGroup() }
         }
 
-
         return view
     }
-
 
     override fun onResume() {
         super.onResume()
@@ -181,11 +155,9 @@ class GroupDetailsFragment : Fragment() {
         loadGroupSchedules()
     }
 
-
     private fun setupScheduleList() {
         scheduleAdapter = ScheduleAdapter(scheduleList)
         recyclerSchedules.adapter = scheduleAdapter
-
 
         scheduleAdapter.setOnItemClickListener { schedule ->
             val detailFragment = ScheduleDetailFragment()
@@ -200,7 +172,6 @@ class GroupDetailsFragment : Fragment() {
             bundle.putString("SCH_IMAGE", schedule.imageUrl)
             detailFragment.arguments = bundle
 
-
             parentFragmentManager.beginTransaction()
                 .replace(R.id.fragmentContainer, detailFragment)
                 .addToBackStack(null)
@@ -208,7 +179,6 @@ class GroupDetailsFragment : Fragment() {
         }
         loadGroupSchedules()
     }
-
 
     private fun loadGroupSchedules() {
         if (groupId == -1) return
@@ -219,7 +189,6 @@ class GroupDetailsFragment : Fragment() {
         }
     }
 
-
     private fun loadGroupDetails() {
         dbHelper.getGroupDetails(groupId) { group ->
             if (group != null) {
@@ -228,18 +197,15 @@ class GroupDetailsFragment : Fragment() {
                 groupCode = group.code
                 val imageUrl = group.imageUrl
 
-
                 if (currentGroupNickname.isNotEmpty()) {
                     tvName.text = currentGroupNickname
                 } else {
                     tvName.text = currentGroupName
                 }
 
-
                 if (group.code.isNotEmpty()) {
                     tvCode.text = group.code
                 }
-
 
                 if (imageUrl.isNotEmpty()) {
                     try {
@@ -256,11 +222,9 @@ class GroupDetailsFragment : Fragment() {
         }
     }
 
-
     private fun setupMemberList(creator: String) {
         dbHelper.getGroupMemberUsernames(groupId, "") { members ->
             recyclerMembers.adapter = object : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-
 
                 inner class MemberViewHolder(view: View) : RecyclerView.ViewHolder(view) {
                     val tvUsername: TextView = view.findViewById(R.id.tvAttendeeName)
@@ -269,18 +233,15 @@ class GroupDetailsFragment : Fragment() {
                     val btnKick: ImageView = view.findViewById(R.id.btnKickMember)
                 }
 
-
                 override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
                     val v = LayoutInflater.from(parent.context).inflate(R.layout.item_attendee, parent, false)
                     return MemberViewHolder(v)
                 }
 
-
                 override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
                     val memberName = members[position]
                     if (holder is MemberViewHolder) {
                         holder.tvUsername.text = memberName
-
 
                         if (memberName == creator) {
                             holder.tvStatus.text = "Admin"
@@ -290,14 +251,12 @@ class GroupDetailsFragment : Fragment() {
                             holder.tvStatus.setTextColor(Color.GRAY)
                         }
 
-
                         if (currentUser == creator && memberName != creator) {
                             holder.btnKick.visibility = View.VISIBLE
                             holder.btnKick.setOnClickListener { showKickConfirmation(memberName) }
                         } else {
                             holder.btnKick.visibility = View.GONE
                         }
-
 
                         dbHelper.getProfilePictureUrl(memberName) { url ->
                             if (url.isNotEmpty()) {
@@ -323,7 +282,6 @@ class GroupDetailsFragment : Fragment() {
         }
     }
 
-
     private fun showKickConfirmation(username: String) {
         val builder = AlertDialog.Builder(requireContext())
         val view = LayoutInflater.from(context).inflate(R.layout.dialog_generic_confirmation, null)
@@ -345,7 +303,6 @@ class GroupDetailsFragment : Fragment() {
         dialog.show()
     }
 
-
     private fun kickMember(username: String) {
         dbHelper.leaveGroup(groupId, username) { success ->
             if (success) {
@@ -357,44 +314,52 @@ class GroupDetailsFragment : Fragment() {
         }
     }
 
-
+    // --- UPDATED INVITE LOGIC START ---
     private fun showInviteDialog() {
-        val builder = AlertDialog.Builder(context)
-        builder.setTitle("Invite Members")
-        val input = android.widget.EditText(context)
-        input.hint = "Search Username"
-        builder.setView(input)
-        builder.setPositiveButton("Search") { _, _ ->
-            val query = input.text.toString()
-            if (query.isNotEmpty()) performSearch(query)
-        }
-        builder.setNegativeButton("Cancel", null)
-        builder.show()
-    }
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_invite_member, null)
+        val builder = AlertDialog.Builder(requireContext())
+        builder.setView(dialogView)
+        val dialog = builder.create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
 
+        val etSearch = dialogView.findViewById<EditText>(R.id.etSearchUser)
+        val btnSearch = dialogView.findViewById<ImageView>(R.id.btnSearchTrigger)
+        val btnClose = dialogView.findViewById<Button>(R.id.btnCloseInvite)
+        val recyclerView = dialogView.findViewById<RecyclerView>(R.id.recyclerInviteResults)
+        val tvNoResults = dialogView.findViewById<TextView>(R.id.tvNoResults)
 
-    private fun performSearch(query: String) {
-        // --- FIX: Added 'currentUser' as the second argument ---
-        dbHelper.searchUsers(query, currentUser) { users ->
-            if (users.isEmpty()) {
-                Toast.makeText(context, "No users found", Toast.LENGTH_SHORT).show()
-            } else {
-                showUserListDialog(users)
+        recyclerView.layoutManager = LinearLayoutManager(context)
+
+        fun performSearch() {
+            val query = etSearch.text.toString().trim()
+            if (query.isNotEmpty()) {
+                dbHelper.searchUsers(query, currentUser) { users ->
+                    if (users.isEmpty()) {
+                        tvNoResults.visibility = View.VISIBLE
+                        recyclerView.visibility = View.GONE
+                    } else {
+                        tvNoResults.visibility = View.GONE
+                        recyclerView.visibility = View.VISIBLE
+                        // Load adapter with results
+                        recyclerView.adapter = InviteAdapter(users) { selectedUser ->
+                            sendInvite(selectedUser)
+                            dialog.dismiss()
+                        }
+                    }
+                }
             }
         }
-    }
 
-
-    private fun showUserListDialog(users: ArrayList<String>) {
-        val builder = AlertDialog.Builder(context)
-        builder.setTitle("Select User to Invite")
-        val userArray = users.toTypedArray()
-        builder.setItems(userArray) { _, which ->
-            sendInvite(userArray[which])
+        btnSearch.setOnClickListener {
+            performSearch()
         }
-        builder.show()
-    }
 
+        btnClose.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.show()
+    }
 
     private fun sendInvite(targetUser: String) {
         dbHelper.isUserInGroup(groupId, targetUser) { exists ->
@@ -410,6 +375,60 @@ class GroupDetailsFragment : Fragment() {
         }
     }
 
+    // --- INNER ADAPTER FOR INVITE RESULTS ---
+    inner class InviteAdapter(
+        private val usernames: ArrayList<String>,
+        private val onInviteClick: (String) -> Unit
+    ) : RecyclerView.Adapter<InviteAdapter.ViewHolder>() {
+
+        inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+            val tvName: TextView = view.findViewById(R.id.tvInviteName)
+            val tvUsername: TextView = view.findViewById(R.id.tvInviteUsername)
+            val ivAvatar: ImageView = view.findViewById(R.id.ivInviteAvatar)
+            val btnInvite: Button = view.findViewById(R.id.btnSendInvite)
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+            val v = LayoutInflater.from(parent.context).inflate(R.layout.item_invite_user, parent, false)
+            return ViewHolder(v)
+        }
+
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            val username = usernames[position]
+            holder.tvUsername.text = "@$username"
+            holder.tvName.text = username // Default to username until loaded
+
+            holder.ivAvatar.setImageResource(R.drawable.ic_person)
+            holder.ivAvatar.setColorFilter(Color.GRAY)
+            holder.ivAvatar.imageTintList = null
+
+            holder.btnInvite.setOnClickListener { onInviteClick(username) }
+
+            // Load real details
+            dbHelper.getUserDetails(username) { user ->
+                if (user != null) {
+                    val realName = user.firstName.trim()
+                    if (realName.isNotEmpty()) {
+                        holder.tvName.text = realName
+                    }
+
+                    if (user.profileImageUrl.isNotEmpty()) {
+                        try {
+                            val decodedString = Base64.decode(user.profileImageUrl, Base64.DEFAULT)
+                            val decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
+                            if (decodedByte != null) {
+                                holder.ivAvatar.setImageBitmap(decodedByte)
+                                holder.ivAvatar.colorFilter = null
+                            }
+                        } catch (e: Exception) { }
+                    }
+                }
+            }
+        }
+
+        override fun getItemCount(): Int = usernames.size
+    }
+    // --- UPDATED INVITE LOGIC END ---
 
     private fun showConfirmationDialog(title: String, message: String, onConfirm: () -> Unit) {
         val builder = AlertDialog.Builder(requireContext())
@@ -428,7 +447,6 @@ class GroupDetailsFragment : Fragment() {
         dialog.show()
     }
 
-
     private fun leaveGroup() {
         dbHelper.leaveGroup(groupId, currentUser) { success ->
             if (success) {
@@ -437,7 +455,6 @@ class GroupDetailsFragment : Fragment() {
             }
         }
     }
-
 
     private fun deleteGroup() {
         dbHelper.deleteGroup(groupId) { success ->
@@ -448,4 +465,3 @@ class GroupDetailsFragment : Fragment() {
         }
     }
 }
-
