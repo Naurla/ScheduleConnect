@@ -135,7 +135,8 @@ class AddSharedScheduleFragment : Fragment() {
                 btnAdd.text = "ADD SHARED SCHEDULE"
 
                 if (success) {
-                    notifyGroupMembers(name, date)
+                    // REMOVED: notifyGroupMembers(name, date)
+                    // REASON: DatabaseHelper already handles notifications for shared schedules automatically.
 
                     // Schedule local reminders (Exact time + 1 Day before)
                     scheduleLocalNotification(name, date, loc)
@@ -149,22 +150,6 @@ class AddSharedScheduleFragment : Fragment() {
             }
         }
         return view
-    }
-
-    private fun notifyGroupMembers(scheduleTitle: String, date: String) {
-        if (groupId == -1) return
-
-        val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-        val notifTitle = "New Group Schedule"
-        val notifMsg = "$currentUser added '$scheduleTitle' for $date"
-
-        dbHelper.getGroupMemberUsernames(groupId, "") { members ->
-            for (member in members) {
-                if (member != currentUser) {
-                    dbHelper.addNotification(member, notifTitle, notifMsg, currentDate, groupId, "SCHEDULE")
-                }
-            }
-        }
     }
 
     // --- UPDATED: Schedule Notification Logic ---

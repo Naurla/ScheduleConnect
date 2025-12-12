@@ -73,9 +73,11 @@ class HomeActivity : AppCompatActivity() {
         // Top Bar Click Listeners
         val btnNotif = findViewById<ImageView>(R.id.btnTopNotifications)
         btnNotif.setOnClickListener {
+            // Uncheck other items to show we are in a different section
             bottomNav.menu.setGroupCheckable(0, true, false)
             for (i in 0 until bottomNav.menu.size()) bottomNav.menu.getItem(i).isChecked = false
             bottomNav.menu.setGroupCheckable(0, true, true)
+
             loadFragment(UserNotificationsFragment())
         }
 
@@ -115,8 +117,6 @@ class HomeActivity : AppCompatActivity() {
                             ivProfile.setImageBitmap(bitmap)
                             ivProfile.setPadding(0, 0, 0, 0)
                             ivProfile.scaleType = ImageView.ScaleType.CENTER_CROP
-
-                            // --- FIX: CLEAR THE RED TINT ---
                             ivProfile.clearColorFilter()
                             ivProfile.imageTintList = null
                         }
@@ -135,20 +135,23 @@ class HomeActivity : AppCompatActivity() {
         ivProfile.post {
             ivProfile.setImageResource(R.drawable.ic_person)
             val color = ContextCompat.getColor(this, R.color.app_red)
-            ivProfile.setColorFilter(color) // This applies the Red Tint
+            ivProfile.setColorFilter(color)
             ivProfile.setPadding(5, 5, 5, 5)
             ivProfile.scaleType = ImageView.ScaleType.FIT_CENTER
         }
     }
 
+    // This method is called by UserNotificationsFragment to update the bell icon count
     fun updateNotificationBadge() {
         if (currentUsername.isNotEmpty()) {
             dbHelper.getUnreadNotificationCount(currentUsername) { count ->
-                if (count > 0) {
-                    tvBadge.text = if (count > 99) "99+" else count.toString()
-                    tvBadge.visibility = View.VISIBLE
-                } else {
-                    tvBadge.visibility = View.GONE
+                runOnUiThread {
+                    if (count > 0) {
+                        tvBadge.text = if (count > 99) "99+" else count.toString()
+                        tvBadge.visibility = View.VISIBLE
+                    } else {
+                        tvBadge.visibility = View.GONE
+                    }
                 }
             }
         }
