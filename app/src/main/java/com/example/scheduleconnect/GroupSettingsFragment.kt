@@ -39,6 +39,9 @@ class GroupSettingsFragment : Fragment() {
     private var currentGroupName: String = ""
     private var currentImageBase64: String = ""
 
+    // Store member list to look up current nicknames for pre-filling
+    private var currentMemberList: List<Map<String, String>> = emptyList()
+
     private val imagePickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK && result.data != null) {
             val imageUri: Uri? = result.data?.data
@@ -111,11 +114,13 @@ class GroupSettingsFragment : Fragment() {
     }
 
     private fun loadParticipants() {
-        // UPDATED: Now calls getGroupMembersWithNicknames instead of just usernames
         dbHelper.getGroupMembersWithNicknames(groupId) { memberList ->
             if (memberList.isEmpty()) {
                 // Optional handle empty
             }
+            // Update the class variable so we can access it in the dialog
+            currentMemberList = memberList
+
             recyclerParticipants.adapter = ParticipantsAdapter(memberList) { username ->
                 showEditMemberNicknameDialog(username)
             }
@@ -157,35 +162,55 @@ class GroupSettingsFragment : Fragment() {
         builder.show()
     }
 
+    // --- UPDATED: Custom Dialog for Editing Nickname ---
     private fun showEditMemberNicknameDialog(username: String) {
+        // Inflate the custom layout we created (dialog_edit_nickname.xml)
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_edit_nickname, null)
+
         val builder = AlertDialog.Builder(requireContext())
-        builder.setTitle("Edit Nickname for $username")
+        builder.setView(dialogView)
 
-        val input = EditText(requireContext())
-        input.hint = "Enter new nickname"
+        val dialog = builder.create()
+        // Set transparent background to respect the rounded corners in XML
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
-        val container = android.widget.FrameLayout(requireContext())
-        val params = android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-        params.setMargins(50, 20, 50, 20)
-        input.layoutParams = params
-        container.addView(input)
+        // Find views in the custom layout
+        val etNickname = dialogView.findViewById<EditText>(R.id.etNickname)
+        val btnSave = dialogView.findViewById<Button>(R.id.btnSave)
+        val btnCancel = dialogView.findViewById<TextView>(R.id.btnCancel)
 
-        builder.setView(container)
+        // Logic to pre-fill the current nickname if it exists
+        val currentMember = currentMemberList.find { it["username"] == username }
+        val currentNickname = currentMember?.get("nickname") ?: ""
 
-        builder.setPositiveButton("Save") { _, _ ->
-            val newNickname = input.text.toString().trim()
-            // Allow empty string if they want to remove nickname, or enforce length check
+        if (currentNickname.isNotEmpty()) {
+            etNickname.setText(currentNickname)
+            etNickname.setSelection(currentNickname.length) // Move cursor to end
+        } else {
+            etNickname.hint = "Enter nickname for $username"
+        }
+
+        // Setup Buttons
+        btnCancel.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        btnSave.setOnClickListener {
+            val newNickname = etNickname.text.toString().trim()
+
+            // Call Database Helper
             dbHelper.updateMemberNickname(groupId, username, newNickname) { success ->
                 if (success) {
                     Toast.makeText(context, "Nickname updated", Toast.LENGTH_SHORT).show()
                     loadParticipants() // Refresh List immediately
+                    dialog.dismiss()
                 } else {
                     Toast.makeText(context, "Failed to update nickname", Toast.LENGTH_SHORT).show()
                 }
             }
         }
-        builder.setNegativeButton("Cancel", null)
-        builder.show()
+
+        dialog.show()
     }
 
     private fun saveNewGroupImage(bitmap: Bitmap) {
@@ -242,7 +267,7 @@ class GroupSettingsFragment : Fragment() {
         }
     }
 
-    // --- UPDATED ADAPTER ---
+    // --- ADAPTER ---
     inner class ParticipantsAdapter(
         private val memberList: List<Map<String, String>>, // Contains username AND nickname
         private val onEditClick: (String) -> Unit
@@ -290,14 +315,10 @@ class GroupSettingsFragment : Fragment() {
                     val realName = user.firstName.trim()
 
                     if (nickname.isNotEmpty()) {
-                        // If Nickname exists, it stays as Main Title.
-                        // Subtitle becomes Real Name if available, otherwise stays @username
                         if (realName.isNotEmpty()) {
                             holder.tvStatus.text = realName
                         }
                     } else {
-                        // If No Nickname, Main Title becomes Real Name (if available)
-                        // Subtitle becomes @username
                         if (realName.isNotEmpty()) {
                             holder.tvUsername.text = realName
                             holder.tvStatus.text = "@$username"
