@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager // Required for keyboard adjustment
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
@@ -52,45 +53,61 @@ class GroupChatFragment : Fragment() {
 
         tvGroupName.text = groupName
 
-        // --- UPDATED: Passing groupId and dbHelper for Nickname support ---
         chatAdapter = ChatAdapter(requireContext(), chatList, currentUser, groupId, dbHelper)
 
-        recyclerChat.layoutManager = LinearLayoutManager(context)
+        // Setup LayoutManager with stackFromEnd to keep messages at the bottom
+        val layoutManager = LinearLayoutManager(context)
+        layoutManager.stackFromEnd = true
+        recyclerChat.layoutManager = layoutManager
         recyclerChat.adapter = chatAdapter
 
         loadMessages()
 
-        // Setup settings button logic
+        // --- FIX: Auto-scroll to bottom when the keyboard opens ---
+        recyclerChat.addOnLayoutChangeListener { _, _, _, _, bottom, _, _, _, oldBottom ->
+            if (bottom < oldBottom) {
+                recyclerChat.postDelayed({
+                    if (chatList.isNotEmpty()) {
+                        recyclerChat.scrollToPosition(chatList.size - 1)
+                    }
+                }, 100)
+            }
+        }
+
         btnSettings.visibility = View.VISIBLE
         fetchGroupDetailsForSettings()
 
         btnBack.setOnClickListener { parentFragmentManager.popBackStack() }
-
         btnSend.setOnClickListener { sendMessage() }
-
-        btnSettings.setOnClickListener {
-            openGroupSettings()
-        }
+        btnSettings.setOnClickListener { openGroupSettings() }
 
         return view
     }
 
-    // --- FIX FOR KEYBOARD / NAVIGATION VISIBILITY ---
     override fun onResume() {
         super.onResume()
-        // Hide the Bottom Navigation and Main Header when chatting
-        // This prevents the keyboard from pushing the nav bar up
+        // 1. Hide global UI elements
         activity?.findViewById<View>(R.id.bottomNav)?.visibility = View.GONE
         activity?.findViewById<View>(R.id.llHeader)?.visibility = View.GONE
+
+        // 2. DYNAMIC FIX: Switch to adjustResize so the Group Name stays at the top
+        // This stops the whole screen from "panning" (sliding up)
+        activity?.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // 3. RESTORE: Revert back to adjustPan for Login/Signup pages
+        // to prevent icons from jumping on those screens
+        activity?.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN)
     }
 
     override fun onStop() {
         super.onStop()
-        // Show them again when leaving the chat screen
+        // Show navigation again when leaving
         activity?.findViewById<View>(R.id.bottomNav)?.visibility = View.VISIBLE
         activity?.findViewById<View>(R.id.llHeader)?.visibility = View.VISIBLE
     }
-    // -----------------------------------------------
 
     private fun fetchGroupDetailsForSettings() {
         dbHelper.getGroupDetails(groupId) { group ->
@@ -123,6 +140,7 @@ class GroupChatFragment : Fragment() {
         if (msg.isNotEmpty()) {
             dbHelper.sendGroupMessage(groupId, groupName, currentUser, msg)
             etMessage.text.clear()
+            // Messages will auto-reload and scroll via the database listener
         }
     }
 
