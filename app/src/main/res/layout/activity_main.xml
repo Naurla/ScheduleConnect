@@ -28,11 +28,11 @@
 
             <ImageView
                 android:id="@+id/imgLogo"
-                android:layout_width="100dp"
-                android:layout_height="100dp"
+                android:layout_width="150dp"
+                android:layout_height="150dp"
                 android:src="@drawable/lugaw"
                 android:layout_gravity="center_horizontal"
-                android:layout_marginBottom="10dp"/>
+                android:layout_marginBottom="-30dp"/>
 
             <TextView
                 android:layout_width="wrap_content"
