@@ -2,7 +2,6 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
 
-
     // Add the Google services Gradle plugin
     id("com.google.gms.google-services")
 }
@@ -76,11 +75,13 @@ dependencies {
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-firestore") // For Database
     implementation("com.google.firebase:firebase-storage")   // For Images//
+
     // --- GLIDE (For loading images from URLs) ---
     implementation("com.github.bumptech.glide:glide:4.16.0")
-    implementation("com.google.android.material:material:1.x.x")
+
+    // I REMOVED THE INVALID LINE BELOW:
+    // implementation("com.google.android.material:material:1.x.x")
 
     // Add the dependencies for any other desired Firebase products
     // https://firebase.google.com/docs/android/setup#available-libraries
-
 }
