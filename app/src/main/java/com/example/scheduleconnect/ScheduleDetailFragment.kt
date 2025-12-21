@@ -61,7 +61,7 @@ class ScheduleDetailFragment : Fragment() {
 
         creator = arguments?.getString("SCH_CREATOR") ?: "Unknown"
         type = arguments?.getString("SCH_TYPE") ?: "shared"
-        isFromHistory = arguments?.getBoolean("IS_FROM_HISTORY", false) ?: false // Reads the initial state
+        isFromHistory = arguments?.getBoolean("IS_FROM_HISTORY", false) ?: false
 
         tvTitle = view.findViewById(R.id.tvDetailTitle)
         tvDate = view.findViewById(R.id.tvDetailDate)
@@ -125,11 +125,19 @@ class ScheduleDetailFragment : Fragment() {
                 .commit()
         }
 
-        btnFinishSchedule.setOnClickListener { updateScheduleStatus("FINISHED") }
+        btnFinishSchedule.setOnClickListener { showFinishConfirmation() }
 
-        btnCancelPersonal.setOnClickListener { showCancelConfirmation() }
+        btnCancelPersonal.setOnClickListener {
+            if (type == "shared") {
+                showTerminalDialog(isDeletion = false)
+            } else {
+                showCancelConfirmation()
+            }
+        }
 
-        btnDelete.setOnClickListener { showDeleteConfirmation() }
+        btnDelete.setOnClickListener {
+            showTerminalDialog(isDeletion = true)
+        }
 
         return view
     }
@@ -138,8 +146,6 @@ class ScheduleDetailFragment : Fragment() {
         super.onResume()
         if (schId != -1) {
             loadScheduleDetails()
-        } else {
-            Toast.makeText(context, "Error: Invalid Schedule ID", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -149,16 +155,7 @@ class ScheduleDetailFragment : Fragment() {
                 tvTitle.text = schedule.title
                 tvDate.text = schedule.date
                 tvLoc.text = schedule.location
-
-                if (schedule.description.trim().isEmpty()) {
-                    tvDesc.text = "No description provided."
-                    tvDesc.setTextColor(Color.parseColor("#999999"))
-                    tvDesc.setTypeface(null, android.graphics.Typeface.ITALIC)
-                } else {
-                    tvDesc.text = schedule.description
-                    tvDesc.setTextColor(Color.parseColor("#555555"))
-                    tvDesc.setTypeface(null, android.graphics.Typeface.NORMAL)
-                }
+                tvDesc.text = if (schedule.description.trim().isEmpty()) "No description provided." else schedule.description
 
                 creator = schedule.creator
                 if (schedule.type == "shared") {
@@ -172,26 +169,17 @@ class ScheduleDetailFragment : Fragment() {
                 groupId = schedule.groupId
                 type = schedule.type
 
-                // --- START OF NEW LOGIC: CHECK IF SCHEDULE IS IN THE PAST ---
-                val scheduleDateTimeString = schedule.date
                 val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
                 try {
-                    val scheduleDate = dateFormat.parse(scheduleDateTimeString)
-                    // If the schedule date is before the current time, mark it as a history item
+                    val scheduleDate = dateFormat.parse(schedule.date)
                     if (scheduleDate != null && scheduleDate.before(Date())) {
                         isFromHistory = true
                     }
-                } catch (e: Exception) {
-                    // Log or handle the case where the date format might be wrong
-                    e.printStackTrace()
-                }
-                // --- END OF NEW LOGIC ---
+                } catch (e: Exception) { e.printStackTrace() }
 
-                // This ensures the flag is always correct when the fragment is resumed/updated.
                 if (currentStatus == "FINISHED" || currentStatus == "CANCELLED") {
                     isFromHistory = true
                 }
-
 
                 if (schedule.imageUrl.isNotEmpty()) {
                     try {
@@ -199,107 +187,154 @@ class ScheduleDetailFragment : Fragment() {
                         val decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
                         ivImage.setImageBitmap(decodedByte)
                         ivImage.visibility = View.VISIBLE
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        ivImage.visibility = View.GONE
-                    }
+                    } catch (e: Exception) { ivImage.visibility = View.GONE }
                 } else {
                     ivImage.visibility = View.GONE
                 }
-
                 updateButtonsVisibility()
-
                 if (type == "shared" && currentUser != creator) {
                     refreshStatusUI()
                 }
-            } else {
-                Toast.makeText(context, "Error loading schedule", Toast.LENGTH_SHORT).show()
-                parentFragmentManager.popBackStack()
             }
         }
     }
 
     private fun updateButtonsVisibility() {
-        // --- 1. HANDLE HISTORY / FINISHED / CANCELLED / PAST STATE ---
-        // If the schedule is finished, cancelled, or is considered "history" (date passed),
-        // hide all action buttons for management and RSVP.
-        if (isFromHistory || currentStatus == "FINISHED" || currentStatus == "CANCELLED") {
+        if (currentStatus == "FINISHED" || currentStatus == "CANCELLED") {
             btnFinishSchedule.visibility = View.GONE
             btnCancelPersonal.visibility = View.GONE
             btnDelete.visibility = View.GONE
             btnEdit.visibility = View.GONE
-
-            // Hides the "WILL YOU ATTEND" prompt and the current status/change mind button
             layoutButtons.visibility = View.GONE
             layoutChangeMind.visibility = View.GONE
-
-            // Allow EVERYONE to view attendees if shared, even if finished
-            if (type == "shared") {
-                btnViewAttendees.visibility = View.VISIBLE
-            } else {
-                btnViewAttendees.visibility = View.GONE
-            }
+            btnViewAttendees.visibility = if (type == "shared") View.VISIBLE else View.GONE
             return
         }
 
-        // --- 2. HANDLE PERSONAL SCHEDULES (ACTIVE) ---
         if (type == "personal") {
-            layoutButtons.visibility = View.GONE
-            layoutChangeMind.visibility = View.GONE
-
-            btnViewAttendees.visibility = View.GONE
-
             btnDelete.visibility = View.VISIBLE
             btnFinishSchedule.visibility = View.VISIBLE
             btnCancelPersonal.visibility = View.VISIBLE
             btnEdit.visibility = View.VISIBLE
-
+            layoutButtons.visibility = View.GONE
+            layoutChangeMind.visibility = View.GONE
         } else {
-            // --- 3. HANDLE SHARED SCHEDULES (ACTIVE) ---
-
             btnViewAttendees.visibility = View.VISIBLE
-
+            // Show delete icon for shared schedule ONLY if the user is the owner
             if (currentUser == creator) {
-                // Creator gets management buttons
                 btnDelete.visibility = View.VISIBLE
                 btnEdit.visibility = View.VISIBLE
                 btnFinishSchedule.visibility = View.VISIBLE
-
-                // Creator usually doesn't RSVP to their own event
-                layoutButtons.visibility = View.GONE
-                layoutChangeMind.visibility = View.GONE
-                btnCancelPersonal.visibility = View.GONE
+                btnCancelPersonal.visibility = View.VISIBLE
             } else {
-                // Member gets RSVP buttons, but NO management buttons
                 btnDelete.visibility = View.GONE
                 btnEdit.visibility = View.GONE
                 btnFinishSchedule.visibility = View.GONE
                 btnCancelPersonal.visibility = View.GONE
-
-                // Member's RSVP visibility is controlled by refreshStatusUI()
             }
         }
+    }
+
+    private fun showFinishConfirmation() {
+        val builder = AlertDialog.Builder(requireContext())
+        val view = LayoutInflater.from(context).inflate(R.layout.dialog_generic_confirmation, null)
+        builder.setView(view)
+        val dialog = builder.create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+        view.findViewById<TextView>(R.id.tvDialogTitle).text = "Finish Schedule"
+        view.findViewById<TextView>(R.id.tvDialogMessage).text = "Are you sure you want to mark this schedule as finished?"
+
+        view.findViewById<TextView>(R.id.btnDialogNo).setOnClickListener { dialog.dismiss() }
+        view.findViewById<Button>(R.id.btnDialogYes).setOnClickListener {
+            updateScheduleStatus("FINISHED")
+            dialog.dismiss()
+        }
+        dialog.show()
     }
 
     private fun showCancelConfirmation() {
         val builder = AlertDialog.Builder(requireContext())
         val view = LayoutInflater.from(context).inflate(R.layout.dialog_cancel_confirmation, null)
+        builder.setView(view)
+        val dialog = builder.create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        view.findViewById<TextView>(R.id.btnModalNo).setOnClickListener { dialog.dismiss() }
+        view.findViewById<Button>(R.id.btnModalYes).setOnClickListener {
+            updateScheduleStatus("CANCELLED")
+            dialog.dismiss()
+        }
+        dialog.show()
+    }
 
+    private fun showTerminalDialog(isDeletion: Boolean) {
+        val builder = AlertDialog.Builder(requireContext())
+        val view = LayoutInflater.from(context).inflate(R.layout.dialog_delete_confirmation, null)
         builder.setView(view)
         val dialog = builder.create()
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
 
-        val btnNo = view.findViewById<TextView>(R.id.btnModalNo)
-        val btnYes = view.findViewById<Button>(R.id.btnModalYes)
+        val tvTitleDialog = view.findViewById<TextView>(R.id.tvDeleteTitle)
+        val tvMessage = view.findViewById<TextView>(R.id.tvDeleteMessage)
+        val etReason = view.findViewById<EditText>(R.id.etDeleteReason)
+        val btnConfirm = view.findViewById<Button>(R.id.btnConfirmDelete)
 
-        btnNo.setOnClickListener { dialog.dismiss() }
-
-        btnYes.setOnClickListener {
-            updateScheduleStatus("CANCELLED")
-            dialog.dismiss()
+        if (isDeletion) {
+            tvTitleDialog.text = "Delete Schedule"
+            tvMessage.text = "Are you sure? This will permanently remove the schedule and it will NOT appear in history."
+            btnConfirm.text = "DELETE PERMANENTLY"
+            // reason is optional for personal, but we'll show it for shared deletion
+            etReason.visibility = if (type == "shared") View.VISIBLE else View.GONE
+        } else {
+            tvTitleDialog.text = "Cancel Shared Schedule"
+            tvMessage.text = "This will move the schedule to History. Please provide a reason."
+            btnConfirm.text = "CANCEL TO HISTORY"
+            etReason.visibility = View.VISIBLE
         }
 
+        view.findViewById<TextView>(R.id.btnCancelDelete).setOnClickListener { dialog.dismiss() }
+
+        btnConfirm.setOnClickListener {
+            val reason = etReason.text.toString().trim()
+            if (type == "shared" && reason.isEmpty()) {
+                Toast.makeText(context, "Please provide a reason", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            val finalReason = if (reason.isNotEmpty()) reason else "No reason provided."
+
+            if (isDeletion) {
+                dbHelper.deleteSchedule(schId) { success ->
+                    if (success) {
+                        if (type == "shared") notifyAttendeesOfAction("Deleted", finalReason)
+                        Toast.makeText(context, "Schedule Deleted Permanently", Toast.LENGTH_SHORT).show()
+                        parentFragmentManager.popBackStack()
+                        dialog.dismiss()
+                    }
+                }
+            } else {
+                dbHelper.updateScheduleStatus(schId, "CANCELLED") { success ->
+                    if (success) {
+                        notifyAttendeesOfAction("Cancelled", finalReason)
+                        Toast.makeText(context, "Schedule Moved to History", Toast.LENGTH_SHORT).show()
+                        parentFragmentManager.popBackStack()
+                        dialog.dismiss()
+                    }
+                }
+            }
+        }
         dialog.show()
+    }
+
+    private fun notifyAttendeesOfAction(action: String, reason: String) {
+        val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        val notifTitle = "Schedule $action: ${tvTitle.text}"
+        val notifMessage = "$action by $creator. Reason: $reason"
+
+        dbHelper.getGroupMemberUsernames(groupId, creator) { members ->
+            for (user in members) {
+                dbHelper.addNotification(user, notifTitle, notifMessage, currentDate)
+            }
+        }
     }
 
     private fun updateScheduleStatus(status: String) {
@@ -307,74 +342,6 @@ class ScheduleDetailFragment : Fragment() {
             if (success) {
                 Toast.makeText(context, "Schedule marked as $status", Toast.LENGTH_SHORT).show()
                 parentFragmentManager.popBackStack()
-            } else {
-                Toast.makeText(context, "Error updating status", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    private fun showDeleteConfirmation() {
-        val builder = AlertDialog.Builder(requireContext())
-        val view = LayoutInflater.from(context).inflate(R.layout.dialog_delete_confirmation, null)
-
-        builder.setView(view)
-        val dialog = builder.create()
-        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-
-        val tvTitle = view.findViewById<TextView>(R.id.tvDeleteTitle)
-        val tvMessage = view.findViewById<TextView>(R.id.tvDeleteMessage)
-        val etReason = view.findViewById<EditText>(R.id.etDeleteReason)
-        val btnCancel = view.findViewById<TextView>(R.id.btnCancelDelete)
-        val btnConfirm = view.findViewById<Button>(R.id.btnConfirmDelete)
-
-        if (type == "shared" && currentUser == creator) {
-            tvTitle.text = "Delete Shared Schedule"
-            tvMessage.text = "This will notify all members. Please provide a reason."
-            etReason.visibility = View.VISIBLE
-        } else {
-            tvTitle.text = "Delete Schedule"
-            tvMessage.text = "Are you sure you want to delete this schedule?"
-            etReason.visibility = View.GONE
-        }
-
-        btnCancel.setOnClickListener { dialog.dismiss() }
-
-        btnConfirm.setOnClickListener {
-            if (type == "shared" && currentUser == creator) {
-                val reason = etReason.text.toString().trim()
-                val finalReason = if (reason.isNotEmpty()) reason else "No reason provided."
-
-                dbHelper.deleteSchedule(schId) { success ->
-                    if(success) {
-                        notifyAttendeesOfDeletion(finalReason)
-                        Toast.makeText(context, "Schedule Deleted", Toast.LENGTH_SHORT).show()
-                        dialog.dismiss()
-                        parentFragmentManager.popBackStack()
-                    }
-                }
-            } else {
-                dbHelper.deleteSchedule(schId) { success ->
-                    if(success) {
-                        Toast.makeText(context, "Schedule Deleted", Toast.LENGTH_SHORT).show()
-                        dialog.dismiss()
-                        parentFragmentManager.popBackStack()
-                    }
-                }
-            }
-        }
-
-        dialog.show()
-    }
-
-    private fun notifyAttendeesOfDeletion(reason: String) {
-        val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-        val title = tvTitle.text.toString()
-        val notifTitle = "Schedule Deleted: $title"
-        val notifMessage = "Deleted by $creator. Reason: $reason"
-
-        dbHelper.getGroupMemberUsernames(groupId, creator) { members ->
-            for (user in members) {
-                dbHelper.addNotification(user, notifTitle, notifMessage, currentDate)
             }
         }
     }
@@ -385,45 +352,24 @@ class ScheduleDetailFragment : Fragment() {
         refreshStatusUI()
     }
 
-    /**
-     * Refreshes the visibility of the RSVP buttons for shared schedules.
-     * * FIX: Added a check for the schedule's status (FINISHED/CANCELLED) to ensure
-     * RSVP options are hidden for past events, preventing the logic from updateButtonsVisibility()
-     * from being overridden.
-     */
     private fun refreshStatusUI() {
-        // --- START OF FIX ---
-        // If the schedule is FINISHED or CANCELLED, we must hide the RSVP sections.
         if (currentStatus == "FINISHED" || currentStatus == "CANCELLED" || isFromHistory) {
             layoutButtons.visibility = View.GONE
             layoutChangeMind.visibility = View.GONE
             return
         }
-        // --- END OF FIX ---
 
-        // Only proceed with RSVP UI if the schedule is ACTIVE
         dbHelper.getUserRSVPStatus(schId, currentUser) { status ->
             if (status == 0) {
-                // User has not RSVP'd yet
                 layoutButtons.visibility = View.VISIBLE
                 layoutChangeMind.visibility = View.GONE
             } else {
-                // User has already RSVP'd
                 layoutButtons.visibility = View.GONE
                 layoutChangeMind.visibility = View.VISIBLE
                 when (status) {
-                    1 -> {
-                        btnCurrentStatus.text = "I WILL ATTEND"
-                        btnCurrentStatus.background.setTint(Color.parseColor("#8B1A1A"))
-                    }
-                    2 -> {
-                        btnCurrentStatus.text = "UNSURE"
-                        btnCurrentStatus.background.setTint(Color.parseColor("#F57C00"))
-                    }
-                    3 -> {
-                        btnCurrentStatus.text = "I WILL NOT ATTEND"
-                        btnCurrentStatus.background.setTint(Color.parseColor("#555555"))
-                    }
+                    1 -> btnCurrentStatus.text = "I WILL ATTEND"
+                    2 -> btnCurrentStatus.text = "UNSURE"
+                    3 -> btnCurrentStatus.text = "I WILL NOT ATTEND"
                 }
             }
         }
