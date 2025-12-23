@@ -69,13 +69,21 @@
                             android:layout_width="match_parent"
                             android:layout_height="50dp"
                             android:background="@drawable/rounded_edittext"
-                            android:padding="15dp"
-                            android:layout_marginBottom="15dp" />
+                            android:padding="15dp" />
+                        <TextView
+                            android:id="@+id/tvFirstNameError"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="#B71C1C"
+                            android:textSize="12sp"
+                            android:visibility="gone"
+                            android:layout_marginBottom="10dp"/>
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Middle Name"
+                            android:layout_marginTop="5dp"
                             android:layout_marginBottom="5dp"/>
                         <EditText
                             android:id="@+id/etMiddleName"
@@ -96,6 +104,14 @@
                             android:layout_height="50dp"
                             android:background="@drawable/rounded_edittext"
                             android:padding="15dp" />
+                        <TextView
+                            android:id="@+id/tvLastNameError"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="#B71C1C"
+                            android:textSize="12sp"
+                            android:visibility="gone"
+                            android:layout_marginBottom="10dp"/>
                     </LinearLayout>
 
                     <LinearLayout
@@ -112,7 +128,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="horizontal"
-                            android:layout_marginBottom="10dp">
+                            android:layout_marginBottom="5dp">
 
                             <RadioButton
                                 android:id="@+id/rbMan"
@@ -143,7 +159,7 @@
                             android:padding="15dp"
                             android:hint="Specify gender"
                             android:visibility="gone"
-                            android:layout_marginBottom="15dp"/>
+                            android:layout_marginBottom="10dp"/>
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -160,13 +176,21 @@
                             android:inputType="none"
                             android:focusable="false"
                             android:clickable="true"
-                            android:hint="Select Date"
-                            android:layout_marginBottom="15dp" />
+                            android:hint="Select Date" />
+                        <TextView
+                            android:id="@+id/tvDobError"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="#B71C1C"
+                            android:textSize="12sp"
+                            android:visibility="gone"
+                            android:layout_marginBottom="10dp"/>
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Email Address"
+                            android:layout_marginTop="5dp"
                             android:layout_marginBottom="5dp"/>
                         <EditText
                             android:id="@+id/etEmail"
@@ -174,20 +198,27 @@
                             android:layout_height="50dp"
                             android:background="@drawable/rounded_edittext"
                             android:padding="15dp"
-                            android:inputType="textEmailAddress"
-                            android:layout_marginBottom="15dp" />
+                            android:inputType="textEmailAddress" />
+                        <TextView
+                            android:id="@+id/tvEmailError"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="#B71C1C"
+                            android:textSize="12sp"
+                            android:visibility="gone"
+                            android:layout_marginBottom="10dp"/>
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Phone Number"
+                            android:layout_marginTop="5dp"
                             android:layout_marginBottom="5dp"/>
 
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:layout_marginBottom="10dp">
+                            android:orientation="horizontal">
 
                             <com.hbb20.CountryCodePicker
                                 android:id="@+id/ccp"
@@ -212,7 +243,14 @@
                                 android:inputType="phone"
                                 android:layout_marginStart="10dp"/>
                         </LinearLayout>
-
+                        <TextView
+                            android:id="@+id/tvPhoneError"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="#B71C1C"
+                            android:textSize="12sp"
+                            android:visibility="gone"
+                            android:layout_marginBottom="10dp"/>
                     </LinearLayout>
 
                     <LinearLayout
@@ -229,13 +267,21 @@
                             android:layout_width="match_parent"
                             android:layout_height="50dp"
                             android:background="@drawable/rounded_edittext"
-                            android:padding="15dp"
-                            android:layout_marginBottom="15dp" />
+                            android:padding="15dp" />
+                        <TextView
+                            android:id="@+id/tvUsernameError"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="#B71C1C"
+                            android:textSize="12sp"
+                            android:visibility="gone"
+                            android:layout_marginBottom="10dp"/>
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Password"
+                            android:layout_marginTop="5dp"
                             android:layout_marginBottom="5dp"/>
 
                         <com.google.android.material.textfield.TextInputLayout
@@ -244,8 +290,7 @@
                             app:passwordToggleEnabled="true"
                             app:passwordToggleTint="#B71C1C"
                             app:hintEnabled="false"
-                            app:boxBackgroundMode="none"
-                            android:layout_marginBottom="15dp">
+                            app:boxBackgroundMode="none">
 
                             <com.google.android.material.textfield.TextInputEditText
                                 android:id="@+id/etPassword"
@@ -255,11 +300,20 @@
                                 android:padding="15dp"
                                 android:inputType="textPassword"/>
                         </com.google.android.material.textfield.TextInputLayout>
+                        <TextView
+                            android:id="@+id/tvPasswordError"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="#B71C1C"
+                            android:textSize="12sp"
+                            android:visibility="gone"
+                            android:layout_marginBottom="10dp"/>
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Confirm Password"
+                            android:layout_marginTop="5dp"
                             android:layout_marginBottom="5dp"/>
 
                         <com.google.android.material.textfield.TextInputLayout
@@ -268,8 +322,7 @@
                             app:passwordToggleEnabled="true"
                             app:passwordToggleTint="#B71C1C"
                             app:hintEnabled="false"
-                            app:boxBackgroundMode="none"
-                            android:layout_marginBottom="30dp">
+                            app:boxBackgroundMode="none">
 
                             <com.google.android.material.textfield.TextInputEditText
                                 android:id="@+id/etConfirmPassword"
@@ -279,6 +332,14 @@
                                 android:padding="15dp"
                                 android:inputType="textPassword"/>
                         </com.google.android.material.textfield.TextInputLayout>
+                        <TextView
+                            android:id="@+id/tvConfirmPasswordError"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="#B71C1C"
+                            android:textSize="12sp"
+                            android:visibility="gone"
+                            android:layout_marginBottom="20dp"/>
 
                     </LinearLayout>
 

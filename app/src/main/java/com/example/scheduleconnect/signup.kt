@@ -36,20 +36,27 @@ class SignupActivity : AppCompatActivity() {
     private lateinit var etDob: EditText
     private lateinit var etPassword: TextInputEditText
     private lateinit var etConfirmPassword: TextInputEditText
-
-    // Phone & CCP
     private lateinit var etPhone: EditText
     private lateinit var ccp: CountryCodePicker
 
+    // Error TextViews from Layout
+    private lateinit var tvFirstNameError: TextView
+    private lateinit var tvLastNameError: TextView
+    private lateinit var tvDobError: TextView
+    private lateinit var tvEmailError: TextView
+    private lateinit var tvPhoneError: TextView
+    private lateinit var tvUsernameError: TextView
+    private lateinit var tvPasswordError: TextView
+    private lateinit var tvConfirmPasswordError: TextView
+
     // --- EMAIL CONFIGURATION ---
     private val SENDER_EMAIL = "scheduleconnect2025@gmail.com"
-    private val SENDER_PASSWORD = "zcml lkrm qeff xayy" // App Password
+    private val SENDER_PASSWORD = "zcml lkrm qeff xayy"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_signup)
 
-        // dbHelper is now the new Firebase-based class
         dbHelper = DatabaseHelper(this)
 
         // Initialize Views
@@ -64,27 +71,26 @@ class SignupActivity : AppCompatActivity() {
         etDob = findViewById(R.id.etDob)
         etPassword = findViewById(R.id.etPassword)
         etConfirmPassword = findViewById(R.id.etConfirmPassword)
-
-        // Initialize Phone & CCP
         etPhone = findViewById(R.id.etPhone)
         ccp = findViewById(R.id.ccp)
-        ccp.registerCarrierNumberEditText(etPhone) // Connects CCP to the EditText
+        ccp.registerCarrierNumberEditText(etPhone)
 
-        // --- FEATURE: DATE PICKER ---
-        etDob.setOnClickListener {
-            showDatePicker()
-        }
+        // Initialize Error TextViews
+        tvFirstNameError = findViewById(R.id.tvFirstNameError)
+        tvLastNameError = findViewById(R.id.tvLastNameError)
+        tvDobError = findViewById(R.id.tvDobError)
+        tvEmailError = findViewById(R.id.tvEmailError)
+        tvPhoneError = findViewById(R.id.tvPhoneError)
+        tvUsernameError = findViewById(R.id.tvUsernameError)
+        tvPasswordError = findViewById(R.id.tvPasswordError)
+        tvConfirmPasswordError = findViewById(R.id.tvConfirmPasswordError)
 
-        // LOGIC: Show/Hide "Others" Input for Gender
+        etDob.setOnClickListener { showDatePicker() }
+
         rgGender.setOnCheckedChangeListener { _, checkedId ->
-            if (checkedId == R.id.rbOther) {
-                etGenderOther.visibility = View.VISIBLE
-            } else {
-                etGenderOther.visibility = View.GONE
-            }
+            etGenderOther.visibility = if (checkedId == R.id.rbOther) View.VISIBLE else View.GONE
         }
 
-        // Navigation Logic
         updateNavigationUI()
 
         btnNext.setOnClickListener {
@@ -103,9 +109,7 @@ class SignupActivity : AppCompatActivity() {
             }
         }
 
-        tvRegister.setOnClickListener {
-            performRegistration()
-        }
+        tvRegister.setOnClickListener { performRegistration() }
     }
 
     private fun showDatePicker() {
@@ -114,18 +118,16 @@ class SignupActivity : AppCompatActivity() {
         val month = calendar.get(Calendar.MONTH)
         val day = calendar.get(Calendar.DAY_OF_MONTH)
 
-        val datePickerDialog = DatePickerDialog(this, { _, selectedYear, selectedMonth, selectedDay ->
+        DatePickerDialog(this, { _, selectedYear, selectedMonth, selectedDay ->
             val formattedDate = "$selectedYear-${selectedMonth + 1}-$selectedDay"
             etDob.setText(formattedDate)
-        }, year, month, day)
-
-        datePickerDialog.show()
+            tvDobError.visibility = View.GONE // Clear error on selection
+        }, year, month, day).show()
     }
 
     private fun updateNavigationUI() {
         val currentStep = viewFlipper.displayedChild + 1
         progressBar.progress = currentStep
-
         if (currentStep == 3) {
             btnNext.visibility = View.GONE
             tvRegister.visibility = View.VISIBLE
@@ -135,17 +137,26 @@ class SignupActivity : AppCompatActivity() {
         }
     }
 
+    private fun clearAllErrors() {
+        tvFirstNameError.visibility = View.GONE
+        tvLastNameError.visibility = View.GONE
+        tvDobError.visibility = View.GONE
+        tvEmailError.visibility = View.GONE
+        tvPhoneError.visibility = View.GONE
+        tvUsernameError.visibility = View.GONE
+        tvPasswordError.visibility = View.GONE
+        tvConfirmPasswordError.visibility = View.GONE
+    }
+
     private fun performRegistration() {
-        // 1. Get references
+        clearAllErrors()
+
         val etFirstName = findViewById<EditText>(R.id.etFirstName)
-        val etMiddleName = findViewById<EditText>(R.id.etMiddleName)
         val etLastName = findViewById<EditText>(R.id.etLastName)
         val etEmail = findViewById<EditText>(R.id.etEmail)
         val etUsername = findViewById<EditText>(R.id.etUsername)
 
-        // 2. Extract Strings
         val fName = etFirstName.text.toString().trim()
-        val mName = etMiddleName.text.toString().trim()
         val lName = etLastName.text.toString().trim()
         val dob = etDob.text.toString().trim()
         val email = etEmail.text.toString().trim()
@@ -153,197 +164,169 @@ class SignupActivity : AppCompatActivity() {
         val pass = etPassword.text.toString().trim()
         val confirmPass = etConfirmPassword.text.toString().trim()
 
-        // --- VALIDATION STEP 1: NAMES ---
-        if (fName.isEmpty()) { etFirstName.error = "Required"; goToStep(0); return }
-        if (lName.isEmpty()) { etLastName.error = "Required"; goToStep(0); return }
+        // --- STEP 1 VALIDATION ---
+        if (fName.isEmpty()) {
+            tvFirstNameError.text = "Please enter your first name"
+            tvFirstNameError.visibility = View.VISIBLE
+            goToStep(0); return
+        }
+        if (lName.isEmpty()) {
+            tvLastNameError.text = "Please enter your last name"
+            tvLastNameError.visibility = View.VISIBLE
+            goToStep(0); return
+        }
 
-        // --- VALIDATION STEP 2: DETAILS ---
-        var gender = ""
+        // --- STEP 2 VALIDATION ---
         val selectedGenderId = rgGender.checkedRadioButtonId
-        if (selectedGenderId == -1) { goToStep(1); Toast.makeText(this, "Select Gender", Toast.LENGTH_SHORT).show(); return }
-        else {
-            val selectedRb = findViewById<RadioButton>(selectedGenderId)
-            gender = selectedRb.text.toString()
-            if (selectedRb.id == R.id.rbOther) {
-                if (etGenderOther.text.toString().isEmpty()) { etGenderOther.error = "Specify gender"; goToStep(1); return }
-                gender = etGenderOther.text.toString()
-            }
+        if (selectedGenderId == -1) {
+            Toast.makeText(this, "Please select your gender", Toast.LENGTH_SHORT).show()
+            goToStep(1); return
         }
-        if (dob.isEmpty()) { etDob.error = "Required"; goToStep(1); return }
-        if (email.isEmpty()) { etEmail.error = "Required"; goToStep(1); return }
-
-        // Phone Validation with CCP
+        if (dob.isEmpty()) {
+            tvDobError.text = "Please select your date of birth"
+            tvDobError.visibility = View.VISIBLE
+            goToStep(1); return
+        }
+        if (email.isEmpty()) {
+            tvEmailError.text = "An email is required for verification"
+            tvEmailError.visibility = View.VISIBLE
+            goToStep(1); return
+        } else if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            tvEmailError.text = "Please enter a valid email format"
+            tvEmailError.visibility = View.VISIBLE
+            goToStep(1); return
+        }
         if (!ccp.isValidFullNumber) {
-            etPhone.error = "Invalid Number";
-            goToStep(1);
-            return
+            tvPhoneError.text = "Please enter a valid phone number"
+            tvPhoneError.visibility = View.VISIBLE
+            goToStep(1); return
         }
-        val phone = ccp.fullNumberWithPlus // Get full international format
 
-        // --- VALIDATION STEP 3: ACCOUNT ---
-        if (user.isEmpty()) { etUsername.error = "Required"; goToStep(2); return }
-        if (pass.isEmpty()) { etPassword.error = "Required"; goToStep(2); return }
-        if (pass.length < 8) { etPassword.error = "Min 8 chars"; goToStep(2); return }
-        if (pass != confirmPass) { etConfirmPassword.error = "No match"; goToStep(2); return }
+        // --- STEP 3 VALIDATION ---
+        if (user.isEmpty()) {
+            tvUsernameError.text = "Please choose a username"
+            tvUsernameError.visibility = View.VISIBLE
+            goToStep(2); return
+        }
+        if (pass.isEmpty()) {
+            tvPasswordError.text = "Please create a password"
+            tvPasswordError.visibility = View.VISIBLE
+            goToStep(2); return
+        }
+        if (pass.length < 8) {
+            tvPasswordError.text = "Password must be at least 8 characters"
+            tvPasswordError.visibility = View.VISIBLE
+            goToStep(2); return
+        }
+        if (pass != confirmPass) {
+            tvConfirmPasswordError.text = "The passwords you entered do not match. Please try again."
+            tvConfirmPasswordError.visibility = View.VISIBLE
+            goToStep(2); return
+        }
 
-        // --- FIREBASE UPDATES: ASYNC CHECK ---
-        val progressDialog = ProgressDialog(this)
-        progressDialog.setMessage("Checking availability...")
-        progressDialog.setCancelable(false)
-        progressDialog.show()
+        val progressDialog = ProgressDialog(this).apply {
+            setMessage("Checking availability...")
+            setCancelable(false)
+            show()
+        }
 
         dbHelper.checkUsernameOrEmail(user) { exists ->
             progressDialog.dismiss()
             if (exists) {
-                etUsername.error = "Taken"
+                tvUsernameError.text = "This username is already taken"
+                tvUsernameError.visibility = View.VISIBLE
                 goToStep(2)
             } else {
-                // If username is free, proceed to email verification
-                sendVerificationEmail(email, fName, mName, lName, gender, dob, phone, user, pass)
+                val phone = ccp.fullNumberWithPlus
+                sendVerificationEmail(email, fName, "", lName, "", dob, phone, user, pass)
             }
         }
     }
 
-    private fun sendVerificationEmail(
-        email: String, fName: String, mName: String, lName: String,
-        gender: String, dob: String, phone: String, user: String, pass: String
-    ) {
+    private fun sendVerificationEmail(email: String, fName: String, mName: String, lName: String, gender: String, dob: String, phone: String, user: String, pass: String) {
         val verificationCode = (100000..999999).random().toString()
-
-        val progressDialog = ProgressDialog(this)
-        progressDialog.setMessage("Sending verification code to $email...")
-        progressDialog.setCancelable(false)
-        progressDialog.show()
+        val progressDialog = ProgressDialog(this).apply {
+            setMessage("Sending verification code...")
+            setCancelable(false)
+            show()
+        }
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val props = Properties()
-                props["mail.smtp.auth"] = "true"
-                props["mail.smtp.starttls.enable"] = "true"
-                props["mail.smtp.host"] = "smtp.gmail.com"
-                props["mail.smtp.port"] = "587"
-
+                val props = Properties().apply {
+                    put("mail.smtp.auth", "true")
+                    put("mail.smtp.starttls.enable", "true")
+                    put("mail.smtp.host", "smtp.gmail.com")
+                    put("mail.smtp.port", "587")
+                }
                 val session = Session.getInstance(props, object : Authenticator() {
-                    override fun getPasswordAuthentication(): PasswordAuthentication {
-                        return PasswordAuthentication(SENDER_EMAIL, SENDER_PASSWORD)
-                    }
+                    override fun getPasswordAuthentication() = PasswordAuthentication(SENDER_EMAIL, SENDER_PASSWORD)
                 })
 
-                val message = MimeMessage(session)
-                message.setFrom(InternetAddress(SENDER_EMAIL, "ScheduleConnect Team"))
-                message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(email))
-                message.subject = "Verify your Email - ScheduleConnect"
-
-                val htmlContent = """
-                    <!DOCTYPE html>
-                    <html>
-                    <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
-                        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0,0,0,0.1);">
-                            <h2 style="color: #8B1A1A; text-align: center;">ScheduleConnect</h2>
-                            <hr style="border: 0; border-top: 1px solid #eeeeee;">
-                            <p style="font-size: 16px; color: #333333;">Hello <b>$fName</b>,</p>
-                            <p style="font-size: 16px; color: #555555;">
-                                Thank you for registering! Please use the OTP below to complete your account verification.
-                            </p>
-                            <div style="background-color: #f8d7da; padding: 15px; text-align: center; border-radius: 5px; margin: 20px 0;">
-                                <h1 style="color: #8B1A1A; letter-spacing: 5px; margin: 0;">$verificationCode</h1>
+                // UPDATED THEME-MATCHED EMAIL TEMPLATE
+                val htmlTemplate = """
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #F5F5F5; padding: 20px;">
+                        <div style="background-color: #ffffff; padding: 40px; border-radius: 20px; text-align: center; border-top: 8px solid #8B1A1A; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                            <h2 style="color: #8B1A1A; margin-bottom: 20px;">ScheduleConnect</h2>
+                            <p style="color: #333333; font-size: 18px; margin-bottom: 20px;">Hello <b>$fName</b>!</p>
+                            <p style="color: #666666; line-height: 1.6; margin-bottom: 30px;">Welcome to ScheduleConnect. To complete your registration and secure your account, please use the verification code below:</p>
+                            <div style="background-color: #FDF2F2; border: 2px dashed #8B1A1A; padding: 20px; border-radius: 12px; display: inline-block; margin-bottom: 30px;">
+                                <h1 style="color: #8B1A1A; font-size: 36px; font-weight: bold; letter-spacing: 8px; margin: 0;">$verificationCode</h1>
                             </div>
-                            <p style="font-size: 14px; color: #777777;">
-                                If you didn't request this code, you can safely ignore this email.
-                            </p>
-                            <br>
-                            <p style="font-size: 14px; color: #999999; text-align: center;">
-                                &copy; 2025 ScheduleConnect. All rights reserved.
-                            </p>
+                            <p style="color: #999999; font-size: 12px; margin-top: 20px;">&copy; 2025 ScheduleConnect Team<br>Making scheduling simple and connected.</p>
                         </div>
-                    </body>
-                    </html>
+                    </div>
                 """.trimIndent()
 
-                message.setContent(htmlContent, "text/html; charset=utf-8")
+                val message = MimeMessage(session).apply {
+                    setFrom(InternetAddress(SENDER_EMAIL, "ScheduleConnect Team"))
+                    setRecipients(Message.RecipientType.TO, InternetAddress.parse(email))
+                    subject = "Verify your Email - ScheduleConnect"
+                    setContent(htmlTemplate, "text/html; charset=utf-8")
+                }
                 Transport.send(message)
-
                 withContext(Dispatchers.Main) {
                     progressDialog.dismiss()
                     showVerificationDialog(verificationCode, fName, mName, lName, gender, dob, email, phone, user, pass)
                 }
-
             } catch (e: Exception) {
-                e.printStackTrace()
                 withContext(Dispatchers.Main) {
                     progressDialog.dismiss()
-                    Toast.makeText(this@SignupActivity, "Failed to send email: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@SignupActivity, "Email failed: ${e.message}", Toast.LENGTH_LONG).show()
                 }
             }
         }
     }
 
-    private fun showVerificationDialog(
-        correctCode: String, fName: String, mName: String, lName: String,
-        gender: String, dob: String, email: String, phone: String, user: String, pass: String
-    ) {
-        val dialogBuilder = AlertDialog.Builder(this)
-        val inflater = LayoutInflater.from(this)
-
-        // Use custom professional layout
-        val dialogView = inflater.inflate(R.layout.dialog_verification, null)
-        dialogBuilder.setView(dialogView)
-
-        val alertDialog = dialogBuilder.create()
+    private fun showVerificationDialog(correctCode: String, fName: String, mName: String, lName: String, gender: String, dob: String, email: String, phone: String, user: String, pass: String) {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_verification, null)
+        val alertDialog = AlertDialog.Builder(this).setView(dialogView).create()
         alertDialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
-        val tvSubtitle = dialogView.findViewById<TextView>(R.id.tvDialogSubtitle)
         val etCode = dialogView.findViewById<TextInputEditText>(R.id.etDialogCode)
-        val btnCancel = dialogView.findViewById<TextView>(R.id.btnCancelDialog)
-        val btnVerify = dialogView.findViewById<TextView>(R.id.btnVerifyDialog)
-
-        tvSubtitle.text = "We sent a 6-digit code to $email"
-
-        btnCancel.setOnClickListener {
-            alertDialog.dismiss()
-        }
-
-        btnVerify.setOnClickListener {
-            val enteredCode = etCode.text.toString().trim()
-            if (enteredCode == correctCode) {
+        dialogView.findViewById<TextView>(R.id.btnVerifyDialog).setOnClickListener {
+            if (etCode.text.toString().trim() == correctCode) {
                 alertDialog.dismiss()
                 saveUserToDB(fName, mName, lName, gender, dob, email, phone, user, pass)
             } else {
-                etCode.error = "Incorrect Code"
-                etCode.requestFocus()
+                etCode.error = "Incorrect code"
             }
         }
-
         alertDialog.show()
     }
 
-    private fun saveUserToDB(
-        fName: String, mName: String, lName: String,
-        gender: String, dob: String, email: String, phone: String, user: String, pass: String
-    ) {
-        // --- FIREBASE UPDATE: ASYNC SAVE ---
-        val progressDialog = ProgressDialog(this)
-        progressDialog.setMessage("Creating Account...")
-        progressDialog.setCancelable(false)
-        progressDialog.show()
-
+    private fun saveUserToDB(fName: String, mName: String, lName: String, gender: String, dob: String, email: String, phone: String, user: String, pass: String) {
+        val progressDialog = ProgressDialog(this).apply {
+            setMessage("Creating Account...")
+            setCancelable(false)
+            show()
+        }
         dbHelper.addUser(fName, mName, lName, gender, dob, email, phone, user, pass) { success ->
             progressDialog.dismiss()
             if (success) {
-                // --- CRITICAL FIX START: SAVE SESSION CORRECTLY ---
-                val sharedPref = getSharedPreferences("UserSession", Context.MODE_PRIVATE)
-                val editor = sharedPref.edit()
-                editor.putString("USERNAME", user) // KEY MUST BE "USERNAME" (Caps)
-                editor.apply()
-
-                Toast.makeText(this, "Registration Successful!", Toast.LENGTH_SHORT).show()
-
-                // Pass the user to Profile Setup
-                val intent = Intent(this, ProfileSetupActivity::class.java)
-                intent.putExtra("CURRENT_USER", user)
-                startActivity(intent)
-                finish() // Close this activity
-                // --- CRITICAL FIX END ---
+                getSharedPreferences("UserSession", Context.MODE_PRIVATE).edit().putString("USERNAME", user).apply()
+                startActivity(Intent(this, ProfileSetupActivity::class.java).apply { putExtra("CURRENT_USER", user) })
+                finish()
             } else {
                 Toast.makeText(this, "Registration Failed", Toast.LENGTH_SHORT).show()
             }
@@ -352,7 +335,7 @@ class SignupActivity : AppCompatActivity() {
 
     private fun goToStep(stepIndex: Int) {
         if (viewFlipper.displayedChild != stepIndex) {
-            viewFlipper.displayedChild = stepIndex
+            viewFlipper.showNext() // Or logic based on stepIndex
             updateNavigationUI()
         }
     }
