@@ -176,12 +176,26 @@ class SignupActivity : AppCompatActivity() {
             goToStep(0); return
         }
 
-        // --- STEP 2 VALIDATION ---
+        // --- STEP 2 VALIDATION & GENDER CAPTURE ---
+        var gender = ""
         val selectedGenderId = rgGender.checkedRadioButtonId
         if (selectedGenderId == -1) {
             Toast.makeText(this, "Please select your gender", Toast.LENGTH_SHORT).show()
             goToStep(1); return
+        } else {
+            val selectedRb = findViewById<RadioButton>(selectedGenderId)
+            gender = if (selectedRb.id == R.id.rbOther) {
+                etGenderOther.text.toString().trim()
+            } else {
+                selectedRb.text.toString()
+            }
+            // Fix: Check if "Other" is empty
+            if (selectedRb.id == R.id.rbOther && gender.isEmpty()) {
+                etGenderOther.error = "Please specify your gender"
+                goToStep(1); return
+            }
         }
+
         if (dob.isEmpty()) {
             tvDobError.text = "Please select your date of birth"
             tvDobError.visibility = View.VISIBLE
@@ -219,7 +233,7 @@ class SignupActivity : AppCompatActivity() {
             goToStep(2); return
         }
         if (pass != confirmPass) {
-            tvConfirmPasswordError.text = "The passwords you entered do not match. Please try again."
+            tvConfirmPasswordError.text = "The passwords do not match. Please try again."
             tvConfirmPasswordError.visibility = View.VISIBLE
             goToStep(2); return
         }
@@ -238,7 +252,8 @@ class SignupActivity : AppCompatActivity() {
                 goToStep(2)
             } else {
                 val phone = ccp.fullNumberWithPlus
-                sendVerificationEmail(email, fName, "", lName, "", dob, phone, user, pass)
+                // FIX: Correctly passing gender to verification logic
+                sendVerificationEmail(email, fName, "", lName, gender, dob, phone, user, pass)
             }
         }
     }
@@ -263,15 +278,14 @@ class SignupActivity : AppCompatActivity() {
                     override fun getPasswordAuthentication() = PasswordAuthentication(SENDER_EMAIL, SENDER_PASSWORD)
                 })
 
-                // UPDATED THEME-MATCHED EMAIL TEMPLATE
                 val htmlTemplate = """
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #F5F5F5; padding: 20px;">
                         <div style="background-color: #ffffff; padding: 40px; border-radius: 20px; text-align: center; border-top: 8px solid #8B1A1A; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
                             <h2 style="color: #8B1A1A; margin-bottom: 20px;">ScheduleConnect</h2>
-                            <p style="color: #333333; font-size: 18px; margin-bottom: 20px;">Hello <b>$fName</b>!</p>
+                            <p style="color: #333333; font-size: 18px;">Hello <b>$fName</b>!</p>
                             <p style="color: #666666; line-height: 1.6; margin-bottom: 30px;">Welcome to ScheduleConnect. To complete your registration and secure your account, please use the verification code below:</p>
-                            <div style="background-color: #FDF2F2; border: 2px dashed #8B1A1A; padding: 20px; border-radius: 12px; display: inline-block; margin-bottom: 30px;">
-                                <h1 style="color: #8B1A1A; font-size: 36px; font-weight: bold; letter-spacing: 8px; margin: 0;">$verificationCode</h1>
+                            <div style="background-color: #FDF2F2; border: 2px dashed #8B1A1A; padding: 20px; border-radius: 12px; display: inline-block; margin: 25px 0;">
+                                <h1 style="color: #8B1A1A; font-size: 36px; letter-spacing: 8px; margin: 0;">$verificationCode</h1>
                             </div>
                             <p style="color: #999999; font-size: 12px; margin-top: 20px;">&copy; 2025 ScheduleConnect Team<br>Making scheduling simple and connected.</p>
                         </div>
@@ -307,6 +321,7 @@ class SignupActivity : AppCompatActivity() {
         dialogView.findViewById<TextView>(R.id.btnVerifyDialog).setOnClickListener {
             if (etCode.text.toString().trim() == correctCode) {
                 alertDialog.dismiss()
+                // FIX: Passing the captured gender through to database save
                 saveUserToDB(fName, mName, lName, gender, dob, email, phone, user, pass)
             } else {
                 etCode.error = "Incorrect code"
@@ -321,6 +336,7 @@ class SignupActivity : AppCompatActivity() {
             setCancelable(false)
             show()
         }
+        // FIX: The database helper now receives the gender string captured during validation
         dbHelper.addUser(fName, mName, lName, gender, dob, email, phone, user, pass) { success ->
             progressDialog.dismiss()
             if (success) {
@@ -335,7 +351,7 @@ class SignupActivity : AppCompatActivity() {
 
     private fun goToStep(stepIndex: Int) {
         if (viewFlipper.displayedChild != stepIndex) {
-            viewFlipper.showNext() // Or logic based on stepIndex
+            viewFlipper.displayedChild = stepIndex
             updateNavigationUI()
         }
     }

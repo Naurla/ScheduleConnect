@@ -2,15 +2,12 @@ package com.example.scheduleconnect
 
 import android.app.ProgressDialog
 import android.os.Bundle
-import android.telephony.SmsManager
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
 import com.google.android.material.textfield.TextInputEditText
-import com.hbb20.CountryCodePicker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -23,22 +20,12 @@ import javax.mail.internet.MimeMessage
 class ForgotPasswordActivity : AppCompatActivity() {
 
     private lateinit var dbHelper: DatabaseHelper
-    private lateinit var layoutEmail: LinearLayout
-    private lateinit var layoutPhone: LinearLayout
-    private lateinit var layoutReset: LinearLayout
-    private lateinit var btnSendOTP: Button
-
-    // Inputs
     private lateinit var etEmail: EditText
-    private lateinit var etPhone: EditText
-    private lateinit var ccp: CountryCodePicker
-    private lateinit var etNewPass: EditText
-    private lateinit var etConfirmPass: EditText
+    private lateinit var tvEmailError: TextView
+    private lateinit var btnSendOTP: Button
+    private lateinit var layoutReset: LinearLayout
+    private lateinit var layoutEmailInput: LinearLayout
 
-    private var isEmailMethod = true
-    private var targetIdentifier = ""
-
-    // REPLACE WITH YOUR REAL EMAIL CREDENTIALS
     private val SENDER_EMAIL = "scheduleconnect2025@gmail.com"
     private val SENDER_PASSWORD = "zcml lkrm qeff xayy"
 
@@ -47,219 +34,128 @@ class ForgotPasswordActivity : AppCompatActivity() {
         setContentView(R.layout.activity_forgot_password)
         dbHelper = DatabaseHelper(this)
 
-        // Init Views
-        val rgMethod = findViewById<RadioGroup>(R.id.rgMethod)
-
-        // These IDs must exist in the XML for the code to work
-        layoutEmail = findViewById(R.id.layoutEmailInput)
-        layoutPhone = findViewById(R.id.layoutPhoneInput)
-        layoutReset = findViewById(R.id.layoutResetFields)
-
         etEmail = findViewById(R.id.etResetEmail)
-        etPhone = findViewById(R.id.etResetPhone)
-        ccp = findViewById(R.id.ccpReset)
-        ccp.registerCarrierNumberEditText(etPhone)
-
+        tvEmailError = findViewById(R.id.tvEmailError)
         btnSendOTP = findViewById(R.id.btnSendOTP)
-        etNewPass = findViewById(R.id.etNewPass)
-        etConfirmPass = findViewById(R.id.etConfirmNewPass)
+        layoutReset = findViewById(R.id.layoutResetFields)
+        layoutEmailInput = findViewById(R.id.layoutEmailInput)
 
         findViewById<View>(R.id.btnBackForgot).setOnClickListener { finish() }
 
-        // Toggle Logic: Show/Hide inputs based on radio selection
-        rgMethod.setOnCheckedChangeListener { _, checkedId ->
-            if (checkedId == R.id.rbEmail) {
-                isEmailMethod = true
-                layoutEmail.visibility = View.VISIBLE
-                layoutPhone.visibility = View.GONE
-            } else {
-                isEmailMethod = false
-                layoutEmail.visibility = View.GONE
-                layoutPhone.visibility = View.VISIBLE
-            }
-        }
+        btnSendOTP.setOnClickListener { handleSendOTP() }
 
-        btnSendOTP.setOnClickListener {
-            handleSendOTP()
-        }
-
-        findViewById<Button>(R.id.btnFinalizeReset).setOnClickListener {
-            updatePassword()
-        }
+        findViewById<Button>(R.id.btnFinalizeReset).setOnClickListener { updatePassword() }
     }
 
     private fun handleSendOTP() {
-        // Disable button to prevent double-click
-        btnSendOTP.isEnabled = false
-        btnSendOTP.text = "Checking..."
+        val email = etEmail.text.toString().trim()
+        if (email.isEmpty() || !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            tvEmailError.text = "Please enter a valid email address"
+            tvEmailError.visibility = View.VISIBLE
+            return
+        }
+        tvEmailError.visibility = View.GONE
 
-        if (isEmailMethod) {
-            val email = etEmail.text.toString().trim()
-            if (email.isEmpty()) {
-                etEmail.error = "Required"
-                btnSendOTP.isEnabled = true
-                btnSendOTP.text = "SEND OTP"
-                return
-            }
+        val pd = ProgressDialog(this).apply { setMessage("Verifying account..."); show() }
 
-            // --- ASYNC CHECK EMAIL ---
-            dbHelper.checkEmail(email) { exists ->
-                if (exists) {
-                    targetIdentifier = email
-                    sendEmailOTP(email)
-                } else {
-                    Toast.makeText(this, "Email not found in database", Toast.LENGTH_SHORT).show()
-                    btnSendOTP.isEnabled = true
-                    btnSendOTP.text = "SEND OTP"
-                }
-            }
-        } else {
-            if (!ccp.isValidFullNumber) {
-                etPhone.error = "Invalid Number"
-                btnSendOTP.isEnabled = true
-                btnSendOTP.text = "SEND OTP"
-                return
-            }
-            val fullPhone = ccp.fullNumberWithPlus
-
-            // --- ASYNC CHECK PHONE ---
-            dbHelper.checkPhone(fullPhone) { exists ->
-                if (exists) {
-                    targetIdentifier = fullPhone
-                    sendSMSOTP(fullPhone)
-                } else {
-                    Toast.makeText(this, "Phone number not found", Toast.LENGTH_SHORT).show()
-                    btnSendOTP.isEnabled = true
-                    btnSendOTP.text = "SEND OTP"
-                }
+        dbHelper.checkEmail(email) { exists ->
+            pd.dismiss()
+            if (exists) {
+                sendEmailOTP(email)
+            } else {
+                tvEmailError.text = "This email is not registered"
+                tvEmailError.visibility = View.VISIBLE
             }
         }
     }
 
     private fun sendEmailOTP(email: String) {
         val otp = (100000..999999).random().toString()
-        val pd = ProgressDialog(this)
-        pd.setMessage("Sending OTP...")
-        pd.show()
+        val pd = ProgressDialog(this).apply { setMessage("Sending reset code..."); show() }
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val props = Properties()
-                props["mail.smtp.auth"] = "true"
-                props["mail.smtp.starttls.enable"] = "true"
-                props["mail.smtp.host"] = "smtp.gmail.com"
-                props["mail.smtp.port"] = "587"
-
+                val props = Properties().apply {
+                    put("mail.smtp.auth", "true")
+                    put("mail.smtp.starttls.enable", "true")
+                    put("mail.smtp.host", "smtp.gmail.com")
+                    put("mail.smtp.port", "587")
+                }
                 val session = Session.getInstance(props, object : Authenticator() {
                     override fun getPasswordAuthentication() = PasswordAuthentication(SENDER_EMAIL, SENDER_PASSWORD)
                 })
 
-                val message = MimeMessage(session)
-                message.setFrom(InternetAddress(SENDER_EMAIL, "ScheduleConnect Support"))
-                message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(email))
-                message.subject = "Reset Password OTP"
-                message.setText("Your OTP is: $otp")
+                val htmlTemplate = """
+                    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; background-color: #F5F5F5; padding: 20px;">
+                        <div style="background-color: #ffffff; padding: 40px; border-radius: 20px; text-align: center; border-top: 8px solid #8B1A1A;">
+                            <h2 style="color: #8B1A1A;">Password Reset Request</h2>
+                            <p>You requested to reset your ScheduleConnect password. Use the code below to proceed:</p>
+                            <div style="background-color: #FDF2F2; border: 2px dashed #8B1A1A; padding: 20px; border-radius: 12px; display: inline-block; margin: 20px 0;">
+                                <h1 style="color: #8B1A1A; font-size: 36px; letter-spacing: 8px; margin: 0;">$otp</h1>
+                            </div>
+                            <p style="color: #999999; font-size: 12px;">If you didn't request this, you can safely ignore this email.</p>
+                        </div>
+                    </div>
+                """.trimIndent()
 
+                val message = MimeMessage(session).apply {
+                    setFrom(InternetAddress(SENDER_EMAIL, "ScheduleConnect Support"))
+                    setRecipients(Message.RecipientType.TO, InternetAddress.parse(email))
+                    subject = "Your Password Reset Code"
+                    setContent(htmlTemplate, "text/html; charset=utf-8")
+                }
                 Transport.send(message)
 
                 withContext(Dispatchers.Main) {
                     pd.dismiss()
-                    // Re-enable button (though dialog will block it anyway)
-                    btnSendOTP.isEnabled = true
-                    btnSendOTP.text = "SEND OTP"
-                    showVerificationDialog(otp)
+                    showVerificationDialog(otp, email)
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     pd.dismiss()
-                    btnSendOTP.isEnabled = true
-                    btnSendOTP.text = "SEND OTP"
-                    Toast.makeText(this@ForgotPasswordActivity, "Error sending Email: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@ForgotPasswordActivity, "Email failed: ${e.message}", Toast.LENGTH_LONG).show()
                 }
             }
         }
     }
 
-    private fun sendSMSOTP(phone: String) {
-        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.SEND_SMS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.SEND_SMS), 1)
-            btnSendOTP.isEnabled = true
-            btnSendOTP.text = "SEND OTP"
-            return
-        }
-
-        val otp = (100000..999999).random().toString()
-        try {
-            val smsManager = SmsManager.getDefault()
-            smsManager.sendTextMessage(phone, null, "Your OTP is: $otp", null, null)
-            Toast.makeText(this, "OTP sent to $phone", Toast.LENGTH_SHORT).show()
-
-            btnSendOTP.isEnabled = true
-            btnSendOTP.text = "SEND OTP"
-            showVerificationDialog(otp)
-        } catch (e: Exception) {
-            // Fallback for demo if SMS fails (e.g. emulator)
-            Toast.makeText(this, "SMS Failed (Simulated OTP: $otp)", Toast.LENGTH_LONG).show()
-            btnSendOTP.isEnabled = true
-            btnSendOTP.text = "SEND OTP"
-            showVerificationDialog(otp)
-        }
-    }
-
-    private fun showVerificationDialog(correctOtp: String) {
-        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_verification, null)
-        val builder = AlertDialog.Builder(this)
-        builder.setView(dialogView)
-        val dialog = builder.create()
+    private fun showVerificationDialog(correctOtp: String, email: String) {
+        val view = LayoutInflater.from(this).inflate(R.layout.dialog_verification, null)
+        val dialog = AlertDialog.Builder(this).setView(view).create()
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
-        val etCode = dialogView.findViewById<TextInputEditText>(R.id.etDialogCode)
-        val btnVerify = dialogView.findViewById<TextView>(R.id.btnVerifyDialog)
-        val btnCancel = dialogView.findViewById<TextView>(R.id.btnCancelDialog)
+        val etCode = view.findViewById<TextInputEditText>(R.id.etDialogCode)
+        view.findViewById<TextView>(R.id.tvDialogSubtitle).text = "Enter the code sent to $email"
 
-        dialogView.findViewById<TextView>(R.id.tvDialogSubtitle).text = "Enter the code sent to your ${if(isEmailMethod) "Email" else "Phone"}"
-
-        btnCancel.setOnClickListener { dialog.dismiss() }
-
-        btnVerify.setOnClickListener {
+        view.findViewById<TextView>(R.id.btnVerifyDialog).setOnClickListener {
             if (etCode.text.toString().trim() == correctOtp) {
                 dialog.dismiss()
-                // Show Reset Fields
                 layoutReset.visibility = View.VISIBLE
-                // Disable inputs
                 btnSendOTP.visibility = View.GONE
-                layoutEmail.visibility = View.GONE
-                layoutPhone.visibility = View.GONE
-                findViewById<RadioGroup>(R.id.rgMethod).visibility = View.GONE
-                Toast.makeText(this, "Verified! Enter new password.", Toast.LENGTH_SHORT).show()
+                layoutEmailInput.visibility = View.GONE
             } else {
-                etCode.error = "Incorrect OTP"
+                etCode.error = "Incorrect code"
             }
         }
         dialog.show()
     }
 
     private fun updatePassword() {
-        val pass = etNewPass.text.toString()
-        val confirm = etConfirmPass.text.toString()
+        val pass = findViewById<EditText>(R.id.etNewPass).text.toString()
+        val confirm = findViewById<EditText>(R.id.etConfirmNewPass).text.toString()
+        val email = etEmail.text.toString().trim()
 
-        if (pass.length < 8) { etNewPass.error = "Min 8 chars"; return }
-        if (pass != confirm) { etConfirmPass.error = "Passwords do not match"; return }
+        if (pass.length < 8) { Toast.makeText(this, "Minimum 8 characters", Toast.LENGTH_SHORT).show(); return }
+        if (pass != confirm) { Toast.makeText(this, "Passwords do not match", Toast.LENGTH_SHORT).show(); return }
 
-        // --- ASYNC PASSWORD UPDATE ---
-        val btnReset = findViewById<Button>(R.id.btnFinalizeReset)
-        btnReset.isEnabled = false
-        btnReset.text = "Updating..."
-
-        dbHelper.updatePassword(targetIdentifier, pass, isEmailMethod) { success ->
-            btnReset.isEnabled = true
-            btnReset.text = "RESET PASSWORD"
-
+        val pd = ProgressDialog(this).apply { setMessage("Updating password..."); show() }
+        dbHelper.updatePassword(email, pass, true) { success ->
+            pd.dismiss()
             if (success) {
-                Toast.makeText(this, "Password Updated! Please Login.", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Password updated successfully!", Toast.LENGTH_LONG).show()
                 finish()
             } else {
-                Toast.makeText(this, "Database Error", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Failed to update password", Toast.LENGTH_SHORT).show()
             }
         }
     }
